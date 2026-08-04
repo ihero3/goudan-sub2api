@@ -23,6 +23,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitordailyrollup"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorrequesttemplate"
+	"github.com/Wei-Shaw/sub2api/ent/consumer"
+	"github.com/Wei-Shaw/sub2api/ent/department"
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
@@ -38,6 +40,13 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/securitysecret"
 	"github.com/Wei-Shaw/sub2api/ent/setting"
 	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
+	"github.com/Wei-Shaw/sub2api/ent/team"
+	"github.com/Wei-Shaw/sub2api/ent/teamauditlog"
+	"github.com/Wei-Shaw/sub2api/ent/teammember"
+	"github.com/Wei-Shaw/sub2api/ent/teamusageconsumerdaily"
+	"github.com/Wei-Shaw/sub2api/ent/teamusagedeptdaily"
+	"github.com/Wei-Shaw/sub2api/ent/teamusagemodeldaily"
+	"github.com/Wei-Shaw/sub2api/ent/teamusageteamdaily"
 	"github.com/Wei-Shaw/sub2api/ent/ticket"
 	"github.com/Wei-Shaw/sub2api/ent/ticketmessage"
 	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
@@ -120,6 +129,8 @@ func checkColumn(t, c string) error {
 			channelmonitordailyrollup.Table:     channelmonitordailyrollup.ValidColumn,
 			channelmonitorhistory.Table:         channelmonitorhistory.ValidColumn,
 			channelmonitorrequesttemplate.Table: channelmonitorrequesttemplate.ValidColumn,
+			consumer.Table:                      consumer.ValidColumn,
+			department.Table:                    department.ValidColumn,
 			errorpassthroughrule.Table:          errorpassthroughrule.ValidColumn,
 			group.Table:                         group.ValidColumn,
 			idempotencyrecord.Table:             idempotencyrecord.ValidColumn,
@@ -136,6 +147,13 @@ func checkColumn(t, c string) error {
 			setting.Table:                       setting.ValidColumn,
 			subscriptionplan.Table:              subscriptionplan.ValidColumn,
 			tlsfingerprintprofile.Table:         tlsfingerprintprofile.ValidColumn,
+			team.Table:                          team.ValidColumn,
+			teamauditlog.Table:                  teamauditlog.ValidColumn,
+			teammember.Table:                    teammember.ValidColumn,
+			teamusageconsumerdaily.Table:        teamusageconsumerdaily.ValidColumn,
+			teamusagedeptdaily.Table:            teamusagedeptdaily.ValidColumn,
+			teamusagemodeldaily.Table:           teamusagemodeldaily.ValidColumn,
+			teamusageteamdaily.Table:            teamusageteamdaily.ValidColumn,
 			ticket.Table:                        ticket.ValidColumn,
 			ticketmessage.Table:                 ticketmessage.ValidColumn,
 			usagecleanuptask.Table:              usagecleanuptask.ValidColumn,

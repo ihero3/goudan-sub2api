@@ -107,8 +107,9 @@ type UsageLog struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the UsageLogQuery when eager-loading is set.
-	Edges        UsageLogEdges `json:"edges"`
-	selectValues sql.SelectValues
+	Edges           UsageLogEdges `json:"edges"`
+	team_usage_logs *int64
+	selectValues    sql.SelectValues
 }
 
 // UsageLogEdges holds the relations/edges for other nodes in the graph.
@@ -200,6 +201,8 @@ func (*UsageLog) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case usagelog.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
+		case usagelog.ForeignKeys[0]: // team_usage_logs
+			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -485,6 +488,13 @@ func (_m *UsageLog) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
+			}
+		case usagelog.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field team_usage_logs", value)
+			} else if value.Valid {
+				_m.team_usage_logs = new(int64)
+				*_m.team_usage_logs = int64(value.Int64)
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])

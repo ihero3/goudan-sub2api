@@ -73,7 +73,7 @@
               </button>
             </div>
           </div>
-          <button @click="showCreateModal = true" class="btn btn-primary" data-tour="keys-create-btn">
+          <button @click="openCreateModal" class="btn btn-primary" data-tour="keys-create-btn">
             <Icon name="plus" size="md" class="mr-2" />
             {{ t('keys.createKey') }}
           </button>
@@ -398,7 +398,7 @@
               :title="t('keys.noKeysYet')"
               :description="t('keys.createFirstKey')"
               :action-text="t('keys.createKey')"
-              @action="showCreateModal = true"
+              @action="openCreateModal()"
             />
           </template>
         </DataTable>
@@ -469,6 +469,32 @@
               />
             </template>
           </Select>
+        </div>
+
+        <!-- Department & Consumer Section -->
+        <div class="space-y-4">
+          <div>
+            <label class="input-label">{{ t('keys.departmentLabel') }}</label>
+            <DepartmentTreeSelect
+              :model-value="formData.department_id"
+              :departments="departmentTree"
+              :placeholder="t('keys.selectDepartment')"
+              :empty-text="t('keys.noDepartments')"
+              :allow-clear="true"
+              :clear-label="t('keys.noDepartment')"
+              @update:model-value="onDepartmentChange"
+            />
+          </div>
+
+          <div>
+            <label class="input-label">{{ t('keys.consumerLabel') }}</label>
+            <Select
+              v-model="formData.consumer_id"
+              :options="consumerOptions"
+              :placeholder="t('keys.selectConsumer')"
+              :disabled="formData.department_id === null || consumers.length === 0"
+            />
+          </div>
         </div>
 
         <!-- Custom Key Section (only for create) -->
@@ -1086,7 +1112,8 @@
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
 
 const { t } = useI18n()
-import { keysAPI, authAPI, usageAPI, userGroupsAPI } from '@/api'
+import { keysAPI, authAPI, usageAPI, userGroupsAPI, teamAPI } from '@/api'
+import { useTeamContext } from '@/composables/useTeamContext'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 	import DataTable from '@/components/common/DataTable.vue'
@@ -1101,8 +1128,10 @@ import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 	import EndpointPopover from '@/components/keys/EndpointPopover.vue'
 	import GroupBadge from '@/components/common/GroupBadge.vue'
 	import GroupOptionItem from '@/components/common/GroupOptionItem.vue'
+	import DepartmentTreeSelect from '@/components/team/DepartmentTreeSelect.vue'
 	import type { ApiKey, Group, PublicSettings, SubscriptionType, GroupPlatform, UpdateApiKeyRequest } from '@/types'
 import type { Column } from '@/components/common/types'
+import type { Department, Consumer, DepartmentTreeNode } from '@/api/team'
 import type { BatchApiKeyUsageStats } from '@/api/usage'
 import { formatDateTime } from '@/utils/format'
 import { maskApiKey } from '@/utils/maskApiKey'
@@ -1215,6 +1244,12 @@ let resetTimer: ReturnType<typeof setInterval> | null = null
 const usageStats = ref<Record<string, BatchApiKeyUsageStats>>({})
 const userGroupRates = ref<Record<number, number>>({})
 
+// Team-related state
+const departments = ref<Department[]>([])
+const departmentTree = ref<DepartmentTreeNode[]>([])
+const consumers = ref<Consumer[]>([])
+const { teamId, fetchCurrentTeam } = useTeamContext()
+
 const pagination = ref({
   page: 1,
   page_size: getPersistedPageSize(),
@@ -1283,7 +1318,10 @@ const formData = ref({
   rate_limit_7d: null as number | null,
   enable_expiration: false,
   expiration_preset: '30' as '7' | '30' | '90' | 'custom',
-  expiration_date: ''
+  expiration_date: '',
+  // Team/consumer settings
+  department_id: null as number | null,
+  consumer_id: null as number | null
 })
 
 // 自定义Key验证
@@ -1446,6 +1484,65 @@ const loadGroups = async () => {
   }
 }
 
+const loadDepartments = async () => {
+  let tid = teamId.value
+  if (!tid) {
+    await fetchCurrentTeam()
+    tid = teamId.value
+  }
+  if (!tid) return
+  try {
+    const [response, tree] = await Promise.all([
+      teamAPI.listDepartments(tid),
+      teamAPI.getDepartmentTree(tid).catch(() => [] as DepartmentTreeNode[])
+    ])
+    departments.value = response.items || []
+    departmentTree.value = tree || []
+  } catch (error) {
+    console.error('Failed to load departments:', error)
+    departments.value = []
+    departmentTree.value = []
+  }
+}
+
+const loadConsumers = async (teamId: number, deptId?: number) => {
+  try {
+    const params = deptId ? { dept_id: deptId } : undefined
+    const response = await teamAPI.listConsumers(teamId, undefined, params)
+    consumers.value = response.items || []
+  } catch (error) {
+    console.error('Failed to load consumers:', error)
+    consumers.value = []
+  }
+}
+
+// Consumer options filtered by selected department
+const consumerOptions = computed(() => [
+  { value: null as number | null, label: t('keys.noConsumer') },
+  ...consumers.value.map((c) => ({ value: c.id, label: c.name }))
+])
+
+const onDepartmentChange = async (value: number | null) => {
+  formData.value.department_id = value
+  // Reset consumer when department changes
+  formData.value.consumer_id = null
+  // Load consumers for the selected department
+  if (value !== null) {
+    let tid = teamId.value
+    if (!tid) {
+      await fetchCurrentTeam()
+      tid = teamId.value
+    }
+    if (tid) {
+      await loadConsumers(tid, value)
+    } else {
+      consumers.value = []
+    }
+  } else {
+    consumers.value = []
+  }
+}
+
 const loadUserGroupRates = async () => {
   try {
     userGroupRates.value = await userGroupsAPI.getUserGroupRates()
@@ -1490,7 +1587,7 @@ const handleSort = (key: string, order: 'asc' | 'desc') => {
   loadApiKeys()
 }
 
-const editKey = (key: ApiKey) => {
+const editKey = async (key: ApiKey) => {
   selectedKey.value = key
   const hasIPRestriction = (key.ip_whitelist?.length > 0) || (key.ip_blacklist?.length > 0)
   const hasExpiration = !!key.expires_at
@@ -1511,7 +1608,18 @@ const editKey = (key: ApiKey) => {
     rate_limit_7d: key.rate_limit_7d || null,
     enable_expiration: hasExpiration,
     expiration_preset: 'custom',
-    expiration_date: key.expires_at ? formatDateTimeLocal(key.expires_at) : ''
+    expiration_date: key.expires_at ? formatDateTimeLocal(key.expires_at) : '',
+    // Team/consumer settings: echo back persisted values
+    department_id: key.department_id ?? null,
+    consumer_id: key.consumer_id ?? null
+  }
+  // Ensure department tree is loaded before opening the modal
+  await loadDepartments()
+  // Preload consumers for the persisted department so the consumer dropdown can echo the value
+  if (formData.value.department_id !== null && teamId.value) {
+    await loadConsumers(teamId.value, formData.value.department_id)
+  } else {
+    consumers.value = []
   }
   showEditModal.value = true
 }
@@ -1662,6 +1770,14 @@ const handleSubmit = async () => {
       if (shouldSubmitEditStatus(selectedKey.value, formData.value.status)) {
         updates.status = formData.value.status
       }
+      // Include consumer_id in update if selected
+      if (formData.value.consumer_id !== null) {
+        updates.consumer_id = formData.value.consumer_id
+      }
+      // Include department_id in update if selected
+      if (formData.value.department_id !== null) {
+        updates.department_id = formData.value.department_id
+      }
       await keysAPI.update(selectedKey.value.id, updates)
       appStore.showSuccess(t('keys.keyUpdatedSuccess'))
     } else {
@@ -1674,7 +1790,9 @@ const handleSubmit = async () => {
         ipBlacklist,
         quota,
         expiresInDays,
-        rateLimitData
+        rateLimitData,
+        formData.value.consumer_id,
+        formData.value.department_id
       )
       appStore.showSuccess(t('keys.keyCreatedSuccess'))
       // Only advance tour if active, on submit step, and creation succeeded
@@ -1713,6 +1831,11 @@ const handleDelete = async () => {
   }
 }
 
+const openCreateModal = async () => {
+  await loadDepartments()
+  showCreateModal.value = true
+}
+
 const closeModals = () => {
   showCreateModal.value = false
   showEditModal.value = false
@@ -1734,7 +1857,9 @@ const closeModals = () => {
     rate_limit_7d: null,
     enable_expiration: false,
     expiration_preset: '30',
-    expiration_date: ''
+    expiration_date: '',
+    department_id: null,
+    consumer_id: null
   }
 }
 
@@ -1891,12 +2016,14 @@ function formatResetTime(resetAt: string | null): string {
   return `${mins}m`
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadSavedColumns()
   loadApiKeys()
   loadGroups()
   loadUserGroupRates()
   loadPublicSettings()
+  await fetchCurrentTeam()
+  loadDepartments()
   document.addEventListener('click', closeGroupSelector)
   resetTimer = setInterval(() => { now.value = new Date() }, 60000)
 })

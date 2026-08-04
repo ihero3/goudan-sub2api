@@ -36,6 +36,10 @@ type Tx struct {
 	ChannelMonitorHistory *ChannelMonitorHistoryClient
 	// ChannelMonitorRequestTemplate is the client for interacting with the ChannelMonitorRequestTemplate builders.
 	ChannelMonitorRequestTemplate *ChannelMonitorRequestTemplateClient
+	// Consumer is the client for interacting with the Consumer builders.
+	Consumer *ConsumerClient
+	// Department is the client for interacting with the Department builders.
+	Department *DepartmentClient
 	// ErrorPassthroughRule is the client for interacting with the ErrorPassthroughRule builders.
 	ErrorPassthroughRule *ErrorPassthroughRuleClient
 	// Group is the client for interacting with the Group builders.
@@ -68,6 +72,20 @@ type Tx struct {
 	SubscriptionPlan *SubscriptionPlanClient
 	// TLSFingerprintProfile is the client for interacting with the TLSFingerprintProfile builders.
 	TLSFingerprintProfile *TLSFingerprintProfileClient
+	// Team is the client for interacting with the Team builders.
+	Team *TeamClient
+	// TeamAuditLog is the client for interacting with the TeamAuditLog builders.
+	TeamAuditLog *TeamAuditLogClient
+	// TeamMember is the client for interacting with the TeamMember builders.
+	TeamMember *TeamMemberClient
+	// TeamUsageConsumerDaily is the client for interacting with the TeamUsageConsumerDaily builders.
+	TeamUsageConsumerDaily *TeamUsageConsumerDailyClient
+	// TeamUsageDeptDaily is the client for interacting with the TeamUsageDeptDaily builders.
+	TeamUsageDeptDaily *TeamUsageDeptDailyClient
+	// TeamUsageModelDaily is the client for interacting with the TeamUsageModelDaily builders.
+	TeamUsageModelDaily *TeamUsageModelDailyClient
+	// TeamUsageTeamDaily is the client for interacting with the TeamUsageTeamDaily builders.
+	TeamUsageTeamDaily *TeamUsageTeamDailyClient
 	// Ticket is the client for interacting with the Ticket builders.
 	Ticket *TicketClient
 	// TicketMessage is the client for interacting with the TicketMessage builders.
@@ -230,6 +248,8 @@ func (tx *Tx) init() {
 	tx.ChannelMonitorDailyRollup = NewChannelMonitorDailyRollupClient(tx.config)
 	tx.ChannelMonitorHistory = NewChannelMonitorHistoryClient(tx.config)
 	tx.ChannelMonitorRequestTemplate = NewChannelMonitorRequestTemplateClient(tx.config)
+	tx.Consumer = NewConsumerClient(tx.config)
+	tx.Department = NewDepartmentClient(tx.config)
 	tx.ErrorPassthroughRule = NewErrorPassthroughRuleClient(tx.config)
 	tx.Group = NewGroupClient(tx.config)
 	tx.IdempotencyRecord = NewIdempotencyRecordClient(tx.config)
@@ -246,6 +266,13 @@ func (tx *Tx) init() {
 	tx.Setting = NewSettingClient(tx.config)
 	tx.SubscriptionPlan = NewSubscriptionPlanClient(tx.config)
 	tx.TLSFingerprintProfile = NewTLSFingerprintProfileClient(tx.config)
+	tx.Team = NewTeamClient(tx.config)
+	tx.TeamAuditLog = NewTeamAuditLogClient(tx.config)
+	tx.TeamMember = NewTeamMemberClient(tx.config)
+	tx.TeamUsageConsumerDaily = NewTeamUsageConsumerDailyClient(tx.config)
+	tx.TeamUsageDeptDaily = NewTeamUsageDeptDailyClient(tx.config)
+	tx.TeamUsageModelDaily = NewTeamUsageModelDailyClient(tx.config)
+	tx.TeamUsageTeamDaily = NewTeamUsageTeamDailyClient(tx.config)
 	tx.Ticket = NewTicketClient(tx.config)
 	tx.TicketMessage = NewTicketMessageClient(tx.config)
 	tx.UsageCleanupTask = NewUsageCleanupTaskClient(tx.config)

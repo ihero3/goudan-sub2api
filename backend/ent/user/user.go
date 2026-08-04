@@ -91,6 +91,10 @@ const (
 	EdgeTickets = "tickets"
 	// EdgeTicketMessages holds the string denoting the ticket_messages edge name in mutations.
 	EdgeTicketMessages = "ticket_messages"
+	// EdgeOwnedTeams holds the string denoting the owned_teams edge name in mutations.
+	EdgeOwnedTeams = "owned_teams"
+	// EdgeTeamMemberships holds the string denoting the team_memberships edge name in mutations.
+	EdgeTeamMemberships = "team_memberships"
 	// EdgeUserAllowedGroups holds the string denoting the user_allowed_groups edge name in mutations.
 	EdgeUserAllowedGroups = "user_allowed_groups"
 	// Table holds the table name of the user in the database.
@@ -198,6 +202,20 @@ const (
 	TicketMessagesInverseTable = "ticket_messages"
 	// TicketMessagesColumn is the table column denoting the ticket_messages relation/edge.
 	TicketMessagesColumn = "user_id"
+	// OwnedTeamsTable is the table that holds the owned_teams relation/edge.
+	OwnedTeamsTable = "teams"
+	// OwnedTeamsInverseTable is the table name for the Team entity.
+	// It exists in this package in order to avoid circular dependency with the "team" package.
+	OwnedTeamsInverseTable = "teams"
+	// OwnedTeamsColumn is the table column denoting the owned_teams relation/edge.
+	OwnedTeamsColumn = "owner_user_id"
+	// TeamMembershipsTable is the table that holds the team_memberships relation/edge.
+	TeamMembershipsTable = "team_members"
+	// TeamMembershipsInverseTable is the table name for the TeamMember entity.
+	// It exists in this package in order to avoid circular dependency with the "teammember" package.
+	TeamMembershipsInverseTable = "team_members"
+	// TeamMembershipsColumn is the table column denoting the team_memberships relation/edge.
+	TeamMembershipsColumn = "user_id"
 	// UserAllowedGroupsTable is the table that holds the user_allowed_groups relation/edge.
 	UserAllowedGroupsTable = "user_allowed_groups"
 	// UserAllowedGroupsInverseTable is the table name for the UserAllowedGroup entity.
@@ -638,6 +656,34 @@ func ByTicketMessages(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	}
 }
 
+// ByOwnedTeamsCount orders the results by owned_teams count.
+func ByOwnedTeamsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newOwnedTeamsStep(), opts...)
+	}
+}
+
+// ByOwnedTeams orders the results by owned_teams terms.
+func ByOwnedTeams(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newOwnedTeamsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByTeamMembershipsCount orders the results by team_memberships count.
+func ByTeamMembershipsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTeamMembershipsStep(), opts...)
+	}
+}
+
+// ByTeamMemberships orders the results by team_memberships terms.
+func ByTeamMemberships(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTeamMembershipsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
 // ByUserAllowedGroupsCount orders the results by user_allowed_groups count.
 func ByUserAllowedGroupsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
@@ -754,6 +800,20 @@ func newTicketMessagesStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TicketMessagesInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TicketMessagesTable, TicketMessagesColumn),
+	)
+}
+func newOwnedTeamsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(OwnedTeamsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, OwnedTeamsTable, OwnedTeamsColumn),
+	)
+}
+func newTeamMembershipsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TeamMembershipsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TeamMembershipsTable, TeamMembershipsColumn),
 	)
 }
 func newUserAllowedGroupsStep() *sqlgraph.Step {

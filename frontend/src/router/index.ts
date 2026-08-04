@@ -743,6 +743,60 @@ const routes: RouteRecordRaw[] = [
   },
 
 
+  // ==================== Team Management Routes ====================
+  {
+    path: '/team',
+    redirect: '/team/consumers'
+  },
+  {
+    path: '/team/departments',
+    name: 'TeamDepartments',
+    component: () => import('@/views/admin/team/TeamDepartmentsView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Team Departments',
+      titleKey: 'admin.team.departments.title',
+      descriptionKey: 'admin.team.departments.description'
+    }
+  },
+  {
+    path: '/team/consumers',
+    name: 'TeamConsumers',
+    component: () => import('@/views/admin/team/TeamConsumersView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Team Consumers',
+      titleKey: 'admin.team.consumers.title',
+      descriptionKey: 'admin.team.consumers.description'
+    }
+  },
+  {
+    path: '/team/analytics',
+    name: 'TeamAnalytics',
+    component: () => import('@/views/admin/team/TeamAnalyticsView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Team Analytics',
+      titleKey: 'admin.team.analytics.title',
+      descriptionKey: 'admin.team.analytics.description'
+    }
+  },
+  {
+    path: '/team/settings',
+    name: 'TeamSettings',
+    component: () => import('@/views/admin/team/TeamSettingsView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: false,
+      title: 'Team Settings',
+      titleKey: 'admin.team.settings.title',
+      descriptionKey: 'admin.team.settings.subtitle'
+    }
+  },
+
   // ==================== Payment Admin Routes ====================
   {
     path: '/admin/orders/dashboard',

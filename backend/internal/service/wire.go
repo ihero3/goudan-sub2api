@@ -195,6 +195,14 @@ func ProvideUsageCleanupService(repo UsageCleanupRepository, timingWheel *Timing
 	return svc
 }
 
+// ProvideTeamAggregationService 创建并启动团队维度用量聚合服务。
+func ProvideTeamAggregationService(repo TeamAnalyticsRepository, timingWheel *TimingWheelService, lockCache LeaderLockCache, db *sql.DB) *TeamAggregationService {
+	svc := NewTeamAggregationService(repo, timingWheel)
+	svc.SetLeaderLock(lockCache, db)
+	svc.Start()
+	return svc
+}
+
 // ProvideAccountExpiryService creates and starts AccountExpiryService.
 func ProvideAccountExpiryService(accountRepo AccountRepository) *AccountExpiryService {
 	svc := NewAccountExpiryService(accountRepo, time.Minute)
@@ -537,9 +545,11 @@ func ProvideAPIKeyService(
 	cache APIKeyCache,
 	cfg *config.Config,
 	billingCacheService *BillingCacheService,
+	consumerRepo ConsumerRepository,
 ) *APIKeyService {
 	svc := NewAPIKeyService(apiKeyRepo, userRepo, groupRepo, userSubRepo, userGroupRateRepo, cache, cfg)
 	svc.SetRateLimitCacheInvalidator(billingCacheService)
+	svc.SetConsumerRepo(consumerRepo)
 	return svc
 }
 
@@ -616,6 +626,7 @@ var ProviderSet = wire.NewSet(
 	ProvideSubscriptionExpiryService,
 	ProvideTimingWheelService,
 	ProvideDashboardAggregationService,
+	ProvideTeamAggregationService,
 	ProvideUsageCleanupService,
 	ProvideDeferredService,
 	NewAntigravityQuotaFetcher,
@@ -645,6 +656,10 @@ var ProviderSet = wire.NewSet(
 	ProvideChannelMonitorRunner,
 	NewChannelMonitorRequestTemplateService,
 	ProvideUserPlatformQuotaUsageFlusher,
+	NewTeamService,
+	NewDepartmentService,
+	NewConsumerService,
+	NewTeamAnalyticsService,
 
 	// AI 治理与合规模块（见 docs/合规方案.md）
 	NewGeoIPService,

@@ -45,6 +45,11 @@ type APIKey struct {
 	User                *User
 	Group               *Group
 
+	// Team management fields
+	TeamID       *int64
+	ConsumerID   *int64
+	DepartmentID *int64
+
 	// Quota fields
 	Quota     float64    // Quota limit in USD (0 = unlimited)
 	QuotaUsed float64    // Used quota amount

@@ -67,7 +67,8 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	serviceUserPlatformQuotaRepository := repository.NewUserPlatformQuotaServiceAdapter(userPlatformQuotaRepository)
 	billingCacheService := service.ProvideBillingCacheService(billingCache, userRepository, userSubscriptionRepository, apiKeyRepository, userRPMCache, userGroupRateRepository, configConfig, serviceUserPlatformQuotaRepository)
 	apiKeyCache := repository.NewAPIKeyCache(redisClient)
-	apiKeyService := service.ProvideAPIKeyService(apiKeyRepository, userRepository, groupRepository, userSubscriptionRepository, userGroupRateRepository, apiKeyCache, configConfig, billingCacheService)
+	consumerRepository := repository.ProvideConsumerRepository(client, db)
+	apiKeyService := service.ProvideAPIKeyService(apiKeyRepository, userRepository, groupRepository, userSubscriptionRepository, userGroupRateRepository, apiKeyCache, configConfig, billingCacheService, consumerRepository)
 	apiKeyAuthCacheInvalidator := service.ProvideAPIKeyAuthCacheInvalidator(apiKeyService)
 	promoService := service.NewPromoService(promoCodeRepository, userRepository, billingCacheService, client, apiKeyAuthCacheInvalidator)
 	subscriptionService := service.NewSubscriptionService(groupRepository, userSubscriptionRepository, billingCacheService, client, configConfig)
@@ -282,9 +283,23 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	availableChannelHandler := handler.NewAvailableChannelHandler(channelService, apiKeyService, settingService)
 	handlerTicketHandler := handler.NewTicketHandler(ticketService)
 	governanceUserHandler := handler.NewGovernanceUserHandler(complianceService, userComplianceProfileService, policyTemplateService, moderationRuleService, complianceMappingService, complianceCredentialService)
+	teamRepository := repository.ProvideTeamRepository(client, db)
+	teamMemberRepository := repository.ProvideTeamMemberRepository(client, db)
+	userLookupRepository := repository.ProvideUserLookupRepository(userRepository)
+	teamService := service.NewTeamService(teamRepository, teamMemberRepository, userLookupRepository, emailService, settingService)
+	teamHandler := handler.NewTeamHandler(teamService, userLookupRepository)
+	departmentRepository := repository.ProvideDepartmentRepository(client, db)
+	departmentService := service.NewDepartmentService(departmentRepository)
+	departmentHandler := handler.NewDepartmentHandler(departmentService)
+	consumerService := service.NewConsumerService(consumerRepository)
+	consumerHandler := handler.NewConsumerHandler(consumerService)
+	teamAnalyticsRepository := repository.ProvideTeamAnalyticsRepository(client, db)
+	teamAnalyticsService := service.NewTeamAnalyticsService(teamAnalyticsRepository)
+	teamAggregationService := service.ProvideTeamAggregationService(teamAnalyticsRepository, timingWheelService, leaderLockCache, db)
+	teamAnalyticsHandler := handler.NewTeamAnalyticsHandler(teamAnalyticsService)
 	idempotencyCoordinator := service.ProvideIdempotencyCoordinator(idempotencyRepository, configConfig)
 	idempotencyCleanupService := service.ProvideIdempotencyCleanupService(idempotencyRepository, configConfig)
-	handlers := handler.ProvideHandlers(authHandler, userHandler, apiKeyHandler, usageHandler, redeemHandler, subscriptionHandler, announcementHandler, channelMonitorUserHandler, adminHandlers, gatewayHandler, openAIGatewayHandler, handlerSettingHandler, totpHandler, handlerPaymentHandler, paymentWebhookHandler, availableChannelHandler, handlerTicketHandler, governanceUserHandler, idempotencyCoordinator, idempotencyCleanupService)
+	handlers := handler.ProvideHandlers(authHandler, userHandler, apiKeyHandler, usageHandler, redeemHandler, subscriptionHandler, announcementHandler, channelMonitorUserHandler, adminHandlers, gatewayHandler, openAIGatewayHandler, handlerSettingHandler, totpHandler, handlerPaymentHandler, paymentWebhookHandler, availableChannelHandler, handlerTicketHandler, governanceUserHandler, teamHandler, departmentHandler, consumerHandler, teamAnalyticsHandler, idempotencyCoordinator, idempotencyCleanupService)
 	jwtAuthMiddleware := middleware.NewJWTAuthMiddleware(authService, userService)
 	adminAuthMiddleware := middleware.NewAdminAuthMiddleware(authService, userService, settingService)
 	apiKeyAuthMiddleware := middleware.NewAPIKeyAuthMiddleware(apiKeyService, subscriptionService, configConfig)
@@ -304,7 +319,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	channelMonitorRunner := service.ProvideChannelMonitorRunner(channelMonitorService, settingService)
 	userPlatformQuotaUsageFlusher := service.ProvideUserPlatformQuotaUsageFlusher(configConfig, billingCache, serviceUserPlatformQuotaRepository, timingWheelService)
 	userComplianceProfileHook := service.ProvideUserComplianceProfileHook(userComplianceProfileService, gatewayService, contentModerationService)
-	v := provideCleanup(client, redisClient, opsMetricsCollector, opsAggregationService, opsAlertEvaluatorService, opsCleanupService, opsScheduledReportService, opsSystemLogSink, schedulerSnapshotService, tokenRefreshService, accountExpiryService, proxyExpiryService, subscriptionExpiryService, usageCleanupService, idempotencyCleanupService, pricingService, emailQueueService, billingCacheService, usageRecordWorkerPool, subscriptionService, oAuthService, openAIOAuthService, geminiOAuthService, antigravityOAuthService, grokOAuthService, openAIGatewayService, scheduledTestRunnerService, backupService, paymentOrderExpiryService, channelMonitorRunner, userPlatformQuotaUsageFlusher, userComplianceProfileHook)
+	v := provideCleanup(client, redisClient, opsMetricsCollector, opsAggregationService, opsAlertEvaluatorService, opsCleanupService, opsScheduledReportService, opsSystemLogSink, schedulerSnapshotService, tokenRefreshService, accountExpiryService, proxyExpiryService, subscriptionExpiryService, usageCleanupService, teamAggregationService, idempotencyCleanupService, pricingService, emailQueueService, billingCacheService, usageRecordWorkerPool, subscriptionService, oAuthService, openAIOAuthService, geminiOAuthService, antigravityOAuthService, grokOAuthService, openAIGatewayService, scheduledTestRunnerService, backupService, paymentOrderExpiryService, channelMonitorRunner, userPlatformQuotaUsageFlusher, userComplianceProfileHook)
 	application := &Application{
 		Server:  httpServer,
 		Cleanup: v,
@@ -345,6 +360,7 @@ func provideCleanup(
 	proxyExpiry *service.ProxyExpiryService,
 	subscriptionExpiry *service.SubscriptionExpiryService,
 	usageCleanup *service.UsageCleanupService,
+	teamAggregation *service.TeamAggregationService,
 	idempotencyCleanup *service.IdempotencyCleanupService,
 	pricing *service.PricingService,
 	emailQueue *service.EmailQueueService,
@@ -418,17 +434,23 @@ func provideCleanup(
 				return nil
 			}},
 			{"UsageCleanupService", func() error {
-				if usageCleanup != nil {
-					usageCleanup.Stop()
-				}
-				return nil
-			}},
-			{"IdempotencyCleanupService", func() error {
-				if idempotencyCleanup != nil {
-					idempotencyCleanup.Stop()
-				}
-				return nil
-			}},
+			if usageCleanup != nil {
+				usageCleanup.Stop()
+			}
+			return nil
+		}},
+		{"TeamAggregationService", func() error {
+			if teamAggregation != nil {
+				teamAggregation.Stop()
+			}
+			return nil
+		}},
+		{"IdempotencyCleanupService", func() error {
+			if idempotencyCleanup != nil {
+				idempotencyCleanup.Stop()
+			}
+			return nil
+		}},
 			{"TokenRefreshService", func() error {
 				tokenRefresh.Stop()
 				return nil

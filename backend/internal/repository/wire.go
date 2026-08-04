@@ -12,6 +12,36 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// ProvideTeamRepository 创建 TeamRepository 实例
+func ProvideTeamRepository(client *ent.Client, sqlDB *sql.DB) service.TeamRepository {
+	return NewTeamRepository(client, sqlDB)
+}
+
+// ProvideTeamMemberRepository 创建 TeamMemberRepository 实例
+func ProvideTeamMemberRepository(client *ent.Client, sqlDB *sql.DB) service.TeamMemberRepository {
+	return NewTeamMemberRepository(client, sqlDB)
+}
+
+// ProvideDepartmentRepository 创建 DepartmentRepository 实例
+func ProvideDepartmentRepository(client *ent.Client, sqlDB *sql.DB) service.DepartmentRepository {
+	return NewDepartmentRepository(client, sqlDB)
+}
+
+// ProvideConsumerRepository 创建 ConsumerRepository 实例
+func ProvideConsumerRepository(client *ent.Client, sqlDB *sql.DB) service.ConsumerRepository {
+	return NewConsumerRepository(client, sqlDB)
+}
+
+// ProvideTeamAnalyticsRepository 创建 TeamAnalyticsRepository 实例
+func ProvideTeamAnalyticsRepository(client *ent.Client, sqlDB *sql.DB) service.TeamAnalyticsRepository {
+	return NewTeamAnalyticsRepository(client, sqlDB)
+}
+
+// ProvideUserLookupRepository 将 UserRepository 适配为 UserLookupRepository
+func ProvideUserLookupRepository(repo service.UserRepository) service.UserLookupRepository {
+	return repo
+}
+
 // ProvideConcurrencyCache 创建并发控制缓存，从配置读取 TTL 参数
 // 性能优化：TTL 可配置，支持长时间运行的 LLM 请求场景
 func ProvideConcurrencyCache(rdb *redis.Client, cfg *config.Config) service.ConcurrencyCache {
@@ -156,10 +186,18 @@ var ProviderSet = wire.NewSet(
 	NewGeminiOAuthClient,
 	NewGeminiCliCodeAssistClient,
 	NewGeminiDriveClient,
+	ProvideTeamRepository,
+	ProvideTeamMemberRepository,
+	ProvideDepartmentRepository,
+	ProvideConsumerRepository,
+	ProvideTeamAnalyticsRepository,
 
 	ProvideEnt,
 	ProvideSQLDB,
 	ProvideRedis,
+
+	// Interface bindings
+	ProvideUserLookupRepository,
 )
 
 // ProvideEnt 为依赖注入提供 Ent 客户端。

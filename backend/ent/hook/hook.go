@@ -141,6 +141,30 @@ func (f ChannelMonitorRequestTemplateFunc) Mutate(ctx context.Context, m ent.Mut
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ChannelMonitorRequestTemplateMutation", m)
 }
 
+// The ConsumerFunc type is an adapter to allow the use of ordinary
+// function as Consumer mutator.
+type ConsumerFunc func(context.Context, *ent.ConsumerMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ConsumerFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ConsumerMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ConsumerMutation", m)
+}
+
+// The DepartmentFunc type is an adapter to allow the use of ordinary
+// function as Department mutator.
+type DepartmentFunc func(context.Context, *ent.DepartmentMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DepartmentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.DepartmentMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DepartmentMutation", m)
+}
+
 // The ErrorPassthroughRuleFunc type is an adapter to allow the use of ordinary
 // function as ErrorPassthroughRule mutator.
 type ErrorPassthroughRuleFunc func(context.Context, *ent.ErrorPassthroughRuleMutation) (ent.Value, error)
@@ -331,6 +355,90 @@ func (f TLSFingerprintProfileFunc) Mutate(ctx context.Context, m ent.Mutation) (
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TLSFingerprintProfileMutation", m)
+}
+
+// The TeamFunc type is an adapter to allow the use of ordinary
+// function as Team mutator.
+type TeamFunc func(context.Context, *ent.TeamMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TeamFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TeamMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TeamMutation", m)
+}
+
+// The TeamAuditLogFunc type is an adapter to allow the use of ordinary
+// function as TeamAuditLog mutator.
+type TeamAuditLogFunc func(context.Context, *ent.TeamAuditLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TeamAuditLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TeamAuditLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TeamAuditLogMutation", m)
+}
+
+// The TeamMemberFunc type is an adapter to allow the use of ordinary
+// function as TeamMember mutator.
+type TeamMemberFunc func(context.Context, *ent.TeamMemberMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TeamMemberFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TeamMemberMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TeamMemberMutation", m)
+}
+
+// The TeamUsageConsumerDailyFunc type is an adapter to allow the use of ordinary
+// function as TeamUsageConsumerDaily mutator.
+type TeamUsageConsumerDailyFunc func(context.Context, *ent.TeamUsageConsumerDailyMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TeamUsageConsumerDailyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TeamUsageConsumerDailyMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TeamUsageConsumerDailyMutation", m)
+}
+
+// The TeamUsageDeptDailyFunc type is an adapter to allow the use of ordinary
+// function as TeamUsageDeptDaily mutator.
+type TeamUsageDeptDailyFunc func(context.Context, *ent.TeamUsageDeptDailyMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TeamUsageDeptDailyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TeamUsageDeptDailyMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TeamUsageDeptDailyMutation", m)
+}
+
+// The TeamUsageModelDailyFunc type is an adapter to allow the use of ordinary
+// function as TeamUsageModelDaily mutator.
+type TeamUsageModelDailyFunc func(context.Context, *ent.TeamUsageModelDailyMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TeamUsageModelDailyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TeamUsageModelDailyMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TeamUsageModelDailyMutation", m)
+}
+
+// The TeamUsageTeamDailyFunc type is an adapter to allow the use of ordinary
+// function as TeamUsageTeamDaily mutator.
+type TeamUsageTeamDailyFunc func(context.Context, *ent.TeamUsageTeamDailyMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f TeamUsageTeamDailyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.TeamUsageTeamDailyMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.TeamUsageTeamDailyMutation", m)
 }
 
 // The TicketFunc type is an adapter to allow the use of ordinary

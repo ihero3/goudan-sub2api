@@ -101,11 +101,15 @@ type UserEdges struct {
 	Tickets []*Ticket `json:"tickets,omitempty"`
 	// TicketMessages holds the value of the ticket_messages edge.
 	TicketMessages []*TicketMessage `json:"ticket_messages,omitempty"`
+	// OwnedTeams holds the value of the owned_teams edge.
+	OwnedTeams []*Team `json:"owned_teams,omitempty"`
+	// TeamMemberships holds the value of the team_memberships edge.
+	TeamMemberships []*TeamMember `json:"team_memberships,omitempty"`
 	// UserAllowedGroups holds the value of the user_allowed_groups edge.
 	UserAllowedGroups []*UserAllowedGroup `json:"user_allowed_groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [16]bool
+	loadedTypes [18]bool
 }
 
 // APIKeysOrErr returns the APIKeys value or an error if the edge
@@ -243,10 +247,28 @@ func (e UserEdges) TicketMessagesOrErr() ([]*TicketMessage, error) {
 	return nil, &NotLoadedError{edge: "ticket_messages"}
 }
 
+// OwnedTeamsOrErr returns the OwnedTeams value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) OwnedTeamsOrErr() ([]*Team, error) {
+	if e.loadedTypes[15] {
+		return e.OwnedTeams, nil
+	}
+	return nil, &NotLoadedError{edge: "owned_teams"}
+}
+
+// TeamMembershipsOrErr returns the TeamMemberships value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) TeamMembershipsOrErr() ([]*TeamMember, error) {
+	if e.loadedTypes[16] {
+		return e.TeamMemberships, nil
+	}
+	return nil, &NotLoadedError{edge: "team_memberships"}
+}
+
 // UserAllowedGroupsOrErr returns the UserAllowedGroups value or an error if the edge
 // was not loaded in eager-loading.
 func (e UserEdges) UserAllowedGroupsOrErr() ([]*UserAllowedGroup, error) {
-	if e.loadedTypes[15] {
+	if e.loadedTypes[17] {
 		return e.UserAllowedGroups, nil
 	}
 	return nil, &NotLoadedError{edge: "user_allowed_groups"}
@@ -518,6 +540,16 @@ func (_m *User) QueryTickets() *TicketQuery {
 // QueryTicketMessages queries the "ticket_messages" edge of the User entity.
 func (_m *User) QueryTicketMessages() *TicketMessageQuery {
 	return NewUserClient(_m.config).QueryTicketMessages(_m)
+}
+
+// QueryOwnedTeams queries the "owned_teams" edge of the User entity.
+func (_m *User) QueryOwnedTeams() *TeamQuery {
+	return NewUserClient(_m.config).QueryOwnedTeams(_m)
+}
+
+// QueryTeamMemberships queries the "team_memberships" edge of the User entity.
+func (_m *User) QueryTeamMemberships() *TeamMemberQuery {
+	return NewUserClient(_m.config).QueryTeamMemberships(_m)
 }
 
 // QueryUserAllowedGroups queries the "user_allowed_groups" edge of the User entity.

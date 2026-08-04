@@ -19,6 +19,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitordailyrollup"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorrequesttemplate"
+	"github.com/Wei-Shaw/sub2api/ent/consumer"
+	"github.com/Wei-Shaw/sub2api/ent/department"
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
@@ -35,6 +37,13 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/securitysecret"
 	"github.com/Wei-Shaw/sub2api/ent/setting"
 	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
+	"github.com/Wei-Shaw/sub2api/ent/team"
+	"github.com/Wei-Shaw/sub2api/ent/teamauditlog"
+	"github.com/Wei-Shaw/sub2api/ent/teammember"
+	"github.com/Wei-Shaw/sub2api/ent/teamusageconsumerdaily"
+	"github.com/Wei-Shaw/sub2api/ent/teamusagedeptdaily"
+	"github.com/Wei-Shaw/sub2api/ent/teamusagemodeldaily"
+	"github.com/Wei-Shaw/sub2api/ent/teamusageteamdaily"
 	"github.com/Wei-Shaw/sub2api/ent/ticket"
 	"github.com/Wei-Shaw/sub2api/ent/ticketmessage"
 	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
@@ -399,6 +408,60 @@ func (f TraverseChannelMonitorRequestTemplate) Traverse(ctx context.Context, q e
 		return f(ctx, q)
 	}
 	return fmt.Errorf("unexpected query type %T. expect *ent.ChannelMonitorRequestTemplateQuery", q)
+}
+
+// The ConsumerFunc type is an adapter to allow the use of ordinary function as a Querier.
+type ConsumerFunc func(context.Context, *ent.ConsumerQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f ConsumerFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.ConsumerQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.ConsumerQuery", q)
+}
+
+// The TraverseConsumer type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseConsumer func(context.Context, *ent.ConsumerQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseConsumer) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseConsumer) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.ConsumerQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.ConsumerQuery", q)
+}
+
+// The DepartmentFunc type is an adapter to allow the use of ordinary function as a Querier.
+type DepartmentFunc func(context.Context, *ent.DepartmentQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f DepartmentFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.DepartmentQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.DepartmentQuery", q)
+}
+
+// The TraverseDepartment type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseDepartment func(context.Context, *ent.DepartmentQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseDepartment) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseDepartment) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.DepartmentQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.DepartmentQuery", q)
 }
 
 // The ErrorPassthroughRuleFunc type is an adapter to allow the use of ordinary function as a Querier.
@@ -833,6 +896,195 @@ func (f TraverseTLSFingerprintProfile) Traverse(ctx context.Context, q ent.Query
 	return fmt.Errorf("unexpected query type %T. expect *ent.TLSFingerprintProfileQuery", q)
 }
 
+// The TeamFunc type is an adapter to allow the use of ordinary function as a Querier.
+type TeamFunc func(context.Context, *ent.TeamQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f TeamFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.TeamQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.TeamQuery", q)
+}
+
+// The TraverseTeam type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseTeam func(context.Context, *ent.TeamQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseTeam) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseTeam) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.TeamQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.TeamQuery", q)
+}
+
+// The TeamAuditLogFunc type is an adapter to allow the use of ordinary function as a Querier.
+type TeamAuditLogFunc func(context.Context, *ent.TeamAuditLogQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f TeamAuditLogFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.TeamAuditLogQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.TeamAuditLogQuery", q)
+}
+
+// The TraverseTeamAuditLog type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseTeamAuditLog func(context.Context, *ent.TeamAuditLogQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseTeamAuditLog) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseTeamAuditLog) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.TeamAuditLogQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.TeamAuditLogQuery", q)
+}
+
+// The TeamMemberFunc type is an adapter to allow the use of ordinary function as a Querier.
+type TeamMemberFunc func(context.Context, *ent.TeamMemberQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f TeamMemberFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.TeamMemberQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.TeamMemberQuery", q)
+}
+
+// The TraverseTeamMember type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseTeamMember func(context.Context, *ent.TeamMemberQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseTeamMember) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseTeamMember) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.TeamMemberQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.TeamMemberQuery", q)
+}
+
+// The TeamUsageConsumerDailyFunc type is an adapter to allow the use of ordinary function as a Querier.
+type TeamUsageConsumerDailyFunc func(context.Context, *ent.TeamUsageConsumerDailyQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f TeamUsageConsumerDailyFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.TeamUsageConsumerDailyQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.TeamUsageConsumerDailyQuery", q)
+}
+
+// The TraverseTeamUsageConsumerDaily type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseTeamUsageConsumerDaily func(context.Context, *ent.TeamUsageConsumerDailyQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseTeamUsageConsumerDaily) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseTeamUsageConsumerDaily) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.TeamUsageConsumerDailyQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.TeamUsageConsumerDailyQuery", q)
+}
+
+// The TeamUsageDeptDailyFunc type is an adapter to allow the use of ordinary function as a Querier.
+type TeamUsageDeptDailyFunc func(context.Context, *ent.TeamUsageDeptDailyQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f TeamUsageDeptDailyFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.TeamUsageDeptDailyQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.TeamUsageDeptDailyQuery", q)
+}
+
+// The TraverseTeamUsageDeptDaily type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseTeamUsageDeptDaily func(context.Context, *ent.TeamUsageDeptDailyQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseTeamUsageDeptDaily) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseTeamUsageDeptDaily) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.TeamUsageDeptDailyQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.TeamUsageDeptDailyQuery", q)
+}
+
+// The TeamUsageModelDailyFunc type is an adapter to allow the use of ordinary function as a Querier.
+type TeamUsageModelDailyFunc func(context.Context, *ent.TeamUsageModelDailyQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f TeamUsageModelDailyFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.TeamUsageModelDailyQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.TeamUsageModelDailyQuery", q)
+}
+
+// The TraverseTeamUsageModelDaily type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseTeamUsageModelDaily func(context.Context, *ent.TeamUsageModelDailyQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseTeamUsageModelDaily) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseTeamUsageModelDaily) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.TeamUsageModelDailyQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.TeamUsageModelDailyQuery", q)
+}
+
+// The TeamUsageTeamDailyFunc type is an adapter to allow the use of ordinary function as a Querier.
+type TeamUsageTeamDailyFunc func(context.Context, *ent.TeamUsageTeamDailyQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f TeamUsageTeamDailyFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.TeamUsageTeamDailyQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.TeamUsageTeamDailyQuery", q)
+}
+
+// The TraverseTeamUsageTeamDaily type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseTeamUsageTeamDaily func(context.Context, *ent.TeamUsageTeamDailyQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseTeamUsageTeamDaily) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseTeamUsageTeamDaily) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.TeamUsageTeamDailyQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.TeamUsageTeamDailyQuery", q)
+}
+
 // The TicketFunc type is an adapter to allow the use of ordinary function as a Querier.
 type TicketFunc func(context.Context, *ent.TicketQuery) (ent.Value, error)
 
@@ -1128,6 +1380,10 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.ChannelMonitorHistoryQuery, predicate.ChannelMonitorHistory, channelmonitorhistory.OrderOption]{typ: ent.TypeChannelMonitorHistory, tq: q}, nil
 	case *ent.ChannelMonitorRequestTemplateQuery:
 		return &query[*ent.ChannelMonitorRequestTemplateQuery, predicate.ChannelMonitorRequestTemplate, channelmonitorrequesttemplate.OrderOption]{typ: ent.TypeChannelMonitorRequestTemplate, tq: q}, nil
+	case *ent.ConsumerQuery:
+		return &query[*ent.ConsumerQuery, predicate.Consumer, consumer.OrderOption]{typ: ent.TypeConsumer, tq: q}, nil
+	case *ent.DepartmentQuery:
+		return &query[*ent.DepartmentQuery, predicate.Department, department.OrderOption]{typ: ent.TypeDepartment, tq: q}, nil
 	case *ent.ErrorPassthroughRuleQuery:
 		return &query[*ent.ErrorPassthroughRuleQuery, predicate.ErrorPassthroughRule, errorpassthroughrule.OrderOption]{typ: ent.TypeErrorPassthroughRule, tq: q}, nil
 	case *ent.GroupQuery:
@@ -1160,6 +1416,20 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.SubscriptionPlanQuery, predicate.SubscriptionPlan, subscriptionplan.OrderOption]{typ: ent.TypeSubscriptionPlan, tq: q}, nil
 	case *ent.TLSFingerprintProfileQuery:
 		return &query[*ent.TLSFingerprintProfileQuery, predicate.TLSFingerprintProfile, tlsfingerprintprofile.OrderOption]{typ: ent.TypeTLSFingerprintProfile, tq: q}, nil
+	case *ent.TeamQuery:
+		return &query[*ent.TeamQuery, predicate.Team, team.OrderOption]{typ: ent.TypeTeam, tq: q}, nil
+	case *ent.TeamAuditLogQuery:
+		return &query[*ent.TeamAuditLogQuery, predicate.TeamAuditLog, teamauditlog.OrderOption]{typ: ent.TypeTeamAuditLog, tq: q}, nil
+	case *ent.TeamMemberQuery:
+		return &query[*ent.TeamMemberQuery, predicate.TeamMember, teammember.OrderOption]{typ: ent.TypeTeamMember, tq: q}, nil
+	case *ent.TeamUsageConsumerDailyQuery:
+		return &query[*ent.TeamUsageConsumerDailyQuery, predicate.TeamUsageConsumerDaily, teamusageconsumerdaily.OrderOption]{typ: ent.TypeTeamUsageConsumerDaily, tq: q}, nil
+	case *ent.TeamUsageDeptDailyQuery:
+		return &query[*ent.TeamUsageDeptDailyQuery, predicate.TeamUsageDeptDaily, teamusagedeptdaily.OrderOption]{typ: ent.TypeTeamUsageDeptDaily, tq: q}, nil
+	case *ent.TeamUsageModelDailyQuery:
+		return &query[*ent.TeamUsageModelDailyQuery, predicate.TeamUsageModelDaily, teamusagemodeldaily.OrderOption]{typ: ent.TypeTeamUsageModelDaily, tq: q}, nil
+	case *ent.TeamUsageTeamDailyQuery:
+		return &query[*ent.TeamUsageTeamDailyQuery, predicate.TeamUsageTeamDaily, teamusageteamdaily.OrderOption]{typ: ent.TypeTeamUsageTeamDaily, tq: q}, nil
 	case *ent.TicketQuery:
 		return &query[*ent.TicketQuery, predicate.Ticket, ticket.OrderOption]{typ: ent.TypeTicket, tq: q}, nil
 	case *ent.TicketMessageQuery:

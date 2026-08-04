@@ -134,6 +134,11 @@ func (User) Edges() []ent.Edge {
 		edge.To("platform_quotas", UserPlatformQuota.Type),
 		edge.To("tickets", Ticket.Type),
 		edge.To("ticket_messages", TicketMessage.Type),
+		// Team management
+		edge.To("owned_teams", Team.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("team_memberships", TeamMember.Type).
+			Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

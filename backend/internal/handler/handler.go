@@ -63,6 +63,10 @@ type Handlers struct {
 	AvailableChannel *AvailableChannelHandler
 	Ticket           *TicketHandler
 	Governance       *GovernanceUserHandler
+	Team             *TeamHandler
+	Department       *DepartmentHandler
+	Consumer         *ConsumerHandler
+	TeamAnalytics    *TeamAnalyticsHandler
 }
 
 // BuildInfo contains build-time information

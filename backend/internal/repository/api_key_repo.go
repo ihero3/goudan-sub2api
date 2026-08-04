@@ -51,7 +51,10 @@ func (r *apiKeyRepository) Create(ctx context.Context, key *service.APIKey) erro
 		SetNillableExpiresAt(key.ExpiresAt).
 		SetRateLimit5h(key.RateLimit5h).
 		SetRateLimit1d(key.RateLimit1d).
-		SetRateLimit7d(key.RateLimit7d)
+		SetRateLimit7d(key.RateLimit7d).
+		SetNillableTeamID(key.TeamID).
+		SetNillableConsumerID(key.ConsumerID).
+		SetNillableDepartmentID(key.DepartmentID)
 
 	if len(key.IPWhitelist) > 0 {
 		builder.SetIPWhitelist(key.IPWhitelist)
@@ -268,6 +271,11 @@ func (r *apiKeyRepository) Update(ctx context.Context, key *service.APIKey) erro
 	} else {
 		builder.ClearIPBlacklist()
 	}
+
+	// Team management fields (use Nillable to skip nil values, preserving existing DB values)
+	builder.SetNillableTeamID(key.TeamID)
+	builder.SetNillableConsumerID(key.ConsumerID)
+	builder.SetNillableDepartmentID(key.DepartmentID)
 
 	affected, err := builder.Save(ctx)
 	if err != nil {
@@ -721,6 +729,10 @@ func apiKeyEntityToService(m *dbent.APIKey) *service.APIKey {
 		Window5hStart: m.Window5hStart,
 		Window1dStart: m.Window1dStart,
 		Window7dStart: m.Window7dStart,
+		// Team management fields
+		TeamID:       m.TeamID,
+		ConsumerID:   m.ConsumerID,
+		DepartmentID: m.DepartmentID,
 	}
 	if m.Edges.User != nil {
 		out.User = userEntityToService(m.Edges.User)

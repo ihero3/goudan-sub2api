@@ -38,6 +38,11 @@ type CreateAPIKeyRequest struct {
 	Quota         *float64 `json:"quota"`           // 配额限制 (USD)
 	ExpiresInDays *int     `json:"expires_in_days"` // 过期天数
 
+	// Team management fields (optional)
+	TeamID       *int64 `json:"team_id"`
+	ConsumerID   *int64 `json:"consumer_id"`
+	DepartmentID *int64 `json:"department_id"`
+
 	// Rate limit fields (0 = unlimited)
 	RateLimit5h *float64 `json:"rate_limit_5h"`
 	RateLimit1d *float64 `json:"rate_limit_1d"`
@@ -54,6 +59,11 @@ type UpdateAPIKeyRequest struct {
 	Quota       *float64 `json:"quota"`        // 配额限制 (USD), 0=无限制
 	ExpiresAt   *string  `json:"expires_at"`   // 过期时间 (ISO 8601)
 	ResetQuota  *bool    `json:"reset_quota"`  // 重置已用配额
+
+	// Team management fields (optional, nil = no change)
+	TeamID       *int64 `json:"team_id"`
+	ConsumerID   *int64 `json:"consumer_id"`
+	DepartmentID *int64 `json:"department_id"`
 
 	// Rate limit fields (nil = no change, 0 = unlimited)
 	RateLimit5h         *float64 `json:"rate_limit_5h"`
@@ -160,6 +170,9 @@ func (h *APIKeyHandler) Create(c *gin.Context) {
 		IPWhitelist:   req.IPWhitelist,
 		IPBlacklist:   req.IPBlacklist,
 		ExpiresInDays: req.ExpiresInDays,
+		TeamID:        req.TeamID,
+		ConsumerID:    req.ConsumerID,
+		DepartmentID:  req.DepartmentID,
 	}
 	if req.Quota != nil {
 		svcReq.Quota = *req.Quota
@@ -213,6 +226,9 @@ func (h *APIKeyHandler) Update(c *gin.Context) {
 		RateLimit1d:         req.RateLimit1d,
 		RateLimit7d:         req.RateLimit7d,
 		ResetRateLimitUsage: req.ResetRateLimitUsage,
+		TeamID:              req.TeamID,
+		ConsumerID:          req.ConsumerID,
+		DepartmentID:        req.DepartmentID,
 	}
 	if req.Name != "" {
 		svcReq.Name = &req.Name

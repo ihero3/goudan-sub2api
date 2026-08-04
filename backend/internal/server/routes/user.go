@@ -139,6 +139,44 @@ func RegisterUserRoutes(
 			monitors.GET("/:id/status", h.ChannelMonitor.GetStatus)
 		}
 
+		// 团队管理
+		teams := authenticated.Group("/teams")
+		{
+			teams.GET("", h.Team.List)
+			teams.POST("", h.Team.Create)
+			teams.GET("/:id", h.Team.Get)
+			teams.PUT("/:id", h.Team.Update)
+			teams.DELETE("/:id", h.Team.Delete)
+
+			// 部门管理（使用 /teams/:id/departments 保持参数名一致）
+			teams.GET("/:id/departments", h.Department.List)
+			teams.POST("/:id/departments", h.Department.Create)
+			teams.GET("/:id/departments/tree", h.Department.GetTree)
+			teams.GET("/:id/departments/:dept_id", h.Department.Get)
+			teams.PUT("/:id/departments/:dept_id", h.Department.Update)
+			teams.DELETE("/:id/departments/:dept_id", h.Department.Delete)
+
+			// 消费者管理
+			teams.GET("/:id/consumers", h.Consumer.List)
+			teams.POST("/:id/consumers", h.Consumer.Create)
+			teams.GET("/:id/consumers/:consumer_id", h.Consumer.Get)
+			teams.PUT("/:id/consumers/:consumer_id", h.Consumer.Update)
+			teams.DELETE("/:id/consumers/:consumer_id", h.Consumer.Delete)
+
+			// 团队成员管理
+			teams.GET("/:id/members", h.Team.ListMembers)
+			teams.POST("/:id/members/invite", h.Team.InviteMember)
+			teams.PUT("/:id/members/:member_id", h.Team.UpdateMember)
+			teams.DELETE("/:id/members/:member_id", h.Team.RemoveMember)
+
+			// 团队分析
+			teams.GET("/:id/analytics/overview", h.TeamAnalytics.Overview)
+			teams.GET("/:id/analytics/departments/ranking", h.TeamAnalytics.DepartmentRanking)
+			teams.GET("/:id/analytics/consumers/ranking", h.TeamAnalytics.ConsumerRanking)
+			teams.GET("/:id/analytics/trend", h.TeamAnalytics.DailyTrend)
+			teams.GET("/:id/analytics/models/distribution", h.TeamAnalytics.ModelDistribution)
+		}
+
 		// AI 治理与合规（用户端：GDPR 数据主体权利 + Account 级合规配置）
 		governance := authenticated.Group("/governance")
 		{

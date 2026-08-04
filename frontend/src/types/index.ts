@@ -635,6 +635,10 @@ export interface ApiKey {
   reset_5h_at: string | null
   reset_1d_at: string | null
   reset_7d_at: string | null
+  // Team management fields
+  team_id?: number | null
+  consumer_id?: number | null
+  department_id?: number | null
 }
 
 export interface CreateApiKeyRequest {
@@ -648,6 +652,8 @@ export interface CreateApiKeyRequest {
   rate_limit_5h?: number
   rate_limit_1d?: number
   rate_limit_7d?: number
+  consumer_id?: number | null // Optional consumer (employee) ID
+  department_id?: number | null // Optional department ID
 }
 
 export interface UpdateApiKeyRequest {
@@ -663,6 +669,8 @@ export interface UpdateApiKeyRequest {
   rate_limit_1d?: number
   rate_limit_7d?: number
   reset_rate_limit_usage?: boolean
+  consumer_id?: number | null // Optional consumer (employee) ID
+  department_id?: number | null // Optional department ID
 }
 
 export interface CreateGroupRequest {

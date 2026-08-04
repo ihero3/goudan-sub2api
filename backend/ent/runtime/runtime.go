@@ -16,6 +16,8 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitordailyrollup"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorrequesttemplate"
+	"github.com/Wei-Shaw/sub2api/ent/consumer"
+	"github.com/Wei-Shaw/sub2api/ent/department"
 	"github.com/Wei-Shaw/sub2api/ent/errorpassthroughrule"
 	"github.com/Wei-Shaw/sub2api/ent/group"
 	"github.com/Wei-Shaw/sub2api/ent/idempotencyrecord"
@@ -32,6 +34,13 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/securitysecret"
 	"github.com/Wei-Shaw/sub2api/ent/setting"
 	"github.com/Wei-Shaw/sub2api/ent/subscriptionplan"
+	"github.com/Wei-Shaw/sub2api/ent/team"
+	"github.com/Wei-Shaw/sub2api/ent/teamauditlog"
+	"github.com/Wei-Shaw/sub2api/ent/teammember"
+	"github.com/Wei-Shaw/sub2api/ent/teamusageconsumerdaily"
+	"github.com/Wei-Shaw/sub2api/ent/teamusagedeptdaily"
+	"github.com/Wei-Shaw/sub2api/ent/teamusagemodeldaily"
+	"github.com/Wei-Shaw/sub2api/ent/teamusageteamdaily"
 	"github.com/Wei-Shaw/sub2api/ent/ticket"
 	"github.com/Wei-Shaw/sub2api/ent/ticketmessage"
 	"github.com/Wei-Shaw/sub2api/ent/tlsfingerprintprofile"
@@ -698,6 +707,160 @@ func init() {
 	channelmonitorrequesttemplate.DefaultBodyOverrideMode = channelmonitorrequesttemplateDescBodyOverrideMode.Default.(string)
 	// channelmonitorrequesttemplate.BodyOverrideModeValidator is a validator for the "body_override_mode" field. It is called by the builders before save.
 	channelmonitorrequesttemplate.BodyOverrideModeValidator = channelmonitorrequesttemplateDescBodyOverrideMode.Validators[0].(func(string) error)
+	consumerMixin := schema.Consumer{}.Mixin()
+	consumerMixinHooks1 := consumerMixin[1].Hooks()
+	consumer.Hooks[0] = consumerMixinHooks1[0]
+	consumerMixinInters1 := consumerMixin[1].Interceptors()
+	consumer.Interceptors[0] = consumerMixinInters1[0]
+	consumerMixinFields0 := consumerMixin[0].Fields()
+	_ = consumerMixinFields0
+	consumerFields := schema.Consumer{}.Fields()
+	_ = consumerFields
+	// consumerDescCreatedAt is the schema descriptor for created_at field.
+	consumerDescCreatedAt := consumerMixinFields0[0].Descriptor()
+	// consumer.DefaultCreatedAt holds the default value on creation for the created_at field.
+	consumer.DefaultCreatedAt = consumerDescCreatedAt.Default.(func() time.Time)
+	// consumerDescUpdatedAt is the schema descriptor for updated_at field.
+	consumerDescUpdatedAt := consumerMixinFields0[1].Descriptor()
+	// consumer.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	consumer.DefaultUpdatedAt = consumerDescUpdatedAt.Default.(func() time.Time)
+	// consumer.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	consumer.UpdateDefaultUpdatedAt = consumerDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// consumerDescType is the schema descriptor for type field.
+	consumerDescType := consumerFields[2].Descriptor()
+	// consumer.DefaultType holds the default value on creation for the type field.
+	consumer.DefaultType = consumerDescType.Default.(string)
+	// consumer.TypeValidator is a validator for the "type" field. It is called by the builders before save.
+	consumer.TypeValidator = consumerDescType.Validators[0].(func(string) error)
+	// consumerDescName is the schema descriptor for name field.
+	consumerDescName := consumerFields[3].Descriptor()
+	// consumer.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	consumer.NameValidator = func() func(string) error {
+		validators := consumerDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// consumerDescEmail is the schema descriptor for email field.
+	consumerDescEmail := consumerFields[4].Descriptor()
+	// consumer.EmailValidator is a validator for the "email" field. It is called by the builders before save.
+	consumer.EmailValidator = consumerDescEmail.Validators[0].(func(string) error)
+	// consumerDescPhone is the schema descriptor for phone field.
+	consumerDescPhone := consumerFields[5].Descriptor()
+	// consumer.PhoneValidator is a validator for the "phone" field. It is called by the builders before save.
+	consumer.PhoneValidator = consumerDescPhone.Validators[0].(func(string) error)
+	// consumerDescTitle is the schema descriptor for title field.
+	consumerDescTitle := consumerFields[6].Descriptor()
+	// consumer.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	consumer.TitleValidator = consumerDescTitle.Validators[0].(func(string) error)
+	// consumerDescAppID is the schema descriptor for app_id field.
+	consumerDescAppID := consumerFields[7].Descriptor()
+	// consumer.AppIDValidator is a validator for the "app_id" field. It is called by the builders before save.
+	consumer.AppIDValidator = consumerDescAppID.Validators[0].(func(string) error)
+	// consumerDescExternalID is the schema descriptor for external_id field.
+	consumerDescExternalID := consumerFields[9].Descriptor()
+	// consumer.ExternalIDValidator is a validator for the "external_id" field. It is called by the builders before save.
+	consumer.ExternalIDValidator = consumerDescExternalID.Validators[0].(func(string) error)
+	// consumerDescSource is the schema descriptor for source field.
+	consumerDescSource := consumerFields[10].Descriptor()
+	// consumer.DefaultSource holds the default value on creation for the source field.
+	consumer.DefaultSource = consumerDescSource.Default.(string)
+	// consumer.SourceValidator is a validator for the "source" field. It is called by the builders before save.
+	consumer.SourceValidator = consumerDescSource.Validators[0].(func(string) error)
+	// consumerDescStatus is the schema descriptor for status field.
+	consumerDescStatus := consumerFields[12].Descriptor()
+	// consumer.DefaultStatus holds the default value on creation for the status field.
+	consumer.DefaultStatus = consumerDescStatus.Default.(string)
+	// consumer.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	consumer.StatusValidator = consumerDescStatus.Validators[0].(func(string) error)
+	// consumerDescSettings is the schema descriptor for settings field.
+	consumerDescSettings := consumerFields[13].Descriptor()
+	// consumer.DefaultSettings holds the default value on creation for the settings field.
+	consumer.DefaultSettings = consumerDescSettings.Default.(map[string]interface{})
+	departmentMixin := schema.Department{}.Mixin()
+	departmentMixinHooks1 := departmentMixin[1].Hooks()
+	department.Hooks[0] = departmentMixinHooks1[0]
+	departmentMixinInters1 := departmentMixin[1].Interceptors()
+	department.Interceptors[0] = departmentMixinInters1[0]
+	departmentMixinFields0 := departmentMixin[0].Fields()
+	_ = departmentMixinFields0
+	departmentFields := schema.Department{}.Fields()
+	_ = departmentFields
+	// departmentDescCreatedAt is the schema descriptor for created_at field.
+	departmentDescCreatedAt := departmentMixinFields0[0].Descriptor()
+	// department.DefaultCreatedAt holds the default value on creation for the created_at field.
+	department.DefaultCreatedAt = departmentDescCreatedAt.Default.(func() time.Time)
+	// departmentDescUpdatedAt is the schema descriptor for updated_at field.
+	departmentDescUpdatedAt := departmentMixinFields0[1].Descriptor()
+	// department.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	department.DefaultUpdatedAt = departmentDescUpdatedAt.Default.(func() time.Time)
+	// department.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	department.UpdateDefaultUpdatedAt = departmentDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// departmentDescName is the schema descriptor for name field.
+	departmentDescName := departmentFields[1].Descriptor()
+	// department.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	department.NameValidator = func() func(string) error {
+		validators := departmentDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// departmentDescDescription is the schema descriptor for description field.
+	departmentDescDescription := departmentFields[2].Descriptor()
+	// department.DefaultDescription holds the default value on creation for the description field.
+	department.DefaultDescription = departmentDescDescription.Default.(string)
+	// departmentDescCostCenterCode is the schema descriptor for cost_center_code field.
+	departmentDescCostCenterCode := departmentFields[3].Descriptor()
+	// department.CostCenterCodeValidator is a validator for the "cost_center_code" field. It is called by the builders before save.
+	department.CostCenterCodeValidator = departmentDescCostCenterCode.Validators[0].(func(string) error)
+	// departmentDescLevel is the schema descriptor for level field.
+	departmentDescLevel := departmentFields[5].Descriptor()
+	// department.DefaultLevel holds the default value on creation for the level field.
+	department.DefaultLevel = departmentDescLevel.Default.(int)
+	// departmentDescPath is the schema descriptor for path field.
+	departmentDescPath := departmentFields[6].Descriptor()
+	// department.DefaultPath holds the default value on creation for the path field.
+	department.DefaultPath = departmentDescPath.Default.(string)
+	// department.PathValidator is a validator for the "path" field. It is called by the builders before save.
+	department.PathValidator = departmentDescPath.Validators[0].(func(string) error)
+	// departmentDescExternalID is the schema descriptor for external_id field.
+	departmentDescExternalID := departmentFields[7].Descriptor()
+	// department.ExternalIDValidator is a validator for the "external_id" field. It is called by the builders before save.
+	department.ExternalIDValidator = departmentDescExternalID.Validators[0].(func(string) error)
+	// departmentDescSource is the schema descriptor for source field.
+	departmentDescSource := departmentFields[8].Descriptor()
+	// department.DefaultSource holds the default value on creation for the source field.
+	department.DefaultSource = departmentDescSource.Default.(string)
+	// department.SourceValidator is a validator for the "source" field. It is called by the builders before save.
+	department.SourceValidator = departmentDescSource.Validators[0].(func(string) error)
+	// departmentDescSortOrder is the schema descriptor for sort_order field.
+	departmentDescSortOrder := departmentFields[9].Descriptor()
+	// department.DefaultSortOrder holds the default value on creation for the sort_order field.
+	department.DefaultSortOrder = departmentDescSortOrder.Default.(int)
+	// departmentDescStatus is the schema descriptor for status field.
+	departmentDescStatus := departmentFields[10].Descriptor()
+	// department.DefaultStatus holds the default value on creation for the status field.
+	department.DefaultStatus = departmentDescStatus.Default.(string)
+	// department.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	department.StatusValidator = departmentDescStatus.Validators[0].(func(string) error)
 	errorpassthroughruleMixin := schema.ErrorPassthroughRule{}.Mixin()
 	errorpassthroughruleMixinFields0 := errorpassthroughruleMixin[0].Fields()
 	_ = errorpassthroughruleMixinFields0
@@ -1586,6 +1749,400 @@ func init() {
 	tlsfingerprintprofileDescEnableGrease := tlsfingerprintprofileFields[2].Descriptor()
 	// tlsfingerprintprofile.DefaultEnableGrease holds the default value on creation for the enable_grease field.
 	tlsfingerprintprofile.DefaultEnableGrease = tlsfingerprintprofileDescEnableGrease.Default.(bool)
+	teamMixin := schema.Team{}.Mixin()
+	teamMixinHooks1 := teamMixin[1].Hooks()
+	team.Hooks[0] = teamMixinHooks1[0]
+	teamMixinInters1 := teamMixin[1].Interceptors()
+	team.Interceptors[0] = teamMixinInters1[0]
+	teamMixinFields0 := teamMixin[0].Fields()
+	_ = teamMixinFields0
+	teamFields := schema.Team{}.Fields()
+	_ = teamFields
+	// teamDescCreatedAt is the schema descriptor for created_at field.
+	teamDescCreatedAt := teamMixinFields0[0].Descriptor()
+	// team.DefaultCreatedAt holds the default value on creation for the created_at field.
+	team.DefaultCreatedAt = teamDescCreatedAt.Default.(func() time.Time)
+	// teamDescUpdatedAt is the schema descriptor for updated_at field.
+	teamDescUpdatedAt := teamMixinFields0[1].Descriptor()
+	// team.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	team.DefaultUpdatedAt = teamDescUpdatedAt.Default.(func() time.Time)
+	// team.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	team.UpdateDefaultUpdatedAt = teamDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// teamDescName is the schema descriptor for name field.
+	teamDescName := teamFields[0].Descriptor()
+	// team.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	team.NameValidator = func() func(string) error {
+		validators := teamDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// teamDescSlug is the schema descriptor for slug field.
+	teamDescSlug := teamFields[1].Descriptor()
+	// team.SlugValidator is a validator for the "slug" field. It is called by the builders before save.
+	team.SlugValidator = func() func(string) error {
+		validators := teamDescSlug.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(slug string) error {
+			for _, fn := range fns {
+				if err := fn(slug); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// teamDescDescription is the schema descriptor for description field.
+	teamDescDescription := teamFields[2].Descriptor()
+	// team.DefaultDescription holds the default value on creation for the description field.
+	team.DefaultDescription = teamDescDescription.Default.(string)
+	// team.DescriptionValidator is a validator for the "description" field. It is called by the builders before save.
+	team.DescriptionValidator = teamDescDescription.Validators[0].(func(string) error)
+	// teamDescTimezone is the schema descriptor for timezone field.
+	teamDescTimezone := teamFields[3].Descriptor()
+	// team.DefaultTimezone holds the default value on creation for the timezone field.
+	team.DefaultTimezone = teamDescTimezone.Default.(string)
+	// team.TimezoneValidator is a validator for the "timezone" field. It is called by the builders before save.
+	team.TimezoneValidator = teamDescTimezone.Validators[0].(func(string) error)
+	// teamDescLanguage is the schema descriptor for language field.
+	teamDescLanguage := teamFields[4].Descriptor()
+	// team.DefaultLanguage holds the default value on creation for the language field.
+	team.DefaultLanguage = teamDescLanguage.Default.(string)
+	// team.LanguageValidator is a validator for the "language" field. It is called by the builders before save.
+	team.LanguageValidator = teamDescLanguage.Validators[0].(func(string) error)
+	// teamDescBillingEmail is the schema descriptor for billing_email field.
+	teamDescBillingEmail := teamFields[6].Descriptor()
+	// team.BillingEmailValidator is a validator for the "billing_email" field. It is called by the builders before save.
+	team.BillingEmailValidator = teamDescBillingEmail.Validators[0].(func(string) error)
+	// teamDescSettings is the schema descriptor for settings field.
+	teamDescSettings := teamFields[7].Descriptor()
+	// team.DefaultSettings holds the default value on creation for the settings field.
+	team.DefaultSettings = teamDescSettings.Default.(map[string]interface{})
+	// teamDescStatus is the schema descriptor for status field.
+	teamDescStatus := teamFields[8].Descriptor()
+	// team.DefaultStatus holds the default value on creation for the status field.
+	team.DefaultStatus = teamDescStatus.Default.(string)
+	// team.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	team.StatusValidator = teamDescStatus.Validators[0].(func(string) error)
+	teamauditlogFields := schema.TeamAuditLog{}.Fields()
+	_ = teamauditlogFields
+	// teamauditlogDescAction is the schema descriptor for action field.
+	teamauditlogDescAction := teamauditlogFields[2].Descriptor()
+	// teamauditlog.ActionValidator is a validator for the "action" field. It is called by the builders before save.
+	teamauditlog.ActionValidator = func() func(string) error {
+		validators := teamauditlogDescAction.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(action string) error {
+			for _, fn := range fns {
+				if err := fn(action); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// teamauditlogDescOperationType is the schema descriptor for operation_type field.
+	teamauditlogDescOperationType := teamauditlogFields[3].Descriptor()
+	// teamauditlog.OperationTypeValidator is a validator for the "operation_type" field. It is called by the builders before save.
+	teamauditlog.OperationTypeValidator = teamauditlogDescOperationType.Validators[0].(func(string) error)
+	// teamauditlogDescResourceType is the schema descriptor for resource_type field.
+	teamauditlogDescResourceType := teamauditlogFields[4].Descriptor()
+	// teamauditlog.ResourceTypeValidator is a validator for the "resource_type" field. It is called by the builders before save.
+	teamauditlog.ResourceTypeValidator = func() func(string) error {
+		validators := teamauditlogDescResourceType.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(resource_type string) error {
+			for _, fn := range fns {
+				if err := fn(resource_type); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// teamauditlogDescIP is the schema descriptor for ip field.
+	teamauditlogDescIP := teamauditlogFields[7].Descriptor()
+	// teamauditlog.IPValidator is a validator for the "ip" field. It is called by the builders before save.
+	teamauditlog.IPValidator = teamauditlogDescIP.Validators[0].(func(string) error)
+	// teamauditlogDescCreatedAt is the schema descriptor for created_at field.
+	teamauditlogDescCreatedAt := teamauditlogFields[9].Descriptor()
+	// teamauditlog.DefaultCreatedAt holds the default value on creation for the created_at field.
+	teamauditlog.DefaultCreatedAt = teamauditlogDescCreatedAt.Default.(func() time.Time)
+	teammemberMixin := schema.TeamMember{}.Mixin()
+	teammemberMixinFields0 := teammemberMixin[0].Fields()
+	_ = teammemberMixinFields0
+	teammemberFields := schema.TeamMember{}.Fields()
+	_ = teammemberFields
+	// teammemberDescCreatedAt is the schema descriptor for created_at field.
+	teammemberDescCreatedAt := teammemberMixinFields0[0].Descriptor()
+	// teammember.DefaultCreatedAt holds the default value on creation for the created_at field.
+	teammember.DefaultCreatedAt = teammemberDescCreatedAt.Default.(func() time.Time)
+	// teammemberDescUpdatedAt is the schema descriptor for updated_at field.
+	teammemberDescUpdatedAt := teammemberMixinFields0[1].Descriptor()
+	// teammember.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	teammember.DefaultUpdatedAt = teammemberDescUpdatedAt.Default.(func() time.Time)
+	// teammember.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	teammember.UpdateDefaultUpdatedAt = teammemberDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// teammemberDescRole is the schema descriptor for role field.
+	teammemberDescRole := teammemberFields[2].Descriptor()
+	// teammember.DefaultRole holds the default value on creation for the role field.
+	teammember.DefaultRole = teammemberDescRole.Default.(string)
+	// teammember.RoleValidator is a validator for the "role" field. It is called by the builders before save.
+	teammember.RoleValidator = teammemberDescRole.Validators[0].(func(string) error)
+	// teammemberDescStatus is the schema descriptor for status field.
+	teammemberDescStatus := teammemberFields[3].Descriptor()
+	// teammember.DefaultStatus holds the default value on creation for the status field.
+	teammember.DefaultStatus = teammemberDescStatus.Default.(string)
+	// teammember.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	teammember.StatusValidator = teammemberDescStatus.Validators[0].(func(string) error)
+	// teammemberDescDisplayName is the schema descriptor for display_name field.
+	teammemberDescDisplayName := teammemberFields[4].Descriptor()
+	// teammember.DisplayNameValidator is a validator for the "display_name" field. It is called by the builders before save.
+	teammember.DisplayNameValidator = teammemberDescDisplayName.Validators[0].(func(string) error)
+	// teammemberDescJoinedAt is the schema descriptor for joined_at field.
+	teammemberDescJoinedAt := teammemberFields[7].Descriptor()
+	// teammember.DefaultJoinedAt holds the default value on creation for the joined_at field.
+	teammember.DefaultJoinedAt = teammemberDescJoinedAt.Default.(func() time.Time)
+	teamusageconsumerdailyMixin := schema.TeamUsageConsumerDaily{}.Mixin()
+	teamusageconsumerdailyMixinFields0 := teamusageconsumerdailyMixin[0].Fields()
+	_ = teamusageconsumerdailyMixinFields0
+	teamusageconsumerdailyFields := schema.TeamUsageConsumerDaily{}.Fields()
+	_ = teamusageconsumerdailyFields
+	// teamusageconsumerdailyDescCreatedAt is the schema descriptor for created_at field.
+	teamusageconsumerdailyDescCreatedAt := teamusageconsumerdailyMixinFields0[0].Descriptor()
+	// teamusageconsumerdaily.DefaultCreatedAt holds the default value on creation for the created_at field.
+	teamusageconsumerdaily.DefaultCreatedAt = teamusageconsumerdailyDescCreatedAt.Default.(func() time.Time)
+	// teamusageconsumerdailyDescUpdatedAt is the schema descriptor for updated_at field.
+	teamusageconsumerdailyDescUpdatedAt := teamusageconsumerdailyMixinFields0[1].Descriptor()
+	// teamusageconsumerdaily.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	teamusageconsumerdaily.DefaultUpdatedAt = teamusageconsumerdailyDescUpdatedAt.Default.(func() time.Time)
+	// teamusageconsumerdaily.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	teamusageconsumerdaily.UpdateDefaultUpdatedAt = teamusageconsumerdailyDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// teamusageconsumerdailyDescConsumerName is the schema descriptor for consumer_name field.
+	teamusageconsumerdailyDescConsumerName := teamusageconsumerdailyFields[2].Descriptor()
+	// teamusageconsumerdaily.ConsumerNameValidator is a validator for the "consumer_name" field. It is called by the builders before save.
+	teamusageconsumerdaily.ConsumerNameValidator = teamusageconsumerdailyDescConsumerName.Validators[0].(func(string) error)
+	// teamusageconsumerdailyDescConsumerType is the schema descriptor for consumer_type field.
+	teamusageconsumerdailyDescConsumerType := teamusageconsumerdailyFields[3].Descriptor()
+	// teamusageconsumerdaily.ConsumerTypeValidator is a validator for the "consumer_type" field. It is called by the builders before save.
+	teamusageconsumerdaily.ConsumerTypeValidator = teamusageconsumerdailyDescConsumerType.Validators[0].(func(string) error)
+	// teamusageconsumerdailyDescTotalRequests is the schema descriptor for total_requests field.
+	teamusageconsumerdailyDescTotalRequests := teamusageconsumerdailyFields[5].Descriptor()
+	// teamusageconsumerdaily.DefaultTotalRequests holds the default value on creation for the total_requests field.
+	teamusageconsumerdaily.DefaultTotalRequests = teamusageconsumerdailyDescTotalRequests.Default.(int64)
+	// teamusageconsumerdailyDescInputTokens is the schema descriptor for input_tokens field.
+	teamusageconsumerdailyDescInputTokens := teamusageconsumerdailyFields[6].Descriptor()
+	// teamusageconsumerdaily.DefaultInputTokens holds the default value on creation for the input_tokens field.
+	teamusageconsumerdaily.DefaultInputTokens = teamusageconsumerdailyDescInputTokens.Default.(int64)
+	// teamusageconsumerdailyDescOutputTokens is the schema descriptor for output_tokens field.
+	teamusageconsumerdailyDescOutputTokens := teamusageconsumerdailyFields[7].Descriptor()
+	// teamusageconsumerdaily.DefaultOutputTokens holds the default value on creation for the output_tokens field.
+	teamusageconsumerdaily.DefaultOutputTokens = teamusageconsumerdailyDescOutputTokens.Default.(int64)
+	// teamusageconsumerdailyDescCacheCreationTokens is the schema descriptor for cache_creation_tokens field.
+	teamusageconsumerdailyDescCacheCreationTokens := teamusageconsumerdailyFields[8].Descriptor()
+	// teamusageconsumerdaily.DefaultCacheCreationTokens holds the default value on creation for the cache_creation_tokens field.
+	teamusageconsumerdaily.DefaultCacheCreationTokens = teamusageconsumerdailyDescCacheCreationTokens.Default.(int64)
+	// teamusageconsumerdailyDescCacheReadTokens is the schema descriptor for cache_read_tokens field.
+	teamusageconsumerdailyDescCacheReadTokens := teamusageconsumerdailyFields[9].Descriptor()
+	// teamusageconsumerdaily.DefaultCacheReadTokens holds the default value on creation for the cache_read_tokens field.
+	teamusageconsumerdaily.DefaultCacheReadTokens = teamusageconsumerdailyDescCacheReadTokens.Default.(int64)
+	// teamusageconsumerdailyDescTotalCost is the schema descriptor for total_cost field.
+	teamusageconsumerdailyDescTotalCost := teamusageconsumerdailyFields[10].Descriptor()
+	// teamusageconsumerdaily.DefaultTotalCost holds the default value on creation for the total_cost field.
+	teamusageconsumerdaily.DefaultTotalCost = teamusageconsumerdailyDescTotalCost.Default.(float64)
+	// teamusageconsumerdailyDescActualCost is the schema descriptor for actual_cost field.
+	teamusageconsumerdailyDescActualCost := teamusageconsumerdailyFields[11].Descriptor()
+	// teamusageconsumerdaily.DefaultActualCost holds the default value on creation for the actual_cost field.
+	teamusageconsumerdaily.DefaultActualCost = teamusageconsumerdailyDescActualCost.Default.(float64)
+	// teamusageconsumerdailyDescComputedAt is the schema descriptor for computed_at field.
+	teamusageconsumerdailyDescComputedAt := teamusageconsumerdailyFields[12].Descriptor()
+	// teamusageconsumerdaily.DefaultComputedAt holds the default value on creation for the computed_at field.
+	teamusageconsumerdaily.DefaultComputedAt = teamusageconsumerdailyDescComputedAt.Default.(func() time.Time)
+	teamusagedeptdailyMixin := schema.TeamUsageDeptDaily{}.Mixin()
+	teamusagedeptdailyMixinFields0 := teamusagedeptdailyMixin[0].Fields()
+	_ = teamusagedeptdailyMixinFields0
+	teamusagedeptdailyFields := schema.TeamUsageDeptDaily{}.Fields()
+	_ = teamusagedeptdailyFields
+	// teamusagedeptdailyDescCreatedAt is the schema descriptor for created_at field.
+	teamusagedeptdailyDescCreatedAt := teamusagedeptdailyMixinFields0[0].Descriptor()
+	// teamusagedeptdaily.DefaultCreatedAt holds the default value on creation for the created_at field.
+	teamusagedeptdaily.DefaultCreatedAt = teamusagedeptdailyDescCreatedAt.Default.(func() time.Time)
+	// teamusagedeptdailyDescUpdatedAt is the schema descriptor for updated_at field.
+	teamusagedeptdailyDescUpdatedAt := teamusagedeptdailyMixinFields0[1].Descriptor()
+	// teamusagedeptdaily.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	teamusagedeptdaily.DefaultUpdatedAt = teamusagedeptdailyDescUpdatedAt.Default.(func() time.Time)
+	// teamusagedeptdaily.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	teamusagedeptdaily.UpdateDefaultUpdatedAt = teamusagedeptdailyDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// teamusagedeptdailyDescDepartmentName is the schema descriptor for department_name field.
+	teamusagedeptdailyDescDepartmentName := teamusagedeptdailyFields[2].Descriptor()
+	// teamusagedeptdaily.DepartmentNameValidator is a validator for the "department_name" field. It is called by the builders before save.
+	teamusagedeptdaily.DepartmentNameValidator = teamusagedeptdailyDescDepartmentName.Validators[0].(func(string) error)
+	// teamusagedeptdailyDescCostCenterCode is the schema descriptor for cost_center_code field.
+	teamusagedeptdailyDescCostCenterCode := teamusagedeptdailyFields[3].Descriptor()
+	// teamusagedeptdaily.CostCenterCodeValidator is a validator for the "cost_center_code" field. It is called by the builders before save.
+	teamusagedeptdaily.CostCenterCodeValidator = teamusagedeptdailyDescCostCenterCode.Validators[0].(func(string) error)
+	// teamusagedeptdailyDescTotalRequests is the schema descriptor for total_requests field.
+	teamusagedeptdailyDescTotalRequests := teamusagedeptdailyFields[5].Descriptor()
+	// teamusagedeptdaily.DefaultTotalRequests holds the default value on creation for the total_requests field.
+	teamusagedeptdaily.DefaultTotalRequests = teamusagedeptdailyDescTotalRequests.Default.(int64)
+	// teamusagedeptdailyDescInputTokens is the schema descriptor for input_tokens field.
+	teamusagedeptdailyDescInputTokens := teamusagedeptdailyFields[6].Descriptor()
+	// teamusagedeptdaily.DefaultInputTokens holds the default value on creation for the input_tokens field.
+	teamusagedeptdaily.DefaultInputTokens = teamusagedeptdailyDescInputTokens.Default.(int64)
+	// teamusagedeptdailyDescOutputTokens is the schema descriptor for output_tokens field.
+	teamusagedeptdailyDescOutputTokens := teamusagedeptdailyFields[7].Descriptor()
+	// teamusagedeptdaily.DefaultOutputTokens holds the default value on creation for the output_tokens field.
+	teamusagedeptdaily.DefaultOutputTokens = teamusagedeptdailyDescOutputTokens.Default.(int64)
+	// teamusagedeptdailyDescCacheCreationTokens is the schema descriptor for cache_creation_tokens field.
+	teamusagedeptdailyDescCacheCreationTokens := teamusagedeptdailyFields[8].Descriptor()
+	// teamusagedeptdaily.DefaultCacheCreationTokens holds the default value on creation for the cache_creation_tokens field.
+	teamusagedeptdaily.DefaultCacheCreationTokens = teamusagedeptdailyDescCacheCreationTokens.Default.(int64)
+	// teamusagedeptdailyDescCacheReadTokens is the schema descriptor for cache_read_tokens field.
+	teamusagedeptdailyDescCacheReadTokens := teamusagedeptdailyFields[9].Descriptor()
+	// teamusagedeptdaily.DefaultCacheReadTokens holds the default value on creation for the cache_read_tokens field.
+	teamusagedeptdaily.DefaultCacheReadTokens = teamusagedeptdailyDescCacheReadTokens.Default.(int64)
+	// teamusagedeptdailyDescTotalCost is the schema descriptor for total_cost field.
+	teamusagedeptdailyDescTotalCost := teamusagedeptdailyFields[10].Descriptor()
+	// teamusagedeptdaily.DefaultTotalCost holds the default value on creation for the total_cost field.
+	teamusagedeptdaily.DefaultTotalCost = teamusagedeptdailyDescTotalCost.Default.(float64)
+	// teamusagedeptdailyDescActualCost is the schema descriptor for actual_cost field.
+	teamusagedeptdailyDescActualCost := teamusagedeptdailyFields[11].Descriptor()
+	// teamusagedeptdaily.DefaultActualCost holds the default value on creation for the actual_cost field.
+	teamusagedeptdaily.DefaultActualCost = teamusagedeptdailyDescActualCost.Default.(float64)
+	// teamusagedeptdailyDescComputedAt is the schema descriptor for computed_at field.
+	teamusagedeptdailyDescComputedAt := teamusagedeptdailyFields[12].Descriptor()
+	// teamusagedeptdaily.DefaultComputedAt holds the default value on creation for the computed_at field.
+	teamusagedeptdaily.DefaultComputedAt = teamusagedeptdailyDescComputedAt.Default.(func() time.Time)
+	teamusagemodeldailyMixin := schema.TeamUsageModelDaily{}.Mixin()
+	teamusagemodeldailyMixinFields0 := teamusagemodeldailyMixin[0].Fields()
+	_ = teamusagemodeldailyMixinFields0
+	teamusagemodeldailyFields := schema.TeamUsageModelDaily{}.Fields()
+	_ = teamusagemodeldailyFields
+	// teamusagemodeldailyDescCreatedAt is the schema descriptor for created_at field.
+	teamusagemodeldailyDescCreatedAt := teamusagemodeldailyMixinFields0[0].Descriptor()
+	// teamusagemodeldaily.DefaultCreatedAt holds the default value on creation for the created_at field.
+	teamusagemodeldaily.DefaultCreatedAt = teamusagemodeldailyDescCreatedAt.Default.(func() time.Time)
+	// teamusagemodeldailyDescUpdatedAt is the schema descriptor for updated_at field.
+	teamusagemodeldailyDescUpdatedAt := teamusagemodeldailyMixinFields0[1].Descriptor()
+	// teamusagemodeldaily.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	teamusagemodeldaily.DefaultUpdatedAt = teamusagemodeldailyDescUpdatedAt.Default.(func() time.Time)
+	// teamusagemodeldaily.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	teamusagemodeldaily.UpdateDefaultUpdatedAt = teamusagemodeldailyDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// teamusagemodeldailyDescModelName is the schema descriptor for model_name field.
+	teamusagemodeldailyDescModelName := teamusagemodeldailyFields[4].Descriptor()
+	// teamusagemodeldaily.ModelNameValidator is a validator for the "model_name" field. It is called by the builders before save.
+	teamusagemodeldaily.ModelNameValidator = func() func(string) error {
+		validators := teamusagemodeldailyDescModelName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(model_name string) error {
+			for _, fn := range fns {
+				if err := fn(model_name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// teamusagemodeldailyDescTotalRequests is the schema descriptor for total_requests field.
+	teamusagemodeldailyDescTotalRequests := teamusagemodeldailyFields[5].Descriptor()
+	// teamusagemodeldaily.DefaultTotalRequests holds the default value on creation for the total_requests field.
+	teamusagemodeldaily.DefaultTotalRequests = teamusagemodeldailyDescTotalRequests.Default.(int64)
+	// teamusagemodeldailyDescInputTokens is the schema descriptor for input_tokens field.
+	teamusagemodeldailyDescInputTokens := teamusagemodeldailyFields[6].Descriptor()
+	// teamusagemodeldaily.DefaultInputTokens holds the default value on creation for the input_tokens field.
+	teamusagemodeldaily.DefaultInputTokens = teamusagemodeldailyDescInputTokens.Default.(int64)
+	// teamusagemodeldailyDescOutputTokens is the schema descriptor for output_tokens field.
+	teamusagemodeldailyDescOutputTokens := teamusagemodeldailyFields[7].Descriptor()
+	// teamusagemodeldaily.DefaultOutputTokens holds the default value on creation for the output_tokens field.
+	teamusagemodeldaily.DefaultOutputTokens = teamusagemodeldailyDescOutputTokens.Default.(int64)
+	// teamusagemodeldailyDescCacheCreationTokens is the schema descriptor for cache_creation_tokens field.
+	teamusagemodeldailyDescCacheCreationTokens := teamusagemodeldailyFields[8].Descriptor()
+	// teamusagemodeldaily.DefaultCacheCreationTokens holds the default value on creation for the cache_creation_tokens field.
+	teamusagemodeldaily.DefaultCacheCreationTokens = teamusagemodeldailyDescCacheCreationTokens.Default.(int64)
+	// teamusagemodeldailyDescCacheReadTokens is the schema descriptor for cache_read_tokens field.
+	teamusagemodeldailyDescCacheReadTokens := teamusagemodeldailyFields[9].Descriptor()
+	// teamusagemodeldaily.DefaultCacheReadTokens holds the default value on creation for the cache_read_tokens field.
+	teamusagemodeldaily.DefaultCacheReadTokens = teamusagemodeldailyDescCacheReadTokens.Default.(int64)
+	// teamusagemodeldailyDescTotalCost is the schema descriptor for total_cost field.
+	teamusagemodeldailyDescTotalCost := teamusagemodeldailyFields[10].Descriptor()
+	// teamusagemodeldaily.DefaultTotalCost holds the default value on creation for the total_cost field.
+	teamusagemodeldaily.DefaultTotalCost = teamusagemodeldailyDescTotalCost.Default.(float64)
+	// teamusagemodeldailyDescActualCost is the schema descriptor for actual_cost field.
+	teamusagemodeldailyDescActualCost := teamusagemodeldailyFields[11].Descriptor()
+	// teamusagemodeldaily.DefaultActualCost holds the default value on creation for the actual_cost field.
+	teamusagemodeldaily.DefaultActualCost = teamusagemodeldailyDescActualCost.Default.(float64)
+	// teamusagemodeldailyDescComputedAt is the schema descriptor for computed_at field.
+	teamusagemodeldailyDescComputedAt := teamusagemodeldailyFields[12].Descriptor()
+	// teamusagemodeldaily.DefaultComputedAt holds the default value on creation for the computed_at field.
+	teamusagemodeldaily.DefaultComputedAt = teamusagemodeldailyDescComputedAt.Default.(func() time.Time)
+	teamusageteamdailyMixin := schema.TeamUsageTeamDaily{}.Mixin()
+	teamusageteamdailyMixinFields0 := teamusageteamdailyMixin[0].Fields()
+	_ = teamusageteamdailyMixinFields0
+	teamusageteamdailyFields := schema.TeamUsageTeamDaily{}.Fields()
+	_ = teamusageteamdailyFields
+	// teamusageteamdailyDescCreatedAt is the schema descriptor for created_at field.
+	teamusageteamdailyDescCreatedAt := teamusageteamdailyMixinFields0[0].Descriptor()
+	// teamusageteamdaily.DefaultCreatedAt holds the default value on creation for the created_at field.
+	teamusageteamdaily.DefaultCreatedAt = teamusageteamdailyDescCreatedAt.Default.(func() time.Time)
+	// teamusageteamdailyDescUpdatedAt is the schema descriptor for updated_at field.
+	teamusageteamdailyDescUpdatedAt := teamusageteamdailyMixinFields0[1].Descriptor()
+	// teamusageteamdaily.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	teamusageteamdaily.DefaultUpdatedAt = teamusageteamdailyDescUpdatedAt.Default.(func() time.Time)
+	// teamusageteamdaily.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	teamusageteamdaily.UpdateDefaultUpdatedAt = teamusageteamdailyDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// teamusageteamdailyDescTotalRequests is the schema descriptor for total_requests field.
+	teamusageteamdailyDescTotalRequests := teamusageteamdailyFields[2].Descriptor()
+	// teamusageteamdaily.DefaultTotalRequests holds the default value on creation for the total_requests field.
+	teamusageteamdaily.DefaultTotalRequests = teamusageteamdailyDescTotalRequests.Default.(int64)
+	// teamusageteamdailyDescInputTokens is the schema descriptor for input_tokens field.
+	teamusageteamdailyDescInputTokens := teamusageteamdailyFields[3].Descriptor()
+	// teamusageteamdaily.DefaultInputTokens holds the default value on creation for the input_tokens field.
+	teamusageteamdaily.DefaultInputTokens = teamusageteamdailyDescInputTokens.Default.(int64)
+	// teamusageteamdailyDescOutputTokens is the schema descriptor for output_tokens field.
+	teamusageteamdailyDescOutputTokens := teamusageteamdailyFields[4].Descriptor()
+	// teamusageteamdaily.DefaultOutputTokens holds the default value on creation for the output_tokens field.
+	teamusageteamdaily.DefaultOutputTokens = teamusageteamdailyDescOutputTokens.Default.(int64)
+	// teamusageteamdailyDescCacheCreationTokens is the schema descriptor for cache_creation_tokens field.
+	teamusageteamdailyDescCacheCreationTokens := teamusageteamdailyFields[5].Descriptor()
+	// teamusageteamdaily.DefaultCacheCreationTokens holds the default value on creation for the cache_creation_tokens field.
+	teamusageteamdaily.DefaultCacheCreationTokens = teamusageteamdailyDescCacheCreationTokens.Default.(int64)
+	// teamusageteamdailyDescCacheReadTokens is the schema descriptor for cache_read_tokens field.
+	teamusageteamdailyDescCacheReadTokens := teamusageteamdailyFields[6].Descriptor()
+	// teamusageteamdaily.DefaultCacheReadTokens holds the default value on creation for the cache_read_tokens field.
+	teamusageteamdaily.DefaultCacheReadTokens = teamusageteamdailyDescCacheReadTokens.Default.(int64)
+	// teamusageteamdailyDescTotalCost is the schema descriptor for total_cost field.
+	teamusageteamdailyDescTotalCost := teamusageteamdailyFields[7].Descriptor()
+	// teamusageteamdaily.DefaultTotalCost holds the default value on creation for the total_cost field.
+	teamusageteamdaily.DefaultTotalCost = teamusageteamdailyDescTotalCost.Default.(float64)
+	// teamusageteamdailyDescActualCost is the schema descriptor for actual_cost field.
+	teamusageteamdailyDescActualCost := teamusageteamdailyFields[8].Descriptor()
+	// teamusageteamdaily.DefaultActualCost holds the default value on creation for the actual_cost field.
+	teamusageteamdaily.DefaultActualCost = teamusageteamdailyDescActualCost.Default.(float64)
+	// teamusageteamdailyDescComputedAt is the schema descriptor for computed_at field.
+	teamusageteamdailyDescComputedAt := teamusageteamdailyFields[9].Descriptor()
+	// teamusageteamdaily.DefaultComputedAt holds the default value on creation for the computed_at field.
+	teamusageteamdaily.DefaultComputedAt = teamusageteamdailyDescComputedAt.Default.(func() time.Time)
 	ticketFields := schema.Ticket{}.Fields()
 	_ = ticketFields
 	// ticketDescContact is the schema descriptor for contact field.

@@ -25,5 +25,8 @@ export { default as ticketsAPI } from './tickets'
 // Admin APIs
 export { adminAPI } from './admin'
 
+// Team APIs
+export { teamAPI } from './team'
+
 // Default export
 export { default } from './client'

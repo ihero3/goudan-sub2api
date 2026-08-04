@@ -64,6 +64,11 @@ type APIKey struct {
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 
+	// Team management fields
+	TeamID       *int64 `json:"team_id,omitempty"`
+	ConsumerID   *int64 `json:"consumer_id,omitempty"`
+	DepartmentID *int64 `json:"department_id,omitempty"`
+
 	// Rate limit fields
 	RateLimit5h   float64    `json:"rate_limit_5h"`
 	RateLimit1d   float64    `json:"rate_limit_1d"`

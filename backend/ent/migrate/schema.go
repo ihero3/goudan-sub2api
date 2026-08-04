@@ -33,7 +33,10 @@ var (
 		{Name: "window_5h_start", Type: field.TypeTime, Nullable: true},
 		{Name: "window_1d_start", Type: field.TypeTime, Nullable: true},
 		{Name: "window_7d_start", Type: field.TypeTime, Nullable: true},
+		{Name: "consumer_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "department_id", Type: field.TypeInt64, Nullable: true},
 		{Name: "group_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "team_id", Type: field.TypeInt64, Nullable: true},
 		{Name: "user_id", Type: field.TypeInt64},
 	}
 	// APIKeysTable holds the schema information for the "api_keys" table.
@@ -43,14 +46,32 @@ var (
 		PrimaryKey: []*schema.Column{APIKeysColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "api_keys_groups_api_keys",
+				Symbol:     "api_keys_consumers_api_keys",
 				Columns:    []*schema.Column{APIKeysColumns[22]},
+				RefColumns: []*schema.Column{ConsumersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "api_keys_departments_api_keys",
+				Columns:    []*schema.Column{APIKeysColumns[23]},
+				RefColumns: []*schema.Column{DepartmentsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "api_keys_groups_api_keys",
+				Columns:    []*schema.Column{APIKeysColumns[24]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
+				Symbol:     "api_keys_teams_api_keys",
+				Columns:    []*schema.Column{APIKeysColumns[25]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
 				Symbol:     "api_keys_users_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[23]},
+				Columns:    []*schema.Column{APIKeysColumns[26]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -59,12 +80,27 @@ var (
 			{
 				Name:    "apikey_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[23]},
+				Columns: []*schema.Column{APIKeysColumns[26]},
 			},
 			{
 				Name:    "apikey_group_id",
 				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[24]},
+			},
+			{
+				Name:    "apikey_team_id",
+				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[25]},
+			},
+			{
+				Name:    "apikey_consumer_id",
+				Unique:  false,
 				Columns: []*schema.Column{APIKeysColumns[22]},
+			},
+			{
+				Name:    "apikey_department_id",
+				Unique:  false,
+				Columns: []*schema.Column{APIKeysColumns[23]},
 			},
 			{
 				Name:    "apikey_status",
@@ -608,6 +644,138 @@ var (
 				Name:    "channelmonitorrequesttemplate_provider_api_mode",
 				Unique:  false,
 				Columns: []*schema.Column{ChannelMonitorRequestTemplatesColumns[4], ChannelMonitorRequestTemplatesColumns[5]},
+			},
+		},
+	}
+	// ConsumersColumns holds the columns for the "consumers" table.
+	ConsumersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "type", Type: field.TypeString, Size: 20, Default: "person"},
+		{Name: "name", Type: field.TypeString, Size: 100},
+		{Name: "email", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "phone", Type: field.TypeString, Nullable: true, Size: 50},
+		{Name: "title", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "app_id", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "app_description", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "external_id", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "source", Type: field.TypeString, Size: 50, Default: "manual"},
+		{Name: "deactivated_at", Type: field.TypeTime, Nullable: true},
+		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"},
+		{Name: "settings", Type: field.TypeJSON},
+		{Name: "department_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "team_id", Type: field.TypeInt64},
+	}
+	// ConsumersTable holds the schema information for the "consumers" table.
+	ConsumersTable = &schema.Table{
+		Name:       "consumers",
+		Columns:    ConsumersColumns,
+		PrimaryKey: []*schema.Column{ConsumersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "consumers_departments_consumers",
+				Columns:    []*schema.Column{ConsumersColumns[16]},
+				RefColumns: []*schema.Column{DepartmentsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "consumers_teams_consumers",
+				Columns:    []*schema.Column{ConsumersColumns[17]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "consumer_team_id",
+				Unique:  false,
+				Columns: []*schema.Column{ConsumersColumns[17]},
+			},
+			{
+				Name:    "consumer_department_id",
+				Unique:  false,
+				Columns: []*schema.Column{ConsumersColumns[16]},
+			},
+			{
+				Name:    "consumer_type",
+				Unique:  false,
+				Columns: []*schema.Column{ConsumersColumns[4]},
+			},
+			{
+				Name:    "consumer_external_id",
+				Unique:  false,
+				Columns: []*schema.Column{ConsumersColumns[11]},
+			},
+			{
+				Name:    "consumer_status",
+				Unique:  false,
+				Columns: []*schema.Column{ConsumersColumns[14]},
+			},
+			{
+				Name:    "consumer_team_id_app_id",
+				Unique:  true,
+				Columns: []*schema.Column{ConsumersColumns[17], ConsumersColumns[9]},
+			},
+		},
+	}
+	// DepartmentsColumns holds the columns for the "departments" table.
+	DepartmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "name", Type: field.TypeString, Size: 100},
+		{Name: "description", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "cost_center_code", Type: field.TypeString, Nullable: true, Size: 50},
+		{Name: "parent_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "level", Type: field.TypeInt, Default: 0},
+		{Name: "path", Type: field.TypeString, Size: 500, Default: "/"},
+		{Name: "external_id", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "source", Type: field.TypeString, Size: 50, Default: "manual"},
+		{Name: "sort_order", Type: field.TypeInt, Default: 0},
+		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"},
+		{Name: "team_id", Type: field.TypeInt64},
+	}
+	// DepartmentsTable holds the schema information for the "departments" table.
+	DepartmentsTable = &schema.Table{
+		Name:       "departments",
+		Columns:    DepartmentsColumns,
+		PrimaryKey: []*schema.Column{DepartmentsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "departments_teams_departments",
+				Columns:    []*schema.Column{DepartmentsColumns[14]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "department_team_id",
+				Unique:  false,
+				Columns: []*schema.Column{DepartmentsColumns[14]},
+			},
+			{
+				Name:    "department_parent_id",
+				Unique:  false,
+				Columns: []*schema.Column{DepartmentsColumns[7]},
+			},
+			{
+				Name:    "department_external_id",
+				Unique:  false,
+				Columns: []*schema.Column{DepartmentsColumns[10]},
+			},
+			{
+				Name:    "department_path",
+				Unique:  false,
+				Columns: []*schema.Column{DepartmentsColumns[9]},
+			},
+			{
+				Name:    "department_team_id_name",
+				Unique:  true,
+				Columns: []*schema.Column{DepartmentsColumns[14], DepartmentsColumns[4]},
 			},
 		},
 	}
@@ -1303,6 +1471,390 @@ var (
 		Columns:    TLSFingerprintProfilesColumns,
 		PrimaryKey: []*schema.Column{TLSFingerprintProfilesColumns[0]},
 	}
+	// TeamsColumns holds the columns for the "teams" table.
+	TeamsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "name", Type: field.TypeString, Size: 100},
+		{Name: "slug", Type: field.TypeString, Size: 100},
+		{Name: "description", Type: field.TypeString, Nullable: true, Size: 500, Default: ""},
+		{Name: "timezone", Type: field.TypeString, Nullable: true, Size: 50, Default: "Asia/Shanghai"},
+		{Name: "language", Type: field.TypeString, Nullable: true, Size: 10, Default: "zh-CN"},
+		{Name: "billing_email", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "metadata", Type: field.TypeJSON},
+		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"},
+		{Name: "owner_user_id", Type: field.TypeInt64},
+	}
+	// TeamsTable holds the schema information for the "teams" table.
+	TeamsTable = &schema.Table{
+		Name:       "teams",
+		Columns:    TeamsColumns,
+		PrimaryKey: []*schema.Column{TeamsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "teams_users_owned_teams",
+				Columns:    []*schema.Column{TeamsColumns[12]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "team_slug",
+				Unique:  true,
+				Columns: []*schema.Column{TeamsColumns[5]},
+			},
+			{
+				Name:    "team_owner_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{TeamsColumns[12]},
+			},
+			{
+				Name:    "team_status",
+				Unique:  false,
+				Columns: []*schema.Column{TeamsColumns[11]},
+			},
+			{
+				Name:    "team_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{TeamsColumns[3]},
+			},
+		},
+	}
+	// TeamAuditLogsColumns holds the columns for the "team_audit_logs" table.
+	TeamAuditLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "user_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "action", Type: field.TypeString, Size: 50},
+		{Name: "operation_type", Type: field.TypeString, Nullable: true, Size: 50},
+		{Name: "resource_type", Type: field.TypeString, Size: 50},
+		{Name: "resource_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "changes", Type: field.TypeJSON, Nullable: true},
+		{Name: "ip", Type: field.TypeString, Nullable: true, Size: 45},
+		{Name: "user_agent", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "team_id", Type: field.TypeInt64},
+	}
+	// TeamAuditLogsTable holds the schema information for the "team_audit_logs" table.
+	TeamAuditLogsTable = &schema.Table{
+		Name:       "team_audit_logs",
+		Columns:    TeamAuditLogsColumns,
+		PrimaryKey: []*schema.Column{TeamAuditLogsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "team_audit_logs_teams_audit_logs",
+				Columns:    []*schema.Column{TeamAuditLogsColumns[10]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "teamauditlog_team_id",
+				Unique:  false,
+				Columns: []*schema.Column{TeamAuditLogsColumns[10]},
+			},
+			{
+				Name:    "teamauditlog_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{TeamAuditLogsColumns[9]},
+			},
+			{
+				Name:    "teamauditlog_operation_type",
+				Unique:  false,
+				Columns: []*schema.Column{TeamAuditLogsColumns[3]},
+			},
+			{
+				Name:    "teamauditlog_resource_type_resource_id",
+				Unique:  false,
+				Columns: []*schema.Column{TeamAuditLogsColumns[4], TeamAuditLogsColumns[5]},
+			},
+		},
+	}
+	// TeamMembersColumns holds the columns for the "team_members" table.
+	TeamMembersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "role", Type: field.TypeString, Size: 20, Default: "member"},
+		{Name: "status", Type: field.TypeString, Size: 20, Default: "active"},
+		{Name: "display_name", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "joined_at", Type: field.TypeTime},
+		{Name: "consumer_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "department_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "team_id", Type: field.TypeInt64},
+		{Name: "user_id", Type: field.TypeInt64},
+	}
+	// TeamMembersTable holds the schema information for the "team_members" table.
+	TeamMembersTable = &schema.Table{
+		Name:       "team_members",
+		Columns:    TeamMembersColumns,
+		PrimaryKey: []*schema.Column{TeamMembersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "team_members_consumers_members",
+				Columns:    []*schema.Column{TeamMembersColumns[7]},
+				RefColumns: []*schema.Column{ConsumersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "team_members_departments_members",
+				Columns:    []*schema.Column{TeamMembersColumns[8]},
+				RefColumns: []*schema.Column{DepartmentsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "team_members_teams_members",
+				Columns:    []*schema.Column{TeamMembersColumns[9]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "team_members_users_team_memberships",
+				Columns:    []*schema.Column{TeamMembersColumns[10]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "teammember_team_id_user_id",
+				Unique:  true,
+				Columns: []*schema.Column{TeamMembersColumns[9], TeamMembersColumns[10]},
+			},
+			{
+				Name:    "teammember_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{TeamMembersColumns[10]},
+			},
+			{
+				Name:    "teammember_role",
+				Unique:  false,
+				Columns: []*schema.Column{TeamMembersColumns[3]},
+			},
+			{
+				Name:    "teammember_department_id",
+				Unique:  false,
+				Columns: []*schema.Column{TeamMembersColumns[8]},
+			},
+			{
+				Name:    "teammember_consumer_id",
+				Unique:  false,
+				Columns: []*schema.Column{TeamMembersColumns[7]},
+			},
+		},
+	}
+	// TeamUsageConsumerDailyColumns holds the columns for the "team_usage_consumer_daily" table.
+	TeamUsageConsumerDailyColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "consumer_name", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "consumer_type", Type: field.TypeString, Nullable: true, Size: 20},
+		{Name: "bucket_date", Type: field.TypeTime},
+		{Name: "total_requests", Type: field.TypeInt64, Default: 0},
+		{Name: "input_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "output_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "cache_creation_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "cache_read_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "total_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "actual_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "computed_at", Type: field.TypeTime},
+		{Name: "consumer_id", Type: field.TypeInt64},
+		{Name: "team_id", Type: field.TypeInt64},
+	}
+	// TeamUsageConsumerDailyTable holds the schema information for the "team_usage_consumer_daily" table.
+	TeamUsageConsumerDailyTable = &schema.Table{
+		Name:       "team_usage_consumer_daily",
+		Columns:    TeamUsageConsumerDailyColumns,
+		PrimaryKey: []*schema.Column{TeamUsageConsumerDailyColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "team_usage_consumer_daily_consumers_usage_consumer_daily",
+				Columns:    []*schema.Column{TeamUsageConsumerDailyColumns[14]},
+				RefColumns: []*schema.Column{ConsumersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "team_usage_consumer_daily_teams_usage_consumer_daily",
+				Columns:    []*schema.Column{TeamUsageConsumerDailyColumns[15]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "teamusageconsumerdaily_team_id_bucket_date",
+				Unique:  false,
+				Columns: []*schema.Column{TeamUsageConsumerDailyColumns[15], TeamUsageConsumerDailyColumns[5]},
+			},
+			{
+				Name:    "teamusageconsumerdaily_consumer_id_bucket_date",
+				Unique:  false,
+				Columns: []*schema.Column{TeamUsageConsumerDailyColumns[14], TeamUsageConsumerDailyColumns[5]},
+			},
+			{
+				Name:    "teamusageconsumerdaily_team_id_consumer_id_bucket_date",
+				Unique:  true,
+				Columns: []*schema.Column{TeamUsageConsumerDailyColumns[15], TeamUsageConsumerDailyColumns[14], TeamUsageConsumerDailyColumns[5]},
+			},
+		},
+	}
+	// TeamUsageDeptDailyColumns holds the columns for the "team_usage_dept_daily" table.
+	TeamUsageDeptDailyColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "department_name", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "cost_center_code", Type: field.TypeString, Nullable: true, Size: 50},
+		{Name: "bucket_date", Type: field.TypeTime},
+		{Name: "total_requests", Type: field.TypeInt64, Default: 0},
+		{Name: "input_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "output_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "cache_creation_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "cache_read_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "total_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "actual_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "computed_at", Type: field.TypeTime},
+		{Name: "department_id", Type: field.TypeInt64},
+		{Name: "team_id", Type: field.TypeInt64},
+	}
+	// TeamUsageDeptDailyTable holds the schema information for the "team_usage_dept_daily" table.
+	TeamUsageDeptDailyTable = &schema.Table{
+		Name:       "team_usage_dept_daily",
+		Columns:    TeamUsageDeptDailyColumns,
+		PrimaryKey: []*schema.Column{TeamUsageDeptDailyColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "team_usage_dept_daily_departments_usage_dept_daily",
+				Columns:    []*schema.Column{TeamUsageDeptDailyColumns[14]},
+				RefColumns: []*schema.Column{DepartmentsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "team_usage_dept_daily_teams_usage_dept_daily",
+				Columns:    []*schema.Column{TeamUsageDeptDailyColumns[15]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "teamusagedeptdaily_team_id_bucket_date",
+				Unique:  false,
+				Columns: []*schema.Column{TeamUsageDeptDailyColumns[15], TeamUsageDeptDailyColumns[5]},
+			},
+			{
+				Name:    "teamusagedeptdaily_department_id_bucket_date",
+				Unique:  false,
+				Columns: []*schema.Column{TeamUsageDeptDailyColumns[14], TeamUsageDeptDailyColumns[5]},
+			},
+			{
+				Name:    "teamusagedeptdaily_team_id_department_id_bucket_date",
+				Unique:  true,
+				Columns: []*schema.Column{TeamUsageDeptDailyColumns[15], TeamUsageDeptDailyColumns[14], TeamUsageDeptDailyColumns[5]},
+			},
+		},
+	}
+	// TeamUsageModelDailyColumns holds the columns for the "team_usage_model_daily" table.
+	TeamUsageModelDailyColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "department_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "consumer_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "bucket_date", Type: field.TypeTime},
+		{Name: "model_name", Type: field.TypeString, Size: 100},
+		{Name: "total_requests", Type: field.TypeInt64, Default: 0},
+		{Name: "input_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "output_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "cache_creation_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "cache_read_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "total_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "actual_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "computed_at", Type: field.TypeTime},
+		{Name: "team_id", Type: field.TypeInt64},
+	}
+	// TeamUsageModelDailyTable holds the schema information for the "team_usage_model_daily" table.
+	TeamUsageModelDailyTable = &schema.Table{
+		Name:       "team_usage_model_daily",
+		Columns:    TeamUsageModelDailyColumns,
+		PrimaryKey: []*schema.Column{TeamUsageModelDailyColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "team_usage_model_daily_teams_usage_model_daily",
+				Columns:    []*schema.Column{TeamUsageModelDailyColumns[15]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "teamusagemodeldaily_team_id_bucket_date",
+				Unique:  false,
+				Columns: []*schema.Column{TeamUsageModelDailyColumns[15], TeamUsageModelDailyColumns[5]},
+			},
+			{
+				Name:    "teamusagemodeldaily_department_id_bucket_date",
+				Unique:  false,
+				Columns: []*schema.Column{TeamUsageModelDailyColumns[3], TeamUsageModelDailyColumns[5]},
+			},
+			{
+				Name:    "teamusagemodeldaily_consumer_id_bucket_date",
+				Unique:  false,
+				Columns: []*schema.Column{TeamUsageModelDailyColumns[4], TeamUsageModelDailyColumns[5]},
+			},
+			{
+				Name:    "teamusagemodeldaily_model_name_bucket_date",
+				Unique:  false,
+				Columns: []*schema.Column{TeamUsageModelDailyColumns[6], TeamUsageModelDailyColumns[5]},
+			},
+			{
+				Name:    "teamusagemodeldaily_team_id_department_id_consumer_id_bucket_date_model_name",
+				Unique:  true,
+				Columns: []*schema.Column{TeamUsageModelDailyColumns[15], TeamUsageModelDailyColumns[3], TeamUsageModelDailyColumns[4], TeamUsageModelDailyColumns[5], TeamUsageModelDailyColumns[6]},
+			},
+		},
+	}
+	// TeamUsageTeamDailyColumns holds the columns for the "team_usage_team_daily" table.
+	TeamUsageTeamDailyColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "bucket_date", Type: field.TypeTime},
+		{Name: "total_requests", Type: field.TypeInt64, Default: 0},
+		{Name: "input_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "output_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "cache_creation_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "cache_read_tokens", Type: field.TypeInt64, Default: 0},
+		{Name: "total_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "actual_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "computed_at", Type: field.TypeTime},
+		{Name: "team_id", Type: field.TypeInt64},
+	}
+	// TeamUsageTeamDailyTable holds the schema information for the "team_usage_team_daily" table.
+	TeamUsageTeamDailyTable = &schema.Table{
+		Name:       "team_usage_team_daily",
+		Columns:    TeamUsageTeamDailyColumns,
+		PrimaryKey: []*schema.Column{TeamUsageTeamDailyColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "team_usage_team_daily_teams_usage_team_daily",
+				Columns:    []*schema.Column{TeamUsageTeamDailyColumns[12]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "teamusageteamdaily_team_id_bucket_date",
+				Unique:  true,
+				Columns: []*schema.Column{TeamUsageTeamDailyColumns[12], TeamUsageTeamDailyColumns[3]},
+			},
+		},
+	}
 	// TicketsColumns holds the columns for the "tickets" table.
 	TicketsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -1477,6 +2029,7 @@ var (
 		{Name: "api_key_id", Type: field.TypeInt64},
 		{Name: "account_id", Type: field.TypeInt64},
 		{Name: "group_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "team_usage_logs", Type: field.TypeInt64, Nullable: true},
 		{Name: "user_id", Type: field.TypeInt64},
 		{Name: "subscription_id", Type: field.TypeInt64, Nullable: true},
 	}
@@ -1505,14 +2058,20 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 			{
-				Symbol:     "usage_logs_users_usage_logs",
+				Symbol:     "usage_logs_teams_usage_logs",
 				Columns:    []*schema.Column{UsageLogsColumns[40]},
+				RefColumns: []*schema.Column{TeamsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "usage_logs_users_usage_logs",
+				Columns:    []*schema.Column{UsageLogsColumns[41]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "usage_logs_user_subscriptions_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[41]},
+				Columns:    []*schema.Column{UsageLogsColumns[42]},
 				RefColumns: []*schema.Column{UserSubscriptionsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -1521,7 +2080,7 @@ var (
 			{
 				Name:    "usagelog_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[40]},
+				Columns: []*schema.Column{UsageLogsColumns[41]},
 			},
 			{
 				Name:    "usagelog_api_key_id",
@@ -1541,7 +2100,7 @@ var (
 			{
 				Name:    "usagelog_subscription_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[41]},
+				Columns: []*schema.Column{UsageLogsColumns[42]},
 			},
 			{
 				Name:    "usagelog_created_at",
@@ -1566,7 +2125,7 @@ var (
 			{
 				Name:    "usagelog_user_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[40], UsageLogsColumns[36]},
+				Columns: []*schema.Column{UsageLogsColumns[41], UsageLogsColumns[36]},
 			},
 			{
 				Name:    "usagelog_api_key_id_created_at",
@@ -1893,6 +2452,8 @@ var (
 		ChannelMonitorDailyRollupsTable,
 		ChannelMonitorHistoriesTable,
 		ChannelMonitorRequestTemplatesTable,
+		ConsumersTable,
+		DepartmentsTable,
 		ErrorPassthroughRulesTable,
 		GroupsTable,
 		IdempotencyRecordsTable,
@@ -1909,6 +2470,13 @@ var (
 		SettingsTable,
 		SubscriptionPlansTable,
 		TLSFingerprintProfilesTable,
+		TeamsTable,
+		TeamAuditLogsTable,
+		TeamMembersTable,
+		TeamUsageConsumerDailyTable,
+		TeamUsageDeptDailyTable,
+		TeamUsageModelDailyTable,
+		TeamUsageTeamDailyTable,
 		TicketsTable,
 		TicketMessagesTable,
 		UsageCleanupTasksTable,
@@ -1923,8 +2491,11 @@ var (
 )
 
 func init() {
-	APIKeysTable.ForeignKeys[0].RefTable = GroupsTable
-	APIKeysTable.ForeignKeys[1].RefTable = UsersTable
+	APIKeysTable.ForeignKeys[0].RefTable = ConsumersTable
+	APIKeysTable.ForeignKeys[1].RefTable = DepartmentsTable
+	APIKeysTable.ForeignKeys[2].RefTable = GroupsTable
+	APIKeysTable.ForeignKeys[3].RefTable = TeamsTable
+	APIKeysTable.ForeignKeys[4].RefTable = UsersTable
 	APIKeysTable.Annotation = &entsql.Annotation{
 		Table: "api_keys",
 	}
@@ -1968,6 +2539,15 @@ func init() {
 	}
 	ChannelMonitorRequestTemplatesTable.Annotation = &entsql.Annotation{
 		Table: "channel_monitor_request_templates",
+	}
+	ConsumersTable.ForeignKeys[0].RefTable = DepartmentsTable
+	ConsumersTable.ForeignKeys[1].RefTable = TeamsTable
+	ConsumersTable.Annotation = &entsql.Annotation{
+		Table: "consumers",
+	}
+	DepartmentsTable.ForeignKeys[0].RefTable = TeamsTable
+	DepartmentsTable.Annotation = &entsql.Annotation{
+		Table: "departments",
 	}
 	ErrorPassthroughRulesTable.Annotation = &entsql.Annotation{
 		Table: "error_passthrough_rules",
@@ -2026,6 +2606,39 @@ func init() {
 	TLSFingerprintProfilesTable.Annotation = &entsql.Annotation{
 		Table: "tls_fingerprint_profiles",
 	}
+	TeamsTable.ForeignKeys[0].RefTable = UsersTable
+	TeamsTable.Annotation = &entsql.Annotation{
+		Table: "teams",
+	}
+	TeamAuditLogsTable.ForeignKeys[0].RefTable = TeamsTable
+	TeamAuditLogsTable.Annotation = &entsql.Annotation{
+		Table: "team_audit_logs",
+	}
+	TeamMembersTable.ForeignKeys[0].RefTable = ConsumersTable
+	TeamMembersTable.ForeignKeys[1].RefTable = DepartmentsTable
+	TeamMembersTable.ForeignKeys[2].RefTable = TeamsTable
+	TeamMembersTable.ForeignKeys[3].RefTable = UsersTable
+	TeamMembersTable.Annotation = &entsql.Annotation{
+		Table: "team_members",
+	}
+	TeamUsageConsumerDailyTable.ForeignKeys[0].RefTable = ConsumersTable
+	TeamUsageConsumerDailyTable.ForeignKeys[1].RefTable = TeamsTable
+	TeamUsageConsumerDailyTable.Annotation = &entsql.Annotation{
+		Table: "team_usage_consumer_daily",
+	}
+	TeamUsageDeptDailyTable.ForeignKeys[0].RefTable = DepartmentsTable
+	TeamUsageDeptDailyTable.ForeignKeys[1].RefTable = TeamsTable
+	TeamUsageDeptDailyTable.Annotation = &entsql.Annotation{
+		Table: "team_usage_dept_daily",
+	}
+	TeamUsageModelDailyTable.ForeignKeys[0].RefTable = TeamsTable
+	TeamUsageModelDailyTable.Annotation = &entsql.Annotation{
+		Table: "team_usage_model_daily",
+	}
+	TeamUsageTeamDailyTable.ForeignKeys[0].RefTable = TeamsTable
+	TeamUsageTeamDailyTable.Annotation = &entsql.Annotation{
+		Table: "team_usage_team_daily",
+	}
 	TicketsTable.ForeignKeys[0].RefTable = UsersTable
 	TicketsTable.Annotation = &entsql.Annotation{
 		Table: "tickets",
@@ -2041,8 +2654,9 @@ func init() {
 	UsageLogsTable.ForeignKeys[0].RefTable = APIKeysTable
 	UsageLogsTable.ForeignKeys[1].RefTable = AccountsTable
 	UsageLogsTable.ForeignKeys[2].RefTable = GroupsTable
-	UsageLogsTable.ForeignKeys[3].RefTable = UsersTable
-	UsageLogsTable.ForeignKeys[4].RefTable = UserSubscriptionsTable
+	UsageLogsTable.ForeignKeys[3].RefTable = TeamsTable
+	UsageLogsTable.ForeignKeys[4].RefTable = UsersTable
+	UsageLogsTable.ForeignKeys[5].RefTable = UserSubscriptionsTable
 	UsageLogsTable.Annotation = &entsql.Annotation{
 		Table: "usage_logs",
 	}

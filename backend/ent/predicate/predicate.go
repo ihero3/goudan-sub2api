@@ -39,6 +39,12 @@ type ChannelMonitorHistory func(*sql.Selector)
 // ChannelMonitorRequestTemplate is the predicate function for channelmonitorrequesttemplate builders.
 type ChannelMonitorRequestTemplate func(*sql.Selector)
 
+// Consumer is the predicate function for consumer builders.
+type Consumer func(*sql.Selector)
+
+// Department is the predicate function for department builders.
+type Department func(*sql.Selector)
+
 // ErrorPassthroughRule is the predicate function for errorpassthroughrule builders.
 type ErrorPassthroughRule func(*sql.Selector)
 
@@ -86,6 +92,27 @@ type SubscriptionPlan func(*sql.Selector)
 
 // TLSFingerprintProfile is the predicate function for tlsfingerprintprofile builders.
 type TLSFingerprintProfile func(*sql.Selector)
+
+// Team is the predicate function for team builders.
+type Team func(*sql.Selector)
+
+// TeamAuditLog is the predicate function for teamauditlog builders.
+type TeamAuditLog func(*sql.Selector)
+
+// TeamMember is the predicate function for teammember builders.
+type TeamMember func(*sql.Selector)
+
+// TeamUsageConsumerDaily is the predicate function for teamusageconsumerdaily builders.
+type TeamUsageConsumerDaily func(*sql.Selector)
+
+// TeamUsageDeptDaily is the predicate function for teamusagedeptdaily builders.
+type TeamUsageDeptDaily func(*sql.Selector)
+
+// TeamUsageModelDaily is the predicate function for teamusagemodeldaily builders.
+type TeamUsageModelDaily func(*sql.Selector)
+
+// TeamUsageTeamDaily is the predicate function for teamusageteamdaily builders.
+type TeamUsageTeamDaily func(*sql.Selector)
 
 // Ticket is the predicate function for ticket builders.
 type Ticket func(*sql.Selector)

@@ -17,6 +17,15 @@ function isLocaleCode(value: string): value is LocaleCode {
 }
 
 function getDefaultLocale(): LocaleCode {
+  const saved = localStorage.getItem(LOCALE_KEY)
+  if (saved && isLocaleCode(saved)) {
+    return saved
+  }
+  // 检测浏览器语言
+  const browserLang = navigator.language.toLowerCase()
+  if (browserLang.startsWith('zh')) {
+    return 'zh'
+  }
   return DEFAULT_LOCALE
 }
 

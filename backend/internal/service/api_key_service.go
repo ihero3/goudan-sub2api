@@ -158,6 +158,11 @@ type CreateAPIKeyRequest struct {
 	IPWhitelist []string `json:"ip_whitelist"` // IP 白名单
 	IPBlacklist []string `json:"ip_blacklist"` // IP 黑名单
 
+	// Team management fields (optional)
+	TeamID       *int64 `json:"team_id"`
+	ConsumerID   *int64 `json:"consumer_id"`
+	DepartmentID *int64 `json:"department_id"`
+
 	// Quota fields
 	Quota         float64 `json:"quota"`           // Quota limit in USD (0 = unlimited)
 	ExpiresInDays *int    `json:"expires_in_days"` // Days until expiry (nil = never expires)
@@ -175,6 +180,11 @@ type UpdateAPIKeyRequest struct {
 	Status      *string  `json:"status"`
 	IPWhitelist []string `json:"ip_whitelist"` // IP 白名单（空数组清空）
 	IPBlacklist []string `json:"ip_blacklist"` // IP 黑名单（空数组清空）
+
+	// Team management fields (optional, nil = no change)
+	TeamID       *int64 `json:"team_id"`
+	ConsumerID   *int64 `json:"consumer_id"`
+	DepartmentID *int64 `json:"department_id"`
 
 	// Quota fields
 	Quota           *float64   `json:"quota"`       // Quota limit in USD (nil = no change, 0 = unlimited)
@@ -203,6 +213,7 @@ type APIKeyService struct {
 	userGroupRateRepo     UserGroupRateRepository
 	cache                 APIKeyCache
 	rateLimitCacheInvalid RateLimitCacheInvalidator // optional: invalidate Redis rate limit cache
+	consumerRepo          ConsumerRepository        // optional: for auto-filling team_id from consumer
 	cfg                   *config.Config
 	authCacheL1           *ristretto.Cache
 	authCfg               apiKeyAuthCacheConfig
@@ -238,6 +249,11 @@ func NewAPIKeyService(
 // Called after construction (e.g. in wire) to avoid circular dependencies.
 func (s *APIKeyService) SetRateLimitCacheInvalidator(inv RateLimitCacheInvalidator) {
 	s.rateLimitCacheInvalid = inv
+}
+
+// SetConsumerRepo sets the optional consumer repository for auto-filling team_id.
+func (s *APIKeyService) SetConsumerRepo(repo ConsumerRepository) {
+	s.consumerRepo = repo
 }
 
 func (s *APIKeyService) compileAPIKeyIPRules(apiKey *APIKey) {
@@ -398,20 +414,32 @@ func (s *APIKeyService) Create(ctx context.Context, userID int64, req CreateAPIK
 		}
 	}
 
+	// 如果指定了消费者但未指定团队ID，自动从消费者获取
+	if req.ConsumerID != nil && *req.ConsumerID > 0 && (req.TeamID == nil || *req.TeamID == 0) && s.consumerRepo != nil {
+		consumer, err := s.consumerRepo.GetByID(ctx, *req.ConsumerID)
+		if err == nil && consumer != nil && consumer.TeamID > 0 {
+			teamID := consumer.TeamID
+			req.TeamID = &teamID
+		}
+	}
+
 	// 创建API Key记录
 	apiKey := &APIKey{
-		UserID:      userID,
-		Key:         key,
-		Name:        html.EscapeString(req.Name),
-		GroupID:     req.GroupID,
-		Status:      StatusActive,
-		IPWhitelist: req.IPWhitelist,
-		IPBlacklist: req.IPBlacklist,
-		Quota:       req.Quota,
-		QuotaUsed:   0,
-		RateLimit5h: req.RateLimit5h,
-		RateLimit1d: req.RateLimit1d,
-		RateLimit7d: req.RateLimit7d,
+		UserID:       userID,
+		Key:          key,
+		Name:         html.EscapeString(req.Name),
+		GroupID:      req.GroupID,
+		Status:       StatusActive,
+		IPWhitelist:  req.IPWhitelist,
+		IPBlacklist:  req.IPBlacklist,
+		TeamID:       req.TeamID,
+		ConsumerID:   req.ConsumerID,
+		DepartmentID: req.DepartmentID,
+		Quota:        req.Quota,
+		QuotaUsed:    0,
+		RateLimit5h:  req.RateLimit5h,
+		RateLimit1d:  req.RateLimit1d,
+		RateLimit7d:  req.RateLimit7d,
 	}
 
 	// Set expiration time if specified
@@ -542,6 +570,17 @@ func (s *APIKeyService) Update(ctx context.Context, id int64, userID int64, req 
 	// 更新字段
 	if req.Name != nil {
 		apiKey.Name = html.EscapeString(*req.Name)
+	}
+
+	// Update team management fields
+	if req.TeamID != nil {
+		apiKey.TeamID = req.TeamID
+	}
+	if req.ConsumerID != nil {
+		apiKey.ConsumerID = req.ConsumerID
+	}
+	if req.DepartmentID != nil {
+		apiKey.DepartmentID = req.DepartmentID
 	}
 
 	if req.GroupID != nil {
