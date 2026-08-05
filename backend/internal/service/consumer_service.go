@@ -29,7 +29,7 @@ type ConsumerRepository interface {
 
 // ConsumerService 消费者服务接口
 type ConsumerService interface {
-	CreateConsumer(ctx context.Context, teamID int64, deptID *int64, name, email, consumerType string) (*Consumer, error)
+	CreateConsumer(ctx context.Context, teamID int64, deptID *int64, name, email, phone, title, consumerType, description string) (*Consumer, error)
 	UpdateConsumer(ctx context.Context, consumerID int64, name string, email, phone, title, consumerType, description *string, deptID *int64, status *string) (*Consumer, error)
 	DeleteConsumer(ctx context.Context, consumerID int64) error
 	GetConsumer(ctx context.Context, consumerID int64) (*Consumer, error)
@@ -50,7 +50,7 @@ func NewConsumerService(consumerRepo ConsumerRepository) ConsumerService {
 }
 
 // CreateConsumer 创建消费者
-func (s *consumerService) CreateConsumer(ctx context.Context, teamID int64, deptID *int64, name, email, consumerType string) (*Consumer, error) {
+func (s *consumerService) CreateConsumer(ctx context.Context, teamID int64, deptID *int64, name, email, phone, title, consumerType, description string) (*Consumer, error) {
 	if teamID <= 0 {
 		return nil, ErrInvalidTeamIDForConsumer
 	}
@@ -71,7 +71,20 @@ func (s *consumerService) CreateConsumer(ctx context.Context, teamID int64, dept
 		consumer.DepartmentID = deptID
 	}
 	if email != "" {
-		consumer.Email = &email
+		e := strings.TrimSpace(email)
+		consumer.Email = &e
+	}
+	if phone != "" {
+		p := strings.TrimSpace(phone)
+		consumer.Phone = &p
+	}
+	if title != "" {
+		t := strings.TrimSpace(title)
+		consumer.Title = &t
+	}
+	if description != "" {
+		d := strings.TrimSpace(description)
+		consumer.AppDescription = &d
 	}
 
 	if err := s.consumerRepo.Create(ctx, consumer); err != nil {

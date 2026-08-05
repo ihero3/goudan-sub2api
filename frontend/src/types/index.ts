@@ -1391,6 +1391,10 @@ export interface AdminUsageLog extends UsageLog {
 
   // 最小账号信息（仅管理员接口返回）
   account?: UsageLogAccountSummary
+
+  // 部门和消费者信息（从 APIKey 关联提取）
+  department?: { id: number; name: string } | null
+  consumer?: { id: number; name: string } | null
 }
 
 export interface UsageCleanupFilters {
@@ -1750,6 +1754,10 @@ export interface UsageQueryParams {
   user_id?: number
   account_id?: number
   group_id?: number
+  department_id?: number | null
+  consumer_id?: number | null
+  department_name?: string
+  consumer_name?: string
   model?: string
   request_type?: UsageRequestType
   stream?: boolean

@@ -92,7 +92,12 @@ export interface Consumer {
 
 export interface CreateConsumerRequest {
   name: string
+  email?: string | null
+  phone?: string | null
+  title?: string | null
+  type?: string
   description?: string | null
+  dept_id?: number
 }
 
 export interface UpdateConsumerRequest {

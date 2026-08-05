@@ -276,6 +276,14 @@ type UsageLogFilters struct {
 	EndTime           *time.Time
 	// ExactTotal requests exact COUNT(*) for pagination. Default false for fast large-table paging.
 	ExactTotal bool
+	// DepartmentID filters by api_keys.department_id (via JOIN or subquery).
+	DepartmentID int64
+	// ConsumerID filters by api_keys.consumer_id (via JOIN or subquery).
+	ConsumerID int64
+	// DepartmentName filters by department name (via JOIN with departments).
+	DepartmentName string
+	// ConsumerName filters by consumer name (via JOIN with consumers).
+	ConsumerName string
 }
 
 // UsageStats represents usage statistics

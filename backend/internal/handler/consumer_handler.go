@@ -23,10 +23,13 @@ func NewConsumerHandler(consumerService service.ConsumerService) *ConsumerHandle
 
 // CreateConsumerRequest represents the create consumer request payload
 type CreateConsumerRequest struct {
-	Name   string `json:"name" binding:"required"`
-	Email  string `json:"email"`
-	Type   string `json:"type"`
-	DeptID *int64 `json:"dept_id"`
+	Name        string  `json:"name" binding:"required"`
+	Email       string  `json:"email"`
+	Phone       string  `json:"phone"`
+	Title       string  `json:"title"`
+	Type        string  `json:"type"`
+	Description string  `json:"description"`
+	DeptID      *int64  `json:"dept_id"`
 }
 
 // UpdateConsumerRequest represents the update consumer request payload
@@ -104,7 +107,17 @@ func (h *ConsumerHandler) Create(c *gin.Context) {
 		req.Type = "default"
 	}
 
-	consumer, err := h.consumerService.CreateConsumer(c.Request.Context(), teamID, req.DeptID, req.Name, req.Email, req.Type)
+	consumer, err := h.consumerService.CreateConsumer(
+		c.Request.Context(),
+		teamID,
+		req.DeptID,
+		req.Name,
+		req.Email,
+		req.Phone,
+		req.Title,
+		req.Type,
+		req.Description,
+	)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return

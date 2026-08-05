@@ -82,6 +82,20 @@
           <span v-else class="text-sm text-gray-400 dark:text-gray-500">-</span>
         </template>
 
+        <template #cell-department="{ row }">
+          <span v-if="row.department" class="text-sm text-gray-900 dark:text-white">
+            {{ row.department.name || `#${row.department.id}` }}
+          </span>
+          <span v-else class="text-sm text-gray-400 dark:text-gray-500">-</span>
+        </template>
+
+        <template #cell-consumer="{ row }">
+          <span v-if="row.consumer" class="text-sm text-gray-900 dark:text-white">
+            {{ row.consumer.name || `#${row.consumer.id}` }}
+          </span>
+          <span v-else class="text-sm text-gray-400 dark:text-gray-500">-</span>
+        </template>
+
         <template #cell-stream="{ row }">
           <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium" :class="getRequestTypeBadgeClass(row)">
             {{ getRequestTypeLabel(row) }}

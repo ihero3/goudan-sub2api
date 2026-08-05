@@ -1,6 +1,9 @@
 package service
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // Team 团队领域模型
 type Team struct {
@@ -65,7 +68,6 @@ type Consumer struct {
 	Title          *string                `json:"title"`
 	AppID          *string                `json:"app_id"`
 	AppDescription *string                `json:"app_description"`
-	Description     string                 `json:"description"`
 	ExternalID     *string                `json:"external_id"`
 	Source         string                 `json:"source"`
 	DeactivatedAt  *time.Time             `json:"deactivated_at"`
@@ -74,6 +76,18 @@ type Consumer struct {
 	CreatedAt      time.Time              `json:"created_at"`
 	UpdatedAt      time.Time              `json:"updated_at"`
 	DeletedAt      *time.Time             `json:"deleted_at,omitempty"`
+}
+
+// Description returns app_description for backward compatibility.
+func (c Consumer) MarshalJSON() ([]byte, error) {
+	type Alias Consumer
+	return json.Marshal(&struct {
+		Alias
+		Description *string `json:"description"`
+	}{
+		Alias:       Alias(c),
+		Description: c.AppDescription,
+	})
 }
 
 // TeamAuditLog 团队审计日志领域模型

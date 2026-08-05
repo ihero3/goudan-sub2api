@@ -38,6 +38,20 @@
             <span class="text-sm font-medium text-orange-700">🎁LIMITED TIME: $10 Free Credits (≈ 330M DeepSeek Tokens)</span>
           </div>
 
+          <!-- Nav Links -->
+          <button
+            @click="router.push('/admin/models')"
+            class="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+          >
+            {{ currentLang === 'zh' ? '模型广场' : 'Models' }}
+          </button>
+          <button
+            @click="router.push('/admin')"
+            class="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
+          >
+            {{ currentLang === 'zh' ? '控制台' : 'Console' }}
+          </button>
+
           <!-- Language Toggle -->
           <button
             @click="toggleLanguage"

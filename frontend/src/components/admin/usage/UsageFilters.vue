@@ -145,6 +145,30 @@
           <Select v-model="filters.group_id" :options="groupOptions" searchable @change="emitChange" />
         </div>
 
+        <!-- Department Filter -->
+        <div class="w-full sm:w-auto sm:min-w-[180px]">
+          <label class="input-label">{{ t('admin.usage.department') }}</label>
+          <input
+            v-model="filters.department_name"
+            type="text"
+            class="input w-full"
+            :placeholder="t('admin.usage.departmentPlaceholder')"
+            @change="emitChange"
+          />
+        </div>
+
+        <!-- Consumer Filter -->
+        <div class="w-full sm:w-auto sm:min-w-[180px]">
+          <label class="input-label">{{ t('admin.usage.consumer') }}</label>
+          <input
+            v-model="filters.consumer_name"
+            type="text"
+            class="input w-full"
+            :placeholder="t('admin.usage.consumerPlaceholder')"
+            @change="emitChange"
+          />
+        </div>
+
       </div>
 
       <!-- Right: actions -->

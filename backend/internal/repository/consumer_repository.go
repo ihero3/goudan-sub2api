@@ -77,9 +77,6 @@ func entConsumerToService(c *dbent.Consumer) *service.Consumer {
 	}
 	if c.AppDescription != nil {
 		sc.AppDescription = c.AppDescription
-		sc.Description = *c.AppDescription
-	} else {
-		sc.Description = ""
 	}
 	if c.ExternalID != nil {
 		sc.ExternalID = c.ExternalID
@@ -134,6 +131,12 @@ func (r *consumerRepository) Create(ctx context.Context, c *service.Consumer) er
 	c.ID = entConsumer.ID
 	c.CreatedAt = entConsumer.CreatedAt
 	c.UpdatedAt = entConsumer.UpdatedAt
+	c.DepartmentID = entConsumer.DepartmentID
+	c.Email = entConsumer.Email
+	c.Phone = entConsumer.Phone
+	c.Title = entConsumer.Title
+	c.AppDescription = entConsumer.AppDescription
+	c.ExternalID = entConsumer.ExternalID
 	return nil
 }
 

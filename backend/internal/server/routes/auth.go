@@ -217,6 +217,9 @@ func RegisterAuthRoutes(
 		settings.GET("/email-unsubscribe", h.Setting.UnsubscribeNotificationEmail)
 	}
 
+	// 公开模型定价查询（无需认证，仅返回定价信息）
+	v1.GET("/models/pricing", h.Admin.Channel.GetModelDefaultPricing)
+
 	// 需要认证的当前用户信息
 	authenticated := v1.Group("")
 	authenticated.Use(gin.HandlerFunc(jwtAuth))

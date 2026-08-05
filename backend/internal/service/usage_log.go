@@ -199,6 +199,13 @@ type UsageLog struct {
 	Account      *Account
 	Group        *Group
 	Subscription *UserSubscription
+
+	// DepartmentID and ConsumerID are extracted from APIKey for display/filtering.
+	DepartmentID *int64 `json:"department_id,omitempty"`
+	ConsumerID   *int64 `json:"consumer_id,omitempty"`
+	// DepartmentName and ConsumerName are hydrated for display.
+	DepartmentName *string `json:"department_name,omitempty"`
+	ConsumerName   *string `json:"consumer_name,omitempty"`
 }
 
 func (u *UsageLog) TotalTokens() int {

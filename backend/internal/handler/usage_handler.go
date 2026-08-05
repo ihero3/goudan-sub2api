@@ -107,6 +107,31 @@ func (h *UsageHandler) parseUserUsageFilters(c *gin.Context, requireRange bool) 
 		groupID = id
 	}
 
+	var departmentID, consumerID int64
+	var departmentName, consumerName string
+	if deptIDStr := strings.TrimSpace(c.Query("department_id")); deptIDStr != "" {
+		id, err := strconv.ParseInt(deptIDStr, 10, 64)
+		if err != nil {
+			response.BadRequest(c, "Invalid department_id")
+			return nil, false
+		}
+		departmentID = id
+	}
+	if deptNameStr := strings.TrimSpace(c.Query("department_name")); deptNameStr != "" {
+		departmentName = deptNameStr
+	}
+	if consumerIDStr := strings.TrimSpace(c.Query("consumer_id")); consumerIDStr != "" {
+		id, err := strconv.ParseInt(consumerIDStr, 10, 64)
+		if err != nil {
+			response.BadRequest(c, "Invalid consumer_id")
+			return nil, false
+		}
+		consumerID = id
+	}
+	if consumerNameStr := strings.TrimSpace(c.Query("consumer_name")); consumerNameStr != "" {
+		consumerName = consumerNameStr
+	}
+
 	var requestType *int16
 	var stream *bool
 	if requestTypeStr := strings.TrimSpace(c.Query("request_type")); requestTypeStr != "" {
@@ -198,6 +223,10 @@ func (h *UsageHandler) parseUserUsageFilters(c *gin.Context, requireRange bool) 
 			UserID:            subject.UserID,
 			APIKeyID:          apiKeyID,
 			GroupID:           groupID,
+			DepartmentID:      departmentID,
+			ConsumerID:        consumerID,
+			DepartmentName:    departmentName,
+			ConsumerName:      consumerName,
 			Model:             strings.TrimSpace(c.Query("model")),
 			ModelFilterSource: usagestats.ModelSourceRequested,
 			RequestType:       requestType,

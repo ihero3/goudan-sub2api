@@ -109,6 +109,31 @@ func (h *UsageHandler) List(c *gin.Context) {
 		groupID = id
 	}
 
+	var departmentID, consumerID int64
+	var departmentName, consumerName string
+	if deptIDStr := c.Query("department_id"); deptIDStr != "" {
+		id, err := strconv.ParseInt(deptIDStr, 10, 64)
+		if err != nil {
+			response.BadRequest(c, "Invalid department_id")
+			return
+		}
+		departmentID = id
+	}
+	if deptNameStr := c.Query("department_name"); deptNameStr != "" {
+		departmentName = deptNameStr
+	}
+	if consumerIDStr := c.Query("consumer_id"); consumerIDStr != "" {
+		id, err := strconv.ParseInt(consumerIDStr, 10, 64)
+		if err != nil {
+			response.BadRequest(c, "Invalid consumer_id")
+			return
+		}
+		consumerID = id
+	}
+	if consumerNameStr := c.Query("consumer_name"); consumerNameStr != "" {
+		consumerName = consumerNameStr
+	}
+
 	model := c.Query("model")
 	billingMode := strings.TrimSpace(c.Query("billing_mode"))
 
@@ -172,18 +197,22 @@ func (h *UsageHandler) List(c *gin.Context) {
 		SortOrder: c.DefaultQuery("sort_order", "desc"),
 	}
 	filters := usagestats.UsageLogFilters{
-		UserID:      userID,
-		APIKeyID:    apiKeyID,
-		AccountID:   accountID,
-		GroupID:     groupID,
-		Model:       model,
-		RequestType: requestType,
-		Stream:      stream,
-		BillingType: billingType,
-		BillingMode: billingMode,
-		StartTime:   startTime,
-		EndTime:     endTime,
-		ExactTotal:  exactTotal,
+		UserID:         userID,
+		APIKeyID:       apiKeyID,
+		AccountID:      accountID,
+		GroupID:        groupID,
+		DepartmentID:   departmentID,
+		ConsumerID:     consumerID,
+		DepartmentName: departmentName,
+		ConsumerName:   consumerName,
+		Model:          model,
+		RequestType:    requestType,
+		Stream:         stream,
+		BillingType:    billingType,
+		BillingMode:    billingMode,
+		StartTime:      startTime,
+		EndTime:        endTime,
+		ExactTotal:     exactTotal,
 	}
 
 	records, result, err := h.usageService.ListWithFilters(c.Request.Context(), params, filters)

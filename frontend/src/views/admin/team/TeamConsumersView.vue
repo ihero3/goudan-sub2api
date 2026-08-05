@@ -285,7 +285,7 @@ import ConsumerForm from '@/components/team/ConsumerForm.vue'
 import type { ConsumerFormData, ConsumerType } from '@/components/team/ConsumerForm.vue'
 import type { Column } from '@/components/common/types'
 import { teamAPI } from '@/api/team'
-import type { Consumer as ApiConsumer, DepartmentTreeNode, UpdateConsumerRequest } from '@/api/team'
+import type { Consumer as ApiConsumer, CreateConsumerRequest, DepartmentTreeNode, UpdateConsumerRequest } from '@/api/team'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -431,8 +431,17 @@ onMounted(async () => {
   fetchDepartments()
 })
 
-const handleCreateConsumer = async (payload: any) => {
+const handleCreateConsumer = async (formData: ConsumerFormData) => {
   try {
+    const payload: CreateConsumerRequest = {
+      name: formData.name.trim(),
+      email: formData.email.trim() || null,
+      phone: formData.phone.trim() || null,
+      title: formData.title.trim() || null,
+      type: formData.type || undefined,
+      description: formData.description.trim() || null,
+      dept_id: formData.departmentId ? Number(formData.departmentId) : undefined,
+    }
     await teamAPI.createConsumer(teamId.value, payload)
     appStore.showSuccess(t('admin.team.consumers.createSuccess'))
     showCreateModal.value = false

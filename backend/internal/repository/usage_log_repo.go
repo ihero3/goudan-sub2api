@@ -16,7 +16,10 @@ import (
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	dbaccount "github.com/Wei-Shaw/sub2api/ent/account"
 	dbapikey "github.com/Wei-Shaw/sub2api/ent/apikey"
+	dbconsumer "github.com/Wei-Shaw/sub2api/ent/consumer"
+	dbdept "github.com/Wei-Shaw/sub2api/ent/department"
 	dbgroup "github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/ent/predicate"
 	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
 	dbuser "github.com/Wei-Shaw/sub2api/ent/user"
 	dbusersub "github.com/Wei-Shaw/sub2api/ent/usersubscription"
@@ -2991,6 +2994,43 @@ func (r *usageLogRepository) ListWithFilters(ctx context.Context, params paginat
 		args = append(args, *filters.EndTime)
 	}
 
+	// Handle department_id / consumer_id filtering via api_keys subquery
+	if filters.DepartmentID > 0 || filters.ConsumerID > 0 {
+		apiKeyIDs, err := r.findAPIKeyIDsByDeptOrConsumer(ctx, filters.DepartmentID, filters.ConsumerID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(apiKeyIDs) == 0 {
+			// No matching API keys, return empty result
+			return []service.UsageLog{}, paginationResultFromTotal(0, params), nil
+		}
+		placeholders := make([]string, 0, len(apiKeyIDs))
+		for _, id := range apiKeyIDs {
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)+1))
+			args = append(args, id)
+		}
+		conditions = append(conditions, fmt.Sprintf("api_key_id IN (%s)", strings.Join(placeholders, ", ")))
+	}
+
+	// Handle department_name / consumer_name filtering via JOIN
+	if strings.TrimSpace(filters.DepartmentName) != "" || strings.TrimSpace(filters.ConsumerName) != "" {
+		deptName := strings.TrimSpace(filters.DepartmentName)
+		consumerName := strings.TrimSpace(filters.ConsumerName)
+		apiKeyIDs, err := r.findAPIKeyIDsByDeptOrConsumerName(ctx, deptName, consumerName)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(apiKeyIDs) == 0 {
+			return []service.UsageLog{}, paginationResultFromTotal(0, params), nil
+		}
+		placeholders := make([]string, 0, len(apiKeyIDs))
+		for _, id := range apiKeyIDs {
+			placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)+1))
+			args = append(args, id)
+		}
+		conditions = append(conditions, fmt.Sprintf("api_key_id IN (%s)", strings.Join(placeholders, ", ")))
+	}
+
 	whereClause := buildWhere(conditions)
 	var (
 		logs []service.UsageLog
@@ -4333,6 +4373,13 @@ func (r *usageLogRepository) hydrateUsageLogAssociations(ctx context.Context, lo
 		}
 		if key, ok := apiKeys[logs[i].APIKeyID]; ok {
 			logs[i].APIKey = key
+			// Extract department_id and consumer_id from APIKey
+			if key.DepartmentID != nil && *key.DepartmentID > 0 {
+				logs[i].DepartmentID = key.DepartmentID
+			}
+			if key.ConsumerID != nil && *key.ConsumerID > 0 {
+				logs[i].ConsumerID = key.ConsumerID
+			}
 		}
 		if acc, ok := accounts[logs[i].AccountID]; ok {
 			logs[i].Account = acc
@@ -4347,6 +4394,10 @@ func (r *usageLogRepository) hydrateUsageLogAssociations(ctx context.Context, lo
 				logs[i].Subscription = sub
 			}
 		}
+	}
+	// Load department and consumer names
+	if err := r.hydrateDeptConsumerNames(ctx, logs); err != nil {
+		return err
 	}
 	return nil
 }
@@ -4433,6 +4484,160 @@ func (r *usageLogRepository) loadAccounts(ctx context.Context, ids []int64) (map
 		out[m.ID] = accountEntityToService(m)
 	}
 	return out, nil
+}
+
+// findAPIKeyIDsByDeptOrConsumer returns api_key IDs filtered by department_id and/or consumer_id.
+func (r *usageLogRepository) findAPIKeyIDsByDeptOrConsumer(ctx context.Context, deptID, consumerID int64) ([]int64, error) {
+	q := r.client.APIKey.Query()
+	var predicates []predicate.APIKey
+	if deptID > 0 {
+		predicates = append(predicates, dbapikey.DepartmentID(deptID))
+	}
+	if consumerID > 0 {
+		predicates = append(predicates, dbapikey.ConsumerID(consumerID))
+	}
+	if len(predicates) > 0 {
+		q = q.Where(predicates...)
+	}
+	// Select only IDs
+	intIDs, err := q.Select(dbapikey.FieldID).Ints(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int64, 0, len(intIDs))
+	for _, id := range intIDs {
+		ids = append(ids, int64(id))
+	}
+	return ids, nil
+}
+
+func (r *usageLogRepository) findAPIKeyIDsByDeptOrConsumerName(ctx context.Context, deptName, consumerName string) ([]int64, error) {
+	// Build subquery to find api_key_ids matching department/consumer names
+	var apiKeyIDs []int64
+	seen := make(map[int64]struct{})
+
+	if deptName != "" {
+		// Find departments matching name (case-insensitive LIKE)
+		depts, err := r.client.Department.Query().
+			Where(dbdept.NameContains(deptName)).
+			All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(depts) > 0 {
+			deptIDs := make([]int64, len(depts))
+			for i, d := range depts {
+				deptIDs[i] = d.ID
+			}
+			keys, err := r.client.APIKey.Query().
+				Where(dbapikey.DepartmentIDIn(deptIDs...)).
+				Select(dbapikey.FieldID).
+				Ints(ctx)
+			if err != nil {
+				return nil, err
+			}
+			for _, id := range keys {
+				id64 := int64(id)
+				if _, ok := seen[id64]; !ok {
+					seen[id64] = struct{}{}
+					apiKeyIDs = append(apiKeyIDs, id64)
+				}
+			}
+		}
+	}
+
+	if consumerName != "" {
+		// Find consumers matching name (case-insensitive LIKE)
+		consumers, err := r.client.Consumer.Query().
+			Where(dbconsumer.NameContains(consumerName)).
+			All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if len(consumers) > 0 {
+			consumerIDs := make([]int64, len(consumers))
+			for i, c := range consumers {
+				consumerIDs[i] = c.ID
+			}
+			keys, err := r.client.APIKey.Query().
+				Where(dbapikey.ConsumerIDIn(consumerIDs...)).
+				Select(dbapikey.FieldID).
+				Ints(ctx)
+			if err != nil {
+				return nil, err
+			}
+			for _, id := range keys {
+				id64 := int64(id)
+				if _, ok := seen[id64]; !ok {
+					seen[id64] = struct{}{}
+					apiKeyIDs = append(apiKeyIDs, id64)
+				}
+			}
+		}
+	}
+
+	return apiKeyIDs, nil
+}
+
+// hydrateDeptConsumerNames loads department and consumer names for usage logs.
+func (r *usageLogRepository) hydrateDeptConsumerNames(ctx context.Context, logs []service.UsageLog) error {
+	deptIDs := make(map[int64]struct{})
+	consumerIDs := make(map[int64]struct{})
+	for i := range logs {
+		if logs[i].DepartmentID != nil {
+			deptIDs[*logs[i].DepartmentID] = struct{}{}
+		}
+		if logs[i].ConsumerID != nil {
+			consumerIDs[*logs[i].ConsumerID] = struct{}{}
+		}
+	}
+
+	// Load department names
+	deptNames := make(map[int64]string)
+	if len(deptIDs) > 0 {
+		ids := make([]int64, 0, len(deptIDs))
+		for id := range deptIDs {
+			ids = append(ids, id)
+		}
+		models, err := r.client.Department.Query().Where(dbdept.IDIn(ids...)).All(ctx)
+		if err != nil {
+			return err
+		}
+		for _, m := range models {
+			deptNames[m.ID] = m.Name
+		}
+	}
+
+	// Load consumer names
+	consumerNames := make(map[int64]string)
+	if len(consumerIDs) > 0 {
+		ids := make([]int64, 0, len(consumerIDs))
+		for id := range consumerIDs {
+			ids = append(ids, id)
+		}
+		models, err := r.client.Consumer.Query().Where(dbconsumer.IDIn(ids...)).All(ctx)
+		if err != nil {
+			return err
+		}
+		for _, m := range models {
+			consumerNames[m.ID] = m.Name
+		}
+	}
+
+	// Assign names to logs
+	for i := range logs {
+		if logs[i].DepartmentID != nil {
+			if name, ok := deptNames[*logs[i].DepartmentID]; ok {
+				logs[i].DepartmentName = &name
+			}
+		}
+		if logs[i].ConsumerID != nil {
+			if name, ok := consumerNames[*logs[i].ConsumerID]; ok {
+				logs[i].ConsumerName = &name
+			}
+		}
+	}
+	return nil
 }
 
 func (r *usageLogRepository) loadGroups(ctx context.Context, ids []int64) (map[int64]*service.Group, error) {

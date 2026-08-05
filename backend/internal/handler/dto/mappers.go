@@ -586,7 +586,7 @@ func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 	if requestedModel == "" {
 		requestedModel = l.Model
 	}
-	return UsageLog{
+	usageLog := UsageLog{
 		ID:                    l.ID,
 		UserID:                l.UserID,
 		APIKeyID:              l.APIKeyID,
@@ -636,6 +636,22 @@ func usageLogFromServiceUser(l *service.UsageLog) UsageLog {
 		Group:                 GroupFromServiceShallow(l.Group),
 		Subscription:          UserSubscriptionFromService(l.Subscription),
 	}
+	// Extract department/consumer from UsageLog (hydrated from APIKey)
+	if l.DepartmentID != nil && *l.DepartmentID > 0 {
+		dept := &DepartmentSummary{ID: *l.DepartmentID}
+		if l.DepartmentName != nil {
+			dept.Name = *l.DepartmentName
+		}
+		usageLog.Department = dept
+	}
+	if l.ConsumerID != nil && *l.ConsumerID > 0 {
+		consumer := &ConsumerSummary{ID: *l.ConsumerID}
+		if l.ConsumerName != nil {
+			consumer.Name = *l.ConsumerName
+		}
+		usageLog.Consumer = consumer
+	}
+	return usageLog
 }
 
 // UsageLogFromService converts a service UsageLog to DTO for regular users.
@@ -656,7 +672,7 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 	}
 	usageLog := usageLogFromServiceUser(l)
 	usageLog.UpstreamEndpoint = l.UpstreamEndpoint
-	return &AdminUsageLog{
+	out := &AdminUsageLog{
 		UsageLog:              usageLog,
 		UpstreamModel:         l.UpstreamModel,
 		ChannelID:             l.ChannelID,
@@ -667,6 +683,22 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 		IPAddress:             l.IPAddress,
 		Account:               AccountSummaryFromService(l.Account),
 	}
+	// Extract department/consumer from UsageLog (hydrated from APIKey)
+	if l.DepartmentID != nil && *l.DepartmentID > 0 {
+		dept := &DepartmentSummary{ID: *l.DepartmentID}
+		if l.DepartmentName != nil {
+			dept.Name = *l.DepartmentName
+		}
+		out.Department = dept
+	}
+	if l.ConsumerID != nil && *l.ConsumerID > 0 {
+		consumer := &ConsumerSummary{ID: *l.ConsumerID}
+		if l.ConsumerName != nil {
+			consumer.Name = *l.ConsumerName
+		}
+		out.Consumer = consumer
+	}
+	return out
 }
 
 func UsageCleanupTaskFromService(task *service.UsageCleanupTask) *UsageCleanupTask {

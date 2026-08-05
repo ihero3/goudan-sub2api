@@ -343,7 +343,8 @@ const fetchDepartments = async () => {
 const fetchDepartmentTree = async () => {
   if (!teamId.value) return
   try {
-    departmentTree.value = await teamAPI.getDepartmentTree(teamId.value)
+    const data = await teamAPI.getDepartmentTree(teamId.value)
+    departmentTree.value = data || []
   } catch {
     departmentTree.value = []
   }

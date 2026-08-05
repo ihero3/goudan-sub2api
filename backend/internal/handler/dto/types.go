@@ -511,6 +511,11 @@ type UsageLog struct {
 	APIKey       *APIKey           `json:"api_key,omitempty"`
 	Group        *Group            `json:"group,omitempty"`
 	Subscription *UserSubscription `json:"subscription,omitempty"`
+
+	// Department 部门信息（从 APIKey 关联提取，普通用户可见）
+	Department *DepartmentSummary `json:"department,omitempty"`
+	// Consumer 消费者信息（从 APIKey 关联提取，普通用户可见）
+	Consumer *ConsumerSummary `json:"consumer,omitempty"`
 }
 
 // AdminUsageLog 是管理员接口使用的 usage log DTO（包含管理员字段）。
@@ -538,6 +543,11 @@ type AdminUsageLog struct {
 
 	// Account 最小账号信息（避免泄露敏感字段）
 	Account *AccountSummary `json:"account,omitempty"`
+
+	// Department 部门信息（从 APIKey 关联提取）
+	Department *DepartmentSummary `json:"department,omitempty"`
+	// Consumer 消费者信息（从 APIKey 关联提取）
+	Consumer *ConsumerSummary `json:"consumer,omitempty"`
 }
 
 type UsageCleanupFilters struct {
@@ -571,6 +581,18 @@ type UsageCleanupTask struct {
 // AccountSummary is a minimal account info for usage log display.
 // It intentionally excludes sensitive fields like Credentials, Proxy, etc.
 type AccountSummary struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+// DepartmentSummary is a minimal department info for usage log display.
+type DepartmentSummary struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+// ConsumerSummary is a minimal consumer info for usage log display.
+type ConsumerSummary struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
 }

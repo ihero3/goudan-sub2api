@@ -487,10 +487,10 @@ const routes: RouteRecordRaw[] = [
     name: 'AdminModels',
     component: () => import('@/views/admin/ModelsView.vue'),
     meta: {
-      requiresAuth: true,
-      title: 'Admin Dashboard',
-      titleKey: 'admin.dashboard.title',
-      descriptionKey: 'admin.dashboard.description'
+      requiresAuth: false,
+      title: 'Model Square',
+      titleKey: 'admin.models.title',
+      descriptionKey: 'admin.models.description'
     }
   },
   {
@@ -871,7 +871,7 @@ let authInitialized = false
 const navigationLoading = useNavigationLoadingState()
 // 延迟初始化预加载，传入 router 实例
 let routePrefetch: ReturnType<typeof useRoutePrefetch> | null = null
-const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/airwallex', '/legal']
+const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/airwallex', '/legal', '/home', '/admin/models']
 const BACKEND_MODE_CALLBACK_PATHS = [
   '/auth/callback',
   '/auth/linuxdo/callback',
