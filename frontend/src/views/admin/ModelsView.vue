@@ -71,11 +71,23 @@
                       <div class="w-full space-y-1.5">
                         <div class="flex items-center justify-between">
                           <span class="rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-medium text-red-600">1.5折</span>
-                          <span class="text-gray-600">{{ formatPrice(getDualPricing(model.name)!.tier15.input) }} → {{ formatPrice(getDualPricing(model.name)!.tier15.output) }}</span>
+                          <span class="text-gray-600 text-xs">
+                            <span class="text-gray-500">{{ t('admin.models.pricing.input') }}:</span>
+                            <span class="font-medium">{{ formatPrice(getDualPricing(model.name)!.tier15.input) }}</span>
+                            <span class="mx-1 text-gray-400"> </span>
+                            <span class="text-gray-500">{{ t('admin.models.pricing.output') }}:</span>
+                            <span class="font-medium">{{ formatPrice(getDualPricing(model.name)!.tier15.output) }}</span>
+                          </span>
                         </div>
                         <div class="flex items-center justify-between">
                           <span class="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600">9折</span>
-                          <span class="text-gray-600">{{ formatPrice(getDualPricing(model.name)!.tier90.input) }} → {{ formatPrice(getDualPricing(model.name)!.tier90.output) }}</span>
+                          <span class="text-gray-600 text-xs">
+                            <span class="text-gray-500">{{ t('admin.models.pricing.input') }}:</span>
+                            <span class="font-medium">{{ formatPrice(getDualPricing(model.name)!.tier90.input) }}</span>
+                            <span class="mx-1 text-gray-400"> </span>
+                            <span class="text-gray-500">{{ t('admin.models.pricing.output') }}:</span>
+                            <span class="font-medium">{{ formatPrice(getDualPricing(model.name)!.tier90.output) }}</span>
+                          </span>
                         </div>
                       </div>
                     </template>
