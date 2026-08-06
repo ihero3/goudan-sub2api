@@ -40,6 +40,16 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/enterprise',
+    name: 'Enterprise',
+    component: () => import('@/views/EnterpriseView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Enterprise Service',
+      titleKey: 'enterprise.nav.enterprise'
+    }
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import('@/views/auth/LoginView.vue'),
@@ -871,7 +881,7 @@ let authInitialized = false
 const navigationLoading = useNavigationLoadingState()
 // 延迟初始化预加载，传入 router 实例
 let routePrefetch: ReturnType<typeof useRoutePrefetch> | null = null
-const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/airwallex', '/legal', '/home', '/admin/models']
+const BACKEND_MODE_ALLOWED_PATHS = ['/login', '/key-usage', '/setup', '/payment/result', '/payment/airwallex', '/legal', '/home', '/admin/models', '/enterprise']
 const BACKEND_MODE_CALLBACK_PATHS = [
   '/auth/callback',
   '/auth/linuxdo/callback',

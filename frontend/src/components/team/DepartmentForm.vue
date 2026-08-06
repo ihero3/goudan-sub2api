@@ -298,10 +298,10 @@ const parentOptions = computed<ParentOption[]>(() => {
   const options: ParentOption[] = []
   const collect = (nodes: DepartmentTreeNode[], level: number) => {
     for (const node of nodes) {
-      // Don't allow selecting self or descendants as parent in edit mode
+      // Don't allow selecting self or descendants of self as parent in edit mode
       if (props.mode === 'edit' && props.department) {
         if (node.id === props.department.id) continue
-        if (isDescendant(node, props.department.id)) continue
+        if (isInSubtree(node, props.department.id)) continue
       }
       options.push({ id: node.id, name: node.name, level })
       if (node.children) {
@@ -321,11 +321,11 @@ const selectedParentName = computed(() => {
 
 // ==================== Methods ====================
 
-function isDescendant(node: DepartmentTreeNode, targetId: number): boolean {
+function isInSubtree(node: DepartmentTreeNode, targetId: number): boolean {
+  if (node.id === targetId) return true
   if (!node.children) return false
   for (const child of node.children) {
-    if (child.id === targetId) return true
-    if (isDescendant(child, targetId)) return true
+    if (isInSubtree(child, targetId)) return true
   }
   return false
 }
@@ -377,7 +377,7 @@ function resetForm() {
       name: props.department.name,
       cost_center_code: (props.department as any).cost_center_code || '',
       description: props.department.description || '',
-      parent_id: props.department.parent_id,
+      parent_id: props.department.parent_id ?? null,
       status: props.department.status,
     }
   } else {
