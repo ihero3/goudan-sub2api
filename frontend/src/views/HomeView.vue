@@ -830,6 +830,105 @@ const { t, locale } = useI18n()
 const router = useRouter()
 const appStore = useAppStore()
 
+// FAQPage 结构化数据 - 从 i18n FAQ 内容动态构建，支持中英文切换
+const faqPageJsonLd = computed(() => ({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  'mainEntity': [
+    // 服务类 FAQ
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.service.q1'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.service.a1') }
+    },
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.service.q2'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.service.a2') }
+    },
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.service.q3'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.service.a3') }
+    },
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.service.q4'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.service.a4') }
+    },
+    // 计费类 FAQ
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.billing.q1'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.billing.a1') }
+    },
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.billing.q2'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.billing.a2') }
+    },
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.billing.q3'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.billing.a3') }
+    },
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.billing.q4'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.billing.a4') }
+    },
+    // 集成类 FAQ
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.integration.q1'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.integration.a1') }
+    },
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.integration.q2'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.integration.a2') }
+    },
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.integration.q3'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.integration.a3') }
+    },
+    {
+      '@type': 'Question',
+      'name': t('home.easyrouterFaq.integration.q4'),
+      'acceptedAnswer': { '@type': 'Answer', 'text': t('home.easyrouterFaq.integration.a4') }
+    }
+  ]
+}))
+
+// 合并所有 JSON-LD 结构化数据（WebSite + SoftwareApplication + FAQPage）
+const homeJsonLd = computed(() => [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    'name': 'ThreeRouter',
+    'url': 'https://www.threerouter.com',
+    'description': '企业级 AI API 统一管理平台，一个密钥接入 DeepSeek、Claude、GPT、Kimi、GLM 等大模型。',
+    'inLanguage': ['zh-CN', 'en']
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    'name': 'ThreeRouter',
+    'applicationCategory': 'DeveloperApplication',
+    'operatingSystem': 'Cloud',
+    'description': 'AI API 统一管理平台，兼容 OpenAI 格式，支持 DeepSeek、Claude、GPT 等多模型接入。',
+    'url': 'https://www.threerouter.com',
+    'offers': {
+      '@type': 'Offer',
+      'price': '0',
+      'priceCurrency': 'USD',
+      'description': '新用户获赠 $10 免费 Tokens'
+    }
+  },
+  faqPageJsonLd.value
+])
+
 useSEO({
   title: 'ThreeRouter - AI API 统一网关 | DeepSeek/Claude/GPT 多模型管理平台',
   description: 'ThreeRouter 是企业级 AI API 统一管理平台，一个密钥接入 DeepSeek、Claude、GPT、Kimi、GLM 等大模型。美国本地部署，兼容 OpenAI 格式，成本降低 97%，P99 延迟低于 200ms。',
@@ -839,31 +938,7 @@ useSEO({
   ogUrl: 'https://www.threerouter.com/home',
   ogSiteName: 'ThreeRouter',
   canonicalUrl: 'https://www.threerouter.com/home',
-  jsonLd: [
-    {
-      '@context': 'https://schema.org',
-      '@type': 'WebSite',
-      'name': 'ThreeRouter',
-      'url': 'https://www.threerouter.com',
-      'description': '企业级 AI API 统一管理平台，一个密钥接入 DeepSeek、Claude、GPT、Kimi、GLM 等大模型。',
-      'inLanguage': ['zh-CN', 'en']
-    },
-    {
-      '@context': 'https://schema.org',
-      '@type': 'SoftwareApplication',
-      'name': 'ThreeRouter',
-      'applicationCategory': 'DeveloperApplication',
-      'operatingSystem': 'Cloud',
-      'description': 'AI API 统一管理平台，兼容 OpenAI 格式，支持 DeepSeek、Claude、GPT 等多模型接入。',
-      'url': 'https://www.threerouter.com',
-      'offers': {
-        '@type': 'Offer',
-        'price': '0',
-        'priceCurrency': 'USD',
-        'description': '新用户获赠 $10 免费 Tokens'
-      }
-    }
-  ]
+  jsonLd: homeJsonLd
 })
 
 const isDark = ref(false)

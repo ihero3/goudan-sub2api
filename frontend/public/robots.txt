@@ -1,4 +1,32 @@
+# ThreeRouter robots.txt
+# 允许搜索引擎和 AI 引擎爬虫访问公开内容页面
+
+# 通用规则 - 允许公开页面，禁止私有/管理页面
 User-agent: *
+Allow: /
+Allow: /home
+Allow: /enterprise
+Allow: /admin/models
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# === AI 引擎爬虫 - 明确允许访问公开内容 ===
+
+# OpenAI GPTBot
+User-agent: GPTBot
 Allow: /
 Disallow: /admin/
 Disallow: /dashboard
@@ -16,4 +44,214 @@ Disallow: /redeem
 Disallow: /subscriptions
 Disallow: /custom/
 
+# OpenAI OAI-SearchBot
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# PerplexityBot
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# PerplexityBot-Recrawler
+User-agent: PerplexityBot-Recrawler
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# Anthropic ClaudeBot
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# Anthropic Claude-Web
+User-agent: Claude-Web
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# Google Extended (Gemini/AI 训练)
+User-agent: Google-Extended
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# Common Crawl
+User-agent: CCBot
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# Amazonbot
+User-agent: Amazonbot
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# ByteDance Bytespider
+User-agent: Bytespider
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# Cohere AI
+User-agent: cohere-ai
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# Meta-ExternalAgent
+User-agent: Meta-ExternalAgent
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+# 站点地图
 Sitemap: https://www.threerouter.com/sitemap.xml

@@ -877,6 +877,71 @@
             font-weight: 600;
         }
     </style>
+    <!-- FAQPage 结构化数据 - GEO 优化，助力 AI 引擎引用 -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "ThreeRouter 是什么？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "ThreeRouter = 统一API网关 + 智能路由引擎。提供统一的AI模型访问接口，完全兼容 OpenAI SDK。通过 L1-L5 智能路由引擎，根据任务复杂度自动匹配最优性价比模型，在不牺牲质量的前提下显著降低推理成本。核心能力包括：统一API接入、L1-L5智能路由、成本优化（平均降低40-80%）、策略灵活切换。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "ThreeRouter 都支持哪些模型？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "支持多种开源大模型，覆盖通用对话、编程、推理等核心维度。包括：深度求索(deepseek-v4)、MiniMax(minimax-m3)、Moonshot(kimi-k2.6)、阿里云(qwen3.7-max)、智谱(glm-5.1)、阶跃星辰(seedance-2.0)等。最新模型列表可访问 ThreeRouter 模型广场查看。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "什么是分组和模型？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "模型(Model)是具体的大模型，如 deepseek-v4、minimax-m3、kimi-k2.6 等。分组(Group)是模型的分类方式，调用时只需指定分组名（如 model=\"deepseek\"），平台会自动从该分组里选一个最合适的模型来响应。分组包括 deepseek、minimax、kimi、qwen、glm、seedance 等。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "如何充值？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "充值入口在网站左侧菜单栏，进入充值页面后按需购买即可，支持微信支付和支付宝支付。注册即赠 2 美金，进群赠送 10 美金。充值汇率 1 元 = 1 美金（1:1）。企业大额充值可进 Q 群联系人工客服获取优惠政策。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "有哪些福利？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "线上首充最高送 160 元。限量折扣码不定期更新，可用于余额充值或订阅购买（折扣码与首充不可叠加）。邀请一名新用户注册成功，无需充值，即可获得 5 刀额度赠与。被邀请用户充值后，邀请人可获得 5% 的佣金。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "使用 CC Switch 需要 VPN 吗？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "不需要。ThreeRouter 服务可直接访问，无需使用 VPN。"
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "页面请求失败或使用中速度太慢怎么办？",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "可查看使用中模型的当前状态，有3种查看方式：1. 进 Q 群输入\"/状态检查\"，获取最新的全部渠道状态截图；2. 进网站点击顶栏的\"模型可用性检测\"获取最新的渠道状态；3. 直接访问 status.threerouter.com 查看服务状态。"
+          }
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
     <!-- Sidebar Navigation -->

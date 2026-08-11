@@ -589,6 +589,33 @@
           </div>
         </div>
       </section>
+
+      <!-- Enterprise FAQ Section -->
+      <section id="faq" class="px-6 py-16">
+        <div class="mx-auto max-w-4xl">
+          <div class="mb-10 text-center">
+            <p class="text-xs font-bold uppercase tracking-[0.22em] text-[#0757b8]">{{ t('enterprise.faq.eyebrow') }}</p>
+            <h2 class="mt-3 text-3xl font-black tracking-tight text-gray-950 dark:text-white md:text-4xl">{{ t('enterprise.faq.title') }}</h2>
+            <p class="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-gray-500 dark:text-gray-400">{{ t('enterprise.faq.subtitle') }}</p>
+          </div>
+
+          <div class="space-y-3">
+            <details
+              v-for="i in 8"
+              :key="i"
+              class="group rounded-2xl border border-gray-200 bg-white/90 p-5 shadow-sm transition-all hover:border-[#0757b8]/30 hover:shadow-md dark:border-dark-700 dark:bg-dark-800/60"
+            >
+              <summary class="flex cursor-pointer items-center justify-between gap-4 list-none">
+                <h3 class="text-base font-bold text-gray-950 dark:text-white">{{ t(`enterprise.faq.q${i}`) }}</h3>
+                <span class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition-transform group-open:rotate-180 dark:bg-dark-700 dark:text-gray-400">
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                </span>
+              </summary>
+              <p class="mt-3 text-sm leading-7 text-gray-600 dark:text-gray-300">{{ t(`enterprise.faq.a${i}`) }}</p>
+            </details>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Footer -->
@@ -641,16 +668,25 @@ const { t, tm, locale } = useI18n()
 const router = useRouter()
 const appStore = useAppStore()
 
-useSEO({
-  title: '企业服务 - ThreeRouter | 企业级 AI API 管理与 Token 精细化管控平台',
-  description: 'ThreeRouter 企业服务：统一团队管理、安全合规、Token 使用精细化管理。企业级 AI API 网关，支持部门配额、密钥管控、成本归因、合规审计，让每一个 Token 都被追踪。',
-  keywords: '企业AI,企业API管理,Token精细化管理,团队管理,API网关,企业合规,API密钥管理,成本管控,Token配额,用量监控',
-  ogType: 'website',
-  ogImage: 'https://www.threerouter.com/logo.png',
-  ogUrl: 'https://www.threerouter.com/enterprise',
-  ogSiteName: 'ThreeRouter',
-  canonicalUrl: 'https://www.threerouter.com/enterprise',
-  jsonLd: {
+// FAQPage 结构化数据 - 从 i18n FAQ 内容动态构建，支持中英文切换
+const enterpriseFaqJsonLd = computed(() => ({
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  'mainEntity': [
+    { '@type': 'Question', 'name': t('enterprise.faq.q1'), 'acceptedAnswer': { '@type': 'Answer', 'text': t('enterprise.faq.a1') } },
+    { '@type': 'Question', 'name': t('enterprise.faq.q2'), 'acceptedAnswer': { '@type': 'Answer', 'text': t('enterprise.faq.a2') } },
+    { '@type': 'Question', 'name': t('enterprise.faq.q3'), 'acceptedAnswer': { '@type': 'Answer', 'text': t('enterprise.faq.a3') } },
+    { '@type': 'Question', 'name': t('enterprise.faq.q4'), 'acceptedAnswer': { '@type': 'Answer', 'text': t('enterprise.faq.a4') } },
+    { '@type': 'Question', 'name': t('enterprise.faq.q5'), 'acceptedAnswer': { '@type': 'Answer', 'text': t('enterprise.faq.a5') } },
+    { '@type': 'Question', 'name': t('enterprise.faq.q6'), 'acceptedAnswer': { '@type': 'Answer', 'text': t('enterprise.faq.a6') } },
+    { '@type': 'Question', 'name': t('enterprise.faq.q7'), 'acceptedAnswer': { '@type': 'Answer', 'text': t('enterprise.faq.a7') } },
+    { '@type': 'Question', 'name': t('enterprise.faq.q8'), 'acceptedAnswer': { '@type': 'Answer', 'text': t('enterprise.faq.a8') } },
+  ]
+}))
+
+// 合并 Service + FAQPage 结构化数据
+const enterpriseJsonLd = computed(() => [
+  {
     '@context': 'https://schema.org',
     '@type': 'Service',
     'name': 'ThreeRouter 企业 AI API 管理服务',
@@ -667,7 +703,20 @@ useSEO({
       '@type': 'BusinessAudience',
       'name': 'Enterprise IT & Engineering Teams'
     }
-  }
+  },
+  enterpriseFaqJsonLd.value
+])
+
+useSEO({
+  title: '企业服务 - ThreeRouter | 企业级 AI API 管理与 Token 精细化管控平台',
+  description: 'ThreeRouter 企业服务：统一团队管理、安全合规、Token 使用精细化管理。企业级 AI API 网关，支持部门配额、密钥管控、成本归因、合规审计，让每一个 Token 都被追踪。',
+  keywords: '企业AI,企业API管理,Token精细化管理,团队管理,API网关,企业合规,API密钥管理,成本管控,Token配额,用量监控',
+  ogType: 'website',
+  ogImage: 'https://www.threerouter.com/logo.png',
+  ogUrl: 'https://www.threerouter.com/enterprise',
+  ogSiteName: 'ThreeRouter',
+  canonicalUrl: 'https://www.threerouter.com/enterprise',
+  jsonLd: enterpriseJsonLd
 })
 
 const currentYear = computed(() => new Date().getFullYear())
