@@ -21,11 +21,22 @@ FROM ${NODE_IMAGE} AS frontend-builder
 WORKDIR /app/frontend
 
 # Install pnpm (pinned to v9 to match CI and keep builds reproducible)
-RUN corepack enable && corepack prepare pnpm@9 --activate
+# Use a configurable npm registry mirror (e.g. npmmirror for CN servers) so that
+# corepack can fetch pnpm even when registry.npmjs.org is unreachable.
+ARG NPM_REGISTRY=https://registry.npmjs.org
+# corepack 下载 pnpm 偶发 504（镜像源网关超时），用 shell 循环自动重试
+RUN corepack enable \
+    && for i in $(seq 1 5); do \
+        if COREPACK_NPM_REGISTRY=${NPM_REGISTRY} corepack prepare pnpm@9 --activate; then \
+          break; \
+        fi; \
+        echo "corepack prepare failed (attempt $i/5), retrying..."; \
+        sleep 5; \
+    done
 
 # Install dependencies first (better caching)
 COPY frontend/package.json frontend/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --registry=${NPM_REGISTRY}
 
 # Copy frontend source and build.
 # LegalDocumentView.vue (admin-compliance gate) build-time imports

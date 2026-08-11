@@ -823,11 +823,48 @@ import { useAppStore } from '@/stores'
 import type { CustomMenuItem } from '@/types'
 import Icon from '@/components/icons/Icon.vue'
 import LogoSvg from '@/assets/icons/logo.svg'
+import { useSEO } from '@/composables/useSEO'
 
 const { t, locale } = useI18n()
 
 const router = useRouter()
 const appStore = useAppStore()
+
+useSEO({
+  title: 'ThreeRouter - AI API 统一网关 | DeepSeek/Claude/GPT 多模型管理平台',
+  description: 'ThreeRouter 是企业级 AI API 统一管理平台，一个密钥接入 DeepSeek、Claude、GPT、Kimi、GLM 等大模型。美国本地部署，兼容 OpenAI 格式，成本降低 97%，P99 延迟低于 200ms。',
+  keywords: 'AI API,API网关,DeepSeek API,Claude API,GPT API,大模型API,OpenAI兼容,企业AI,Token管理,API中转,美国部署',
+  ogType: 'website',
+  ogImage: 'https://www.threerouter.com/logo.png',
+  ogUrl: 'https://www.threerouter.com/home',
+  ogSiteName: 'ThreeRouter',
+  canonicalUrl: 'https://www.threerouter.com/home',
+  jsonLd: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      'name': 'ThreeRouter',
+      'url': 'https://www.threerouter.com',
+      'description': '企业级 AI API 统一管理平台，一个密钥接入 DeepSeek、Claude、GPT、Kimi、GLM 等大模型。',
+      'inLanguage': ['zh-CN', 'en']
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'SoftwareApplication',
+      'name': 'ThreeRouter',
+      'applicationCategory': 'DeveloperApplication',
+      'operatingSystem': 'Cloud',
+      'description': 'AI API 统一管理平台，兼容 OpenAI 格式，支持 DeepSeek、Claude、GPT 等多模型接入。',
+      'url': 'https://www.threerouter.com',
+      'offers': {
+        '@type': 'Offer',
+        'price': '0',
+        'priceCurrency': 'USD',
+        'description': '新用户获赠 $10 免费 Tokens'
+      }
+    }
+  ]
+})
 
 const isDark = ref(false)
 const currentYear = computed(() => new Date().getFullYear())

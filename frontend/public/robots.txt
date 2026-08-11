@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /keys
+Disallow: /usage
+Disallow: /profile
+Disallow: /support/
+Disallow: /team/
+Disallow: /purchase
+Disallow: /orders
+Disallow: /payment/
+Disallow: /affiliate
+Disallow: /governance
+Disallow: /redeem
+Disallow: /subscriptions
+Disallow: /custom/
+
+Sitemap: https://www.threerouter.com/sitemap.xml

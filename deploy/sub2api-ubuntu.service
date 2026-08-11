@@ -1,0 +1,54 @@
+# =============================================================================
+# Sub2API Systemd Service File
+# Sub2API Systemd 服务配置文件
+#
+# Installation:
+#   sudo cp sub2api-ubuntu.service /etc/systemd/system/sub2api.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable sub2api
+#   sudo systemctl start sub2api
+#
+# Modify WorkingDirectory, ExecStart, and Environment as needed.
+# =============================================================================
+
+[Unit]
+Description=Sub2API - AI API Gateway Platform
+Documentation=https://github.com/Wei-Shaw/sub2api
+After=network.target postgresql.service redis-server.service
+Wants=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=sub2api
+Group=sub2api
+WorkingDirectory=/opt/sub2api
+ExecStart=/opt/sub2api/sub2api
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sub2api
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/sub2api
+
+# Environment configuration
+Environment=GIN_MODE=release
+Environment=SERVER_HOST=127.0.0.1
+Environment=SERVER_PORT=8080
+Environment=TZ=Asia/Shanghai
+
+# Resource limits (adjust based on your server specs)
+LimitNOFILE=65536
+LimitNPROC=65536
+
+# Graceful shutdown
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

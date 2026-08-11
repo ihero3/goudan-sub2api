@@ -1056,11 +1056,31 @@ router.beforeEach(async (to, _from, next) => {
 })
 
 /**
+ * Set or remove robots meta tag for SEO
+ */
+function setPageRobots(noindex: boolean) {
+  let meta = document.head.querySelector('meta[name="robots"]') as HTMLMetaElement | null
+  if (!meta) {
+    meta = document.createElement('meta')
+    meta.setAttribute('name', 'robots')
+    document.head.appendChild(meta)
+  }
+  meta.setAttribute('content', noindex ? 'noindex, nofollow' : 'index, follow')
+}
+
+/**
  * Navigation guard: End loading and trigger prefetch
  */
 router.afterEach((to) => {
   // 结束导航加载状态
   navigationLoading.endNavigation()
+
+  // SEO: 为需要认证的页面设置 noindex，公开页面设置 index,follow
+  const requiresAuth = to.meta.requiresAuth !== false
+  const isAdminRoute = to.path.startsWith('/admin') || to.path.startsWith('/team')
+  const isPrivateRoute = requiresAuth || isAdminRoute
+    || ['/dashboard', '/keys', '/usage', '/profile', '/purchase', '/orders', '/payment'].some(p => to.path.startsWith(p))
+  setPageRobots(isPrivateRoute)
 
   // 懒初始化预加载（首次导航时创建，传入 router 实例）
   if (!routePrefetch) {

@@ -351,6 +351,59 @@
         </div>
       </section>
 
+      <!-- Token Management -->
+      <section id="token-management" class="relative overflow-hidden px-6 py-20">
+        <div class="pointer-events-none absolute right-0 top-0 h-96 w-96 rounded-full bg-[#20f5b4]/5 blur-3xl"></div>
+        <div class="pointer-events-none absolute left-0 bottom-0 h-96 w-96 rounded-full bg-[#0757b8]/5 blur-3xl"></div>
+        <div class="relative mx-auto max-w-7xl">
+          <div class="mb-12 text-center">
+            <div class="mb-3 text-sm font-bold uppercase tracking-wider text-[#0757b8]">{{ t('enterprise.tokenManagement.label') }}</div>
+            <h2 class="mb-4 text-3xl font-bold text-gray-900 dark:text-white md:text-4xl">{{ t('enterprise.tokenManagement.title') }}</h2>
+            <p class="mx-auto mb-6 max-w-3xl text-gray-500 dark:text-gray-400">{{ t('enterprise.tokenManagement.subtitle') }}</p>
+          </div>
+
+          <!-- Core Metrics Row -->
+          <div class="mb-10 grid gap-6 md:grid-cols-4">
+            <div v-for="(metric, idx) in tokenMetrics" :key="idx" class="rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-gray-50 p-6 text-center shadow-sm dark:border-dark-700 dark:from-dark-800 dark:to-dark-900">
+              <div class="mb-2 text-3xl font-bold text-[#0757b8]">{{ metric.value }}</div>
+              <div class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ metric.label }}</div>
+              <div class="mt-1 text-xs text-gray-400 dark:text-gray-500">{{ metric.desc }}</div>
+            </div>
+          </div>
+
+          <!-- Feature Cards Grid -->
+          <div class="grid gap-6 lg:grid-cols-3">
+            <div v-for="(feature, idx) in tokenManagementFeatures" :key="idx" class="group rounded-2xl border border-gray-100 bg-white p-6 text-left transition-all hover:-translate-y-1 hover:shadow-lg dark:border-dark-700 dark:bg-dark-800">
+              <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-2xl" :class="feature.iconBg">
+                {{ feature.icon }}
+              </div>
+              <h3 class="mb-2 text-lg font-bold text-gray-900 dark:text-white">{{ feature.title }}</h3>
+              <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">{{ feature.desc }}</p>
+              <ul class="list-none space-y-1.5 text-sm text-gray-600 dark:text-gray-300">
+                <li v-for="(point, pIdx) in feature.points" :key="pIdx" class="flex items-start gap-2">
+                  <span class="text-[#20f5b4]">✓</span>
+                  <span>{{ point }}</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Process Flow -->
+          <div class="mt-12 rounded-2xl bg-gradient-to-r from-[#021b4a] to-[#0757b8] p-8 text-white">
+            <h3 class="mb-8 text-center text-2xl font-bold">{{ t('enterprise.tokenManagement.processTitle') }}</h3>
+            <div class="grid gap-6 md:grid-cols-4">
+              <div v-for="(step, idx) in tokenProcessSteps" :key="idx" class="text-center">
+                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-xl font-bold backdrop-blur">
+                  {{ idx + 1 }}
+                </div>
+                <h4 class="mb-2 text-sm font-bold">{{ step.title }}</h4>
+                <p class="text-xs text-white/70">{{ step.desc }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Team Workflow -->
       <section id="team-workflow" class="bg-gray-50 px-6 py-20 dark:bg-dark-900/50">
         <div class="mx-auto max-w-7xl text-center">
@@ -582,10 +635,40 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores'
 import LocaleSwitcher from '@/components/common/LocaleSwitcher.vue'
 import Icon from '@/components/icons/Icon.vue'
+import { useSEO } from '@/composables/useSEO'
 
 const { t, tm, locale } = useI18n()
 const router = useRouter()
 const appStore = useAppStore()
+
+useSEO({
+  title: '企业服务 - ThreeRouter | 企业级 AI API 管理与 Token 精细化管控平台',
+  description: 'ThreeRouter 企业服务：统一团队管理、安全合规、Token 使用精细化管理。企业级 AI API 网关，支持部门配额、密钥管控、成本归因、合规审计，让每一个 Token 都被追踪。',
+  keywords: '企业AI,企业API管理,Token精细化管理,团队管理,API网关,企业合规,API密钥管理,成本管控,Token配额,用量监控',
+  ogType: 'website',
+  ogImage: 'https://www.threerouter.com/logo.png',
+  ogUrl: 'https://www.threerouter.com/enterprise',
+  ogSiteName: 'ThreeRouter',
+  canonicalUrl: 'https://www.threerouter.com/enterprise',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    'name': 'ThreeRouter 企业 AI API 管理服务',
+    'description': '企业级 AI API 统一管理平台，提供 Token 精细化管理、团队配额管控、安全合规审计。',
+    'url': 'https://www.threerouter.com/enterprise',
+    'serviceType': 'AI API Gateway & Token Management',
+    'provider': {
+      '@type': 'Organization',
+      'name': 'ThreeRouter',
+      'url': 'https://www.threerouter.com'
+    },
+    'areaServed': 'Global',
+    'audience': {
+      '@type': 'BusinessAudience',
+      'name': 'Enterprise IT & Engineering Teams'
+    }
+  }
+})
 
 const currentYear = computed(() => new Date().getFullYear())
 const currentLang = computed<'zh' | 'en'>(() => (locale.value === 'zh' ? 'zh' : 'en'))
@@ -609,6 +692,10 @@ const teamFeature6Points = computed(() => tm('enterprise.team.feature6Points') a
 const teamWorkflowStep1Points = computed(() => tm('enterprise.teamWorkflow.step1Points') as unknown as string[])
 const teamWorkflowStep2Points = computed(() => tm('enterprise.teamWorkflow.step2Points') as unknown as string[])
 const teamWorkflowStep3Points = computed(() => tm('enterprise.teamWorkflow.step3Points') as unknown as string[])
+
+const tokenMetrics = computed(() => tm('enterprise.tokenManagement.metrics') as unknown as Array<{ value: string; label: string; desc: string }>)
+const tokenManagementFeatures = computed(() => tm('enterprise.tokenManagement.features') as unknown as Array<{ icon: string; iconBg: string; title: string; desc: string; points: string[] }>)
+const tokenProcessSteps = computed(() => tm('enterprise.tokenManagement.processSteps') as unknown as Array<{ title: string; desc: string }>)
 
 const isDark = ref(document.documentElement.classList.contains('dark'))
 
