@@ -146,21 +146,16 @@ build_frontend() {
     fi
 
     # Build
+    # Vite config sets outDir to '../backend/internal/web/dist' (= $EMBED_DIST_DIR)
+    # so the build output goes directly to the embed directory, no copy needed
     pnpm --dir "$FRONTEND_DIR" run build
 
-    if [ ! -d "$FRONTEND_DIR/dist" ]; then
-        error "Frontend build failed: dist directory not found"
+    if [ ! -d "$EMBED_DIST_DIR" ] || [ -z "$(ls -A "$EMBED_DIST_DIR" 2>/dev/null)" ]; then
+        error "Frontend build failed: embed dist directory not found or empty"
         exit 1
     fi
 
-    success "Frontend build complete"
-
-    # Copy dist to embed directory
-    info "Copying frontend dist to embed directory..."
-    mkdir -p "$EMBED_DIST_DIR"
-    rm -rf "$EMBED_DIST_DIR"/*
-    cp -r "$FRONTEND_DIR/dist/"* "$EMBED_DIST_DIR/"
-    success "Frontend dist copied to $EMBED_DIST_DIR"
+    success "Frontend build complete (output: $EMBED_DIST_DIR)"
 }
 
 # ============================================================
