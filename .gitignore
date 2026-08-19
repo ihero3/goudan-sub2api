@@ -141,6 +141,8 @@ pw.txt
 # 其他
 # ===================
 tests
+!deploy/tests/
+!deploy/tests/**
 CLAUDE.md
 .claude
 scripts
@@ -158,6 +160,7 @@ vite.config.js
 !docs/PAYMENT.md
 !docs/PAYMENT_CN.md
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
+!docs/ASYNC_IMAGE_TASKS.md
 !docs/legal/
 !docs/legal/*.md
 .serena/
@@ -165,3 +168,6 @@ vite.config.js
 frontend/coverage/
 aicodex
 output/
+
+# Vitest / Vite cache at repo root
+.vite/

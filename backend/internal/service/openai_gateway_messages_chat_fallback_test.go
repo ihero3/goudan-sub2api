@@ -1,354 +1,481 @@
+//go:build unit
+
 package service
 
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/Wei-Shaw/sub2api/internal/pkg/apicompat"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/openai_compat"
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
-func TestForwardAnthropicViaRawChatCompletions_BasicConversion(t *testing.T) {
+func forceChatMessagesFallbackAccount() *Account {
+	account := rawChatCompletionsTestAccount()
+	account.Extra = map[string]any{
+		openai_compat.ExtraKeyResponsesMode: string(openai_compat.ResponsesSupportModeForceChatCompletions),
+	}
+	return account
+}
+
+// errTailReader yields the given data, then returns err instead of io.EOF,
+// simulating an upstream connection that breaks mid-stream.
+type errTailReader struct {
+	data []byte
+	off  int
+	err  error
+}
+
+func (r *errTailReader) Read(p []byte) (int, error) {
+	if r.off < len(r.data) {
+		n := copy(p, r.data[r.off:])
+		r.off += n
+		return n, nil
+	}
+	return 0, r.err
+}
+
+func (r *errTailReader) Close() error { return nil }
+
+func TestForwardAsAnthropic_ForceChatCompletionsPreservesFinalModelReasoningEffort(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	anthropicReq := apicompat.AnthropicRequest{
-		Model: "claude-3-5-sonnet-20241022",
-		Messages: []apicompat.AnthropicMessage{
-			{
-				Role:    "user",
-				Content: json.RawMessage(`"Hello"`),
-			},
-		},
-		Stream: false,
-	}
-
-	reqBody, err := json.Marshal(anthropicReq)
-	if err != nil {
-		t.Fatalf("Failed to marshal request: %v", err)
-	}
-
-	responsesReq, err := apicompat.AnthropicToResponses(&anthropicReq)
-	if err != nil {
-		t.Fatalf("AnthropicToResponses failed: %v", err)
-	}
-
-	if responsesReq.Model != "claude-3-5-sonnet-20241022" {
-		t.Errorf("Expected model claude-3-5-sonnet-20241022, got %s", responsesReq.Model)
-	}
-
-	chatReq, err := apicompat.ResponsesToChatCompletionsRequest(responsesReq)
-	if err != nil {
-		t.Fatalf("ResponsesToChatCompletionsRequest failed: %v", err)
-	}
-
-	if chatReq.Model != "claude-3-5-sonnet-20241022" {
-		t.Errorf("Expected model claude-3-5-sonnet-20241022, got %s", chatReq.Model)
-	}
-
-	if len(chatReq.Messages) == 0 {
-		t.Fatal("Expected at least one message in Chat Completions request")
-	}
-
-	if len(reqBody) == 0 {
-		t.Fatal("Request body should not be empty")
-	}
-}
-
-func TestBufferChatCompletionsAsAnthropic_Conversion(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	ccResp := apicompat.ChatCompletionsResponse{
-		ID:      "chatcmpl-123",
-		Object:  "chat.completion",
-		Created: 1234567890,
-		Model:   "gpt-4",
-		Choices: []apicompat.ChatChoice{
-			{
-				Index: 0,
-				Message: apicompat.ChatMessage{
-					Role:    "assistant",
-					Content: json.RawMessage(`"Hello from GPT-4"`),
-				},
-				FinishReason: "stop",
-			},
-		},
-		Usage: &apicompat.ChatUsage{
-			PromptTokens:     10,
-			CompletionTokens: 5,
-			TotalTokens:      15,
-		},
-	}
-
-	respBody, err := json.Marshal(ccResp)
-	if err != nil {
-		t.Fatalf("Failed to marshal response: %v", err)
-	}
-
-	responsesResp := apicompat.ChatCompletionsResponseToResponses(&ccResp, "claude-3-5-sonnet-20241022")
-	anthropicResp := apicompat.ResponsesToAnthropic(responsesResp, "claude-3-5-sonnet-20241022")
-
-	if anthropicResp.Model != "claude-3-5-sonnet-20241022" {
-		t.Errorf("Expected model claude-3-5-sonnet-20241022, got %s", anthropicResp.Model)
-	}
-
-	if anthropicResp.Type != "message" {
-		t.Errorf("Expected type message, got %s", anthropicResp.Type)
-	}
-
-	if len(anthropicResp.Content) == 0 {
-		t.Fatal("Expected at least one content block")
-	}
-
-	if len(respBody) == 0 {
-		t.Fatal("Response body should not be empty")
-	}
-}
-
-func TestStreamChatCompletionsAsAnthropic_EventConversion(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	chunk := apicompat.ChatCompletionsChunk{
-		ID:      "chatcmpl-123",
-		Object:  "chat.completion.chunk",
-		Created: 1234567890,
-		Model:   "gpt-4",
-		Choices: []apicompat.ChatChunkChoice{
-			{
-				Index: 0,
-				Delta: apicompat.ChatDelta{
-					Content: strPtr("Hello"),
-				},
-			},
-		},
-	}
-
-	ccState := apicompat.NewChatCompletionsToResponsesStreamState("claude-3-5-sonnet-20241022")
-	anthState := apicompat.NewResponsesEventToAnthropicState()
-	anthState.Model = "claude-3-5-sonnet-20241022"
-
-	responsesEvents := apicompat.ChatCompletionsChunkToResponsesEvents(&chunk, ccState)
-	if len(responsesEvents) == 0 {
-		t.Fatal("Expected at least one Responses event from CC chunk")
-	}
-
-	var allAnthEvents []apicompat.AnthropicStreamEvent
-	for i := range responsesEvents {
-		anthEvents := apicompat.ResponsesEventToAnthropicEvents(&responsesEvents[i], anthState)
-		allAnthEvents = append(allAnthEvents, anthEvents...)
-	}
-
-	if len(allAnthEvents) == 0 {
-		t.Fatal("Expected at least one Anthropic event from Responses events")
-	}
-
-	hasMessageStart := false
-	for _, evt := range allAnthEvents {
-		if evt.Type == "message_start" {
-			hasMessageStart = true
-			break
-		}
-	}
-
-	if !hasMessageStart {
-		t.Error("Expected message_start event in Anthropic stream events")
-	}
-}
-
-func TestForwardAnthropicViaRawChatCompletions_UpstreamError(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	upstreamServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error": {"message": "Invalid model", "type": "invalid_request_error"}}`))
-	}))
-	defer upstreamServer.Close()
-
-	if upstreamServer.URL == "" {
-		t.Fatal("Test server URL should not be empty")
-	}
-}
-
-func TestNormalizeOpenAIChatMessagesContentToString_Integration(t *testing.T) {
-	chatReq := apicompat.ChatCompletionsRequest{
-		Model: "gpt-4",
-		Messages: []apicompat.ChatMessage{
-			{
-				Role:    "user",
-				Content: json.RawMessage(`[{"type": "text", "text": "Hello"}]`),
-			},
-		},
-	}
-
-	body, err := json.Marshal(chatReq)
-	if err != nil {
-		t.Fatalf("Failed to marshal: %v", err)
-	}
-
-	normalized := normalizeOpenAIChatMessagesContentToString(body)
-
-	var result apicompat.ChatCompletionsRequest
-	if err := json.Unmarshal(normalized, &result); err != nil {
-		t.Fatalf("Failed to unmarshal normalized: %v", err)
-	}
-
-	if len(result.Messages) != 1 {
-		t.Fatalf("Expected 1 message, got %d", len(result.Messages))
-	}
-
-	content := string(result.Messages[0].Content)
-	if !strings.Contains(content, "Hello") {
-		t.Errorf("Expected content to contain 'Hello', got %s", content)
-	}
-}
-
-func TestShouldUseResponsesAPI_Integration(t *testing.T) {
 	tests := []struct {
-		name     string
-		extra    map[string]any
-		expected bool
+		name       string
+		model      string
+		mapped     string
+		effortJSON string
+		wantEffort string
+		maxPolicy  string
 	}{
 		{
-			name:     "no extra",
-			extra:    nil,
-			expected: true,
+			name:       "policy caps converted effort",
+			model:      "gpt-5.6-luna",
+			mapped:     "gpt-5.6-luna",
+			effortJSON: `,"output_config":{"effort":"max"}`,
+			wantEffort: "medium",
+			maxPolicy:  "medium",
 		},
 		{
-			name:     "empty extra",
-			extra:    map[string]any{},
-			expected: true,
+			name:       "GPT56 max",
+			model:      "luna",
+			mapped:     "gpt-5.6-luna",
+			effortJSON: `,"output_config":{"effort":"max"}`,
+			wantEffort: "max",
 		},
 		{
-			name: "force_responses",
-			extra: map[string]any{
-				"openai_responses_mode": "force_responses",
-			},
-			expected: true,
+			name:       "old model max",
+			model:      "gpt-5.5",
+			mapped:     "gpt-5.5",
+			effortJSON: `,"output_config":{"effort":"max"}`,
+			wantEffort: "xhigh",
 		},
 		{
-			name: "force_chat_completions",
-			extra: map[string]any{
-				"openai_responses_mode": "force_chat_completions",
-			},
-			expected: false,
+			name:       "high remains high",
+			model:      "gpt-5.6-luna",
+			mapped:     "gpt-5.6-luna",
+			effortJSON: `,"output_config":{"effort":"high"}`,
+			wantEffort: "high",
+		},
+		{
+			name:       "omitted defaults medium",
+			model:      "gpt-5.6-luna",
+			mapped:     "gpt-5.6-luna",
+			wantEffort: "medium",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := openai_compat.ShouldUseResponsesAPI(tt.extra)
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			body := `{"model":"` + tt.model + `","max_tokens":16,"messages":[{"role":"user","content":"hello"}]` + tt.effortJSON + `,"stream":false}`
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader([]byte(body)))
+			c.Request.Header.Set("Content-Type", "application/json")
 
-			if result != tt.expected {
-				t.Errorf("openai_compat.ShouldUseResponsesAPI() = %v, expected %v", result, tt.expected)
+			upstream := &httpUpstreamRecorder{resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body: io.NopCloser(strings.NewReader(
+					`{"id":"chatcmpl_effort","object":"chat.completion","model":"` + tt.mapped + `","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":2,"total_tokens":5}}`,
+				)),
+			}}
+			account := forceChatMessagesFallbackAccount()
+			account.Credentials["model_mapping"] = map[string]any{tt.model: tt.mapped}
+
+			svc := &OpenAIGatewayService{cfg: rawChatCompletionsTestConfig(), httpUpstream: upstream}
+			ctx := context.Background()
+			if tt.maxPolicy != "" {
+				ctx = WithOpenAIReasoningEffortPolicy(ctx, tt.maxPolicy, nil)
 			}
+			result, err := svc.ForwardAsAnthropic(ctx, c, account, []byte(body), "", "")
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			require.Equal(t, tt.mapped, gjson.GetBytes(upstream.lastBody, "model").String())
+			require.Equal(t, tt.wantEffort, gjson.GetBytes(upstream.lastBody, "reasoning_effort").String())
+			require.NotNil(t, result.ReasoningEffort)
+			require.Equal(t, tt.wantEffort, *result.ReasoningEffort)
 		})
 	}
 }
 
-func TestStreamConversion_EndToEnd(t *testing.T) {
-	chunks := []apicompat.ChatCompletionsChunk{
-		{
-			ID:    "chatcmpl-123",
-			Model: "gpt-4",
-			Choices: []apicompat.ChatChunkChoice{
-				{
-					Index: 0,
-					Delta: apicompat.ChatDelta{
-						Content: strPtr("Hello"),
-					},
-				},
-			},
-		},
-		{
-			ID:    "chatcmpl-123",
-			Model: "gpt-4",
-			Choices: []apicompat.ChatChunkChoice{
-				{
-					Index: 0,
-					Delta: apicompat.ChatDelta{
-						Content: strPtr(" world"),
-					},
-				},
-			},
-		},
+func TestForwardAsAnthropic_ForceChatCompletionsNonStreaming(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"gpt-5.4","max_tokens":32,"messages":[{"role":"user","content":"hello"}],"stream":false}`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"}, "x-request-id": []string{"rid_msg_chat_json"}},
+		Body: io.NopCloser(strings.NewReader(
+			`{"id":"chatcmpl_json","object":"chat.completion","model":"gpt-5.4","choices":[{"index":0,"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":2,"total_tokens":5,"prompt_tokens_details":{"cached_tokens":1}}}`,
+		)),
+	}}
+	svc := &OpenAIGatewayService{
+		cfg:          rawChatCompletionsTestConfig(),
+		httpUpstream: upstream,
 	}
 
-	ccState := apicompat.NewChatCompletionsToResponsesStreamState("claude-3-5-sonnet-20241022")
-	anthState := apicompat.NewResponsesEventToAnthropicState()
-	anthState.Model = "claude-3-5-sonnet-20241022"
+	result, err := svc.ForwardAsAnthropic(context.Background(), c, forceChatMessagesFallbackAccount(), body, "", "")
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Equal(t, "http://upstream.example/v1/chat/completions", upstream.lastReq.URL.String())
+	require.Equal(t, "hello", gjson.GetBytes(upstream.lastBody, "messages.0.content").String())
+	require.False(t, gjson.GetBytes(upstream.lastBody, "input").Exists())
+	require.True(t, gjson.GetBytes(upstream.lastBody, "stream_options").Exists() == false)
 
-	var allAnthEvents []apicompat.AnthropicStreamEvent
-
-	for _, chunk := range chunks {
-		responsesEvents := apicompat.ChatCompletionsChunkToResponsesEvents(&chunk, ccState)
-		for i := range responsesEvents {
-			anthEvents := apicompat.ResponsesEventToAnthropicEvents(&responsesEvents[i], anthState)
-			allAnthEvents = append(allAnthEvents, anthEvents...)
-		}
-	}
-
-	finalEvents := apicompat.FinalizeResponsesAnthropicStream(anthState)
-	allAnthEvents = append(allAnthEvents, finalEvents...)
-
-	if len(allAnthEvents) == 0 {
-		t.Fatal("Expected Anthropic events from stream conversion")
-	}
-
-	hasMessageStart := false
-	hasContentBlockDelta := false
-	hasMessageStop := false
-
-	for _, evt := range allAnthEvents {
-		switch evt.Type {
-		case "message_start":
-			hasMessageStart = true
-		case "content_block_delta":
-			hasContentBlockDelta = true
-		case "message_stop":
-			hasMessageStop = true
-		}
-	}
-
-	if !hasMessageStart {
-		t.Error("Missing message_start event")
-	}
-	if !hasContentBlockDelta {
-		t.Error("Missing content_block_delta event")
-	}
-	if !hasMessageStop {
-		t.Error("Missing message_stop event")
-	}
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "assistant", gjson.Get(rec.Body.String(), "role").String())
+	require.Equal(t, "ok", gjson.Get(rec.Body.String(), "content.0.text").String())
+	require.Equal(t, 3, result.Usage.InputTokens)
+	require.Equal(t, 2, result.Usage.OutputTokens)
+	require.Equal(t, 1, result.Usage.CacheReadInputTokens)
+	require.False(t, result.Stream)
 }
 
-func TestContextCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
+// Covers the fully-new streaming composition: text block is still open when
+// [DONE] arrives, so finalization must close it (content_block_stop) before
+// message_delta / message_stop.
+func TestForwardAsAnthropic_ForceChatCompletionsStreamingClosesOpenBlockOnDone(t *testing.T) {
+	gin.SetMode(gin.TestMode)
 
-	select {
-	case <-ctx.Done():
-	default:
-		t.Error("Context should be cancelled")
+	body := []byte(`{"model":"gpt-5.4","max_tokens":32,"messages":[{"role":"user","content":"hello"}],"stream":true}`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := strings.Join([]string{
+		`data: {"id":"chatcmpl_s","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}`,
+		"",
+		`data: {"id":"chatcmpl_s","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{"content":"he"},"finish_reason":null}]}`,
+		"",
+		`data: {"id":"chatcmpl_s","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{"content":"llo"},"finish_reason":null}]}`,
+		"",
+		`data: {"id":"chatcmpl_s","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}`,
+		"",
+		`data: {"id":"chatcmpl_s","object":"chat.completion.chunk","model":"gpt-5.4","choices":[],"usage":{"prompt_tokens":4,"completion_tokens":3,"total_tokens":7}}`,
+		"",
+		"data: [DONE]",
+		"",
+	}, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}, "x-request-id": []string{"rid_msg_chat_stream"}},
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+	}}
+	svc := &OpenAIGatewayService{
+		cfg:          rawChatCompletionsTestConfig(),
+		httpUpstream: upstream,
 	}
+
+	result, err := svc.ForwardAsAnthropic(context.Background(), c, forceChatMessagesFallbackAccount(), body, "", "")
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.True(t, gjson.GetBytes(upstream.lastBody, "stream_options.include_usage").Bool())
+
+	out := rec.Body.String()
+	require.Contains(t, out, "event: message_start")
+	require.Contains(t, out, `"text":"he"`)
+	require.Contains(t, out, `"text":"llo"`)
+	require.Contains(t, out, "event: content_block_stop")
+	require.Contains(t, out, `"stop_reason":"end_turn"`)
+	require.Contains(t, out, "event: message_stop")
+
+	blockStop := strings.Index(out, "event: content_block_stop")
+	msgDelta := strings.Index(out, `"stop_reason":"end_turn"`)
+	msgStop := strings.Index(out, "event: message_stop")
+	require.Greater(t, msgDelta, blockStop, "content_block_stop must precede message_delta")
+	require.Greater(t, msgStop, msgDelta, "message_delta must precede message_stop")
+
+	require.Equal(t, 4, result.Usage.InputTokens)
+	require.Equal(t, 3, result.Usage.OutputTokens)
+	require.True(t, result.Stream)
+	require.NotNil(t, result.FirstTokenMs)
 }
 
-func TestResponseBodyHandling(t *testing.T) {
-	body := []byte(`{"test": "data"}`)
-	resp := &http.Response{
-		Body: io.NopCloser(bytes.NewReader(body)),
+// Covers multi-chunk tool_call fragments aggregated by index and finalized as
+// an Anthropic tool_use block with stop_reason=tool_use.
+func TestForwardAsAnthropic_ForceChatCompletionsStreamingToolCallAggregation(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"gpt-5.4","max_tokens":32,"messages":[{"role":"user","content":"weather in sf?"}],"stream":true}`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := strings.Join([]string{
+		`data: {"id":"chatcmpl_t","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{"role":"assistant","tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"get_weather","arguments":""}}]},"finish_reason":null}]}`,
+		"",
+		`data: {"id":"chatcmpl_t","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"city\":"}}]},"finish_reason":null}]}`,
+		"",
+		`data: {"id":"chatcmpl_t","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"sf\"}"}}]},"finish_reason":null}]}`,
+		"",
+		`data: {"id":"chatcmpl_t","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}`,
+		"",
+		`data: {"id":"chatcmpl_t","object":"chat.completion.chunk","model":"gpt-5.4","choices":[],"usage":{"prompt_tokens":6,"completion_tokens":5,"total_tokens":11}}`,
+		"",
+		"data: [DONE]",
+		"",
+	}, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}, "x-request-id": []string{"rid_msg_chat_tool"}},
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+	}}
+	svc := &OpenAIGatewayService{
+		cfg:          rawChatCompletionsTestConfig(),
+		httpUpstream: upstream,
 	}
 
-	readBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("Failed to read body: %v", err)
+	result, err := svc.ForwardAsAnthropic(context.Background(), c, forceChatMessagesFallbackAccount(), body, "", "")
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	out := rec.Body.String()
+	require.Contains(t, out, `"type":"tool_use"`)
+	require.Contains(t, out, `"name":"get_weather"`)
+	require.Contains(t, out, `"input_json_delta"`)
+	require.Contains(t, out, `"stop_reason":"tool_use"`)
+	require.Contains(t, out, "event: message_stop")
+	require.Equal(t, 6, result.Usage.InputTokens)
+	require.Equal(t, 5, result.Usage.OutputTokens)
+}
+
+// finish_reason=length must survive the double conversion (CC → Responses →
+// Anthropic) as stop_reason=max_tokens.
+func TestForwardAsAnthropic_ForceChatCompletionsStreamingLengthMapsToMaxTokens(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"gpt-5.4","max_tokens":8,"messages":[{"role":"user","content":"hello"}],"stream":true}`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstreamBody := strings.Join([]string{
+		`data: {"id":"chatcmpl_l","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{"role":"assistant","content":"truncat"},"finish_reason":null}]}`,
+		"",
+		`data: {"id":"chatcmpl_l","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{},"finish_reason":"length"}],"usage":{"prompt_tokens":4,"completion_tokens":8,"total_tokens":12}}`,
+		"",
+		"data: [DONE]",
+		"",
+	}, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}, "x-request-id": []string{"rid_msg_chat_len"}},
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+	}}
+	svc := &OpenAIGatewayService{
+		cfg:          rawChatCompletionsTestConfig(),
+		httpUpstream: upstream,
 	}
 
-	if string(readBody) != string(body) {
-		t.Errorf("Expected %s, got %s", string(body), string(readBody))
+	result, err := svc.ForwardAsAnthropic(context.Background(), c, forceChatMessagesFallbackAccount(), body, "", "")
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	out := rec.Body.String()
+	require.Contains(t, out, `"stop_reason":"max_tokens"`)
+	require.Contains(t, out, "event: message_stop")
+}
+
+// An upstream that ends immediately with [DONE] must still produce a fully
+// framed (message_start → message_delta → message_stop) Anthropic stream.
+func TestForwardAsAnthropic_ForceChatCompletionsEmptyStreamStillFramesMessage(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"gpt-5.4","max_tokens":8,"messages":[{"role":"user","content":"hello"}],"stream":true}`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}, "x-request-id": []string{"rid_msg_chat_empty"}},
+		Body:       io.NopCloser(strings.NewReader("data: [DONE]\n\n")),
+	}}
+	svc := &OpenAIGatewayService{
+		cfg:          rawChatCompletionsTestConfig(),
+		httpUpstream: upstream,
 	}
+
+	result, err := svc.ForwardAsAnthropic(context.Background(), c, forceChatMessagesFallbackAccount(), body, "", "")
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	out := rec.Body.String()
+	require.Contains(t, out, "event: message_start")
+	require.Contains(t, out, "event: message_delta")
+	require.Contains(t, out, "event: message_stop")
+}
+
+// Non-failover 4xx responses must go through the shared compat error handler:
+// status-specific Anthropic error type, upstream message preserved, and ops
+// upstream-error events recorded (previously this branch bypassed all three).
+func TestForwardAsAnthropic_ForceChatCompletionsNonFailover400UsesSharedErrorHandler(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"gpt-5.4","max_tokens":8,"messages":[{"role":"user","content":"hello"}],"stream":false}`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusBadRequest,
+		Header:     http.Header{"Content-Type": []string{"application/json"}, "x-request-id": []string{"rid_msg_chat_400"}},
+		Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"invalid roles","type":"invalid_request_error"}}`)),
+	}}
+	svc := &OpenAIGatewayService{
+		cfg:          rawChatCompletionsTestConfig(),
+		httpUpstream: upstream,
+	}
+
+	result, err := svc.ForwardAsAnthropic(context.Background(), c, forceChatMessagesFallbackAccount(), body, "", "")
+	require.Error(t, err)
+	require.Nil(t, result)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Equal(t, "error", gjson.Get(rec.Body.String(), "type").String())
+	require.Equal(t, "invalid_request_error", gjson.Get(rec.Body.String(), "error.type").String())
+	require.Equal(t, "invalid roles", gjson.Get(rec.Body.String(), "error.message").String())
+
+	statusVal, ok := c.Get(OpsUpstreamStatusCodeKey)
+	require.True(t, ok, "shared handler must record the upstream status for ops")
+	require.Equal(t, http.StatusBadRequest, statusVal)
+
+	eventsVal, ok := c.Get(OpsUpstreamErrorsKey)
+	require.True(t, ok, "shared handler must append an ops upstream error event")
+	events, castOK := eventsVal.([]*OpsUpstreamErrorEvent)
+	require.True(t, castOK)
+	require.Len(t, events, 1)
+	require.Equal(t, http.StatusBadRequest, events[0].UpstreamStatusCode)
+	require.Equal(t, "http_error", events[0].Kind)
+	require.Equal(t, "invalid roles", events[0].Message)
+}
+
+// A broken upstream read mid-stream must surface an error and must NOT emit a
+// synthetic message_stop that would disguise the truncation as a completion.
+func TestForwardAsAnthropic_ForceChatCompletionsStreamReadErrorSkipsFinalize(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"gpt-5.4","max_tokens":8,"messages":[{"role":"user","content":"hello"}],"stream":true}`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	partial := strings.Join([]string{
+		`data: {"id":"chatcmpl_e","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}`,
+		"",
+		`data: {"id":"chatcmpl_e","object":"chat.completion.chunk","model":"gpt-5.4","choices":[{"index":0,"delta":{"content":"he"},"finish_reason":null}]}`,
+		"",
+		"",
+	}, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}, "x-request-id": []string{"rid_msg_chat_err"}},
+		Body:       &errTailReader{data: []byte(partial), err: errors.New("simulated upstream read failure")},
+	}}
+	svc := &OpenAIGatewayService{
+		cfg:          rawChatCompletionsTestConfig(),
+		httpUpstream: upstream,
+	}
+
+	result, err := svc.ForwardAsAnthropic(context.Background(), c, forceChatMessagesFallbackAccount(), body, "", "")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "stream usage incomplete")
+	require.NotNil(t, result)
+	require.True(t, result.Stream)
+
+	out := rec.Body.String()
+	require.Contains(t, out, `"text":"he"`, "delta emitted before the failure must reach the client")
+	require.NotContains(t, out, "event: message_stop", "no synthetic completion after a broken read")
+}
+
+// Gate regression: an API-key account whose upstream is confirmed to support
+// the Responses API must keep using /v1/responses, never the CC fallback.
+func TestForwardAsAnthropic_ResponsesSupportedAccountStillUsesResponsesEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	body := []byte(`{"model":"gpt-5.4","max_tokens":16,"messages":[{"role":"user","content":"hello"}],"output_config":{"effort":"high"},"stream":false}`)
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Request.Header.Set("User-Agent", "third-party-client/1.0.0")
+	c.Request.Header.Set("originator", "opencode")
+
+	upstreamBody := strings.Join([]string{
+		`data: {"type":"response.completed","response":{"id":"resp_native","object":"response","model":"gpt-5.4","status":"completed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"ok"}]}],"usage":{"input_tokens":5,"output_tokens":2,"total_tokens":7}}}`,
+		"",
+		"data: [DONE]",
+		"",
+	}, "\n")
+	upstream := &httpUpstreamRecorder{resp: &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}, "x-request-id": []string{"rid_msg_native"}},
+		Body:       io.NopCloser(strings.NewReader(upstreamBody)),
+	}}
+	svc := &OpenAIGatewayService{
+		cfg:          rawChatCompletionsTestConfig(),
+		httpUpstream: upstream,
+	}
+	account := rawChatCompletionsTestAccount()
+	account.Extra = map[string]any{
+		openai_compat.ExtraKeyResponsesMode:      string(openai_compat.ResponsesSupportModeAuto),
+		openai_compat.ExtraKeyResponsesSupported: true,
+	}
+
+	ctx := WithOpenAIReasoningEffortPolicy(context.Background(), "medium", nil)
+	result, err := svc.ForwardAsAnthropic(ctx, c, account, body, "", "")
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.True(t, strings.HasSuffix(upstream.lastReq.URL.Path, "/responses"),
+		"responses-capable account must stay on /v1/responses, got %s", upstream.lastReq.URL.String())
+	require.True(t, gjson.GetBytes(upstream.lastBody, "input").Exists())
+	require.Equal(t, "medium", gjson.GetBytes(upstream.lastBody, "reasoning.effort").String())
+	require.NotNil(t, result.ReasoningEffort)
+	require.Equal(t, "medium", *result.ReasoningEffort)
+	require.False(t, gjson.GetBytes(upstream.lastBody, "messages").Exists())
+	require.Equal(t, "third-party-client/1.0.0", upstream.lastReq.Header.Get("User-Agent"))
+	require.Equal(t, "opencode", upstream.lastReq.Header.Get("originator"))
+	require.Empty(t, upstream.lastReq.Header.Get("version"))
+	require.Empty(t, upstream.lastReq.Header.Get("OpenAI-Beta"))
+	require.Equal(t, "ok", gjson.Get(rec.Body.String(), "content.0.text").String())
 }

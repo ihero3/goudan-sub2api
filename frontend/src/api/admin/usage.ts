@@ -84,12 +84,17 @@ export interface AdminUsageQueryParams extends UsageQueryParams {
   user_id?: number
   exact_total?: boolean
   billing_mode?: string
+  upstream_model_mismatch?: boolean
   sort_by?: string
   sort_order?: 'asc' | 'desc'
   department_id?: number
   consumer_id?: number
   department_name?: string
   consumer_name?: string
+  // 错误请求 tab 专属筛选(仅传给错误列表接口;共用同一 filters 对象)
+  error_phase?: string | null
+  error_category?: string | null
+  status_code?: number | null
 }
 
 // ==================== API Functions ====================
@@ -123,6 +128,7 @@ export async function getStats(params: {
   model?: string
   request_type?: UsageRequestType
   stream?: boolean
+  upstream_model_mismatch?: boolean
   period?: string
   start_date?: string
   end_date?: string
