@@ -471,6 +471,188 @@ var (
 			},
 		},
 	}
+	// BatchImageEventsColumns holds the columns for the "batch_image_events" table.
+	BatchImageEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "job_id", Type: field.TypeString, Size: 64},
+		{Name: "event_type", Type: field.TypeString, Size: 64},
+		{Name: "payload", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "event_hash", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// BatchImageEventsTable holds the schema information for the "batch_image_events" table.
+	BatchImageEventsTable = &schema.Table{
+		Name:       "batch_image_events",
+		Columns:    BatchImageEventsColumns,
+		PrimaryKey: []*schema.Column{BatchImageEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "batchimageevent_job_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageEventsColumns[1], BatchImageEventsColumns[5]},
+			},
+			{
+				Name:    "batchimageevent_event_type",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageEventsColumns[2]},
+			},
+			{
+				Name:    "batchimageevent_job_id_event_hash",
+				Unique:  true,
+				Columns: []*schema.Column{BatchImageEventsColumns[1], BatchImageEventsColumns[4]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "event_hash IS NOT NULL AND event_hash <> ''",
+				},
+			},
+		},
+	}
+	// BatchImageItemsColumns holds the columns for the "batch_image_items" table.
+	BatchImageItemsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "job_id", Type: field.TypeString, Size: 64},
+		{Name: "custom_id", Type: field.TypeString, Size: 255},
+		{Name: "status", Type: field.TypeString, Size: 32},
+		{Name: "request_hash", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "prompt_preview", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "provider_source_object", Type: field.TypeString, Nullable: true, Size: 1024},
+		{Name: "source_line_number", Type: field.TypeInt, Nullable: true},
+		{Name: "source_byte_offset", Type: field.TypeInt64, Nullable: true},
+		{Name: "source_byte_length", Type: field.TypeInt64, Nullable: true},
+		{Name: "mime_type", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "file_extension", Type: field.TypeString, Nullable: true, Size: 32},
+		{Name: "image_count", Type: field.TypeInt, Default: 0},
+		{Name: "error_code", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "error_message", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "billed_amount", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "indexed_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// BatchImageItemsTable holds the schema information for the "batch_image_items" table.
+	BatchImageItemsTable = &schema.Table{
+		Name:       "batch_image_items",
+		Columns:    BatchImageItemsColumns,
+		PrimaryKey: []*schema.Column{BatchImageItemsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "batchimageitem_job_id_custom_id",
+				Unique:  true,
+				Columns: []*schema.Column{BatchImageItemsColumns[1], BatchImageItemsColumns[2]},
+			},
+			{
+				Name:    "batchimageitem_job_id_status",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageItemsColumns[1], BatchImageItemsColumns[3]},
+			},
+			{
+				Name:    "batchimageitem_provider_source_object",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageItemsColumns[6]},
+			},
+		},
+	}
+	// BatchImageJobsColumns holds the columns for the "batch_image_jobs" table.
+	BatchImageJobsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "batch_id", Type: field.TypeString, Size: 64},
+		{Name: "user_id", Type: field.TypeInt64},
+		{Name: "api_key_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "account_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "provider", Type: field.TypeString, Size: 32},
+		{Name: "model", Type: field.TypeString, Size: 128},
+		{Name: "task_name", Type: field.TypeString, Size: 255, Default: ""},
+		{Name: "status", Type: field.TypeString, Size: 32, Default: "created"},
+		{Name: "provider_job_name", Type: field.TypeString, Nullable: true, Size: 512},
+		{Name: "provider_input_ref", Type: field.TypeString, Nullable: true, Size: 1024},
+		{Name: "provider_output_ref", Type: field.TypeString, Nullable: true, Size: 1024},
+		{Name: "gcs_input_uri", Type: field.TypeString, Nullable: true, Size: 1024},
+		{Name: "gcs_output_uri", Type: field.TypeString, Nullable: true, Size: 1024},
+		{Name: "item_count", Type: field.TypeInt},
+		{Name: "success_count", Type: field.TypeInt, Default: 0},
+		{Name: "fail_count", Type: field.TypeInt, Default: 0},
+		{Name: "cancelled_count", Type: field.TypeInt, Default: 0},
+		{Name: "estimated_cost", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "hold_amount", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "actual_cost", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,10)"}},
+		{Name: "currency", Type: field.TypeString, Size: 16, Default: "USD"},
+		{Name: "hold_id", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "idempotency_key", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "request_hash", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "manifest_hash", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "retry_count", Type: field.TypeInt, Default: 0},
+		{Name: "version", Type: field.TypeInt, Default: 0},
+		{Name: "output_expires_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "input_deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "output_deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "downloaded_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "user_deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "last_error_code", Type: field.TypeString, Nullable: true, Size: 128},
+		{Name: "last_error_message", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "submitted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "started_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "finished_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "settled_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// BatchImageJobsTable holds the schema information for the "batch_image_jobs" table.
+	BatchImageJobsTable = &schema.Table{
+		Name:       "batch_image_jobs",
+		Columns:    BatchImageJobsColumns,
+		PrimaryKey: []*schema.Column{BatchImageJobsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "batchimagejob_batch_id",
+				Unique:  true,
+				Columns: []*schema.Column{BatchImageJobsColumns[1]},
+			},
+			{
+				Name:    "batchimagejob_user_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[2], BatchImageJobsColumns[35]},
+			},
+			{
+				Name:    "batchimagejob_status",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[8]},
+			},
+			{
+				Name:    "batchimagejob_provider_status",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[5], BatchImageJobsColumns[8]},
+			},
+			{
+				Name:    "batchimagejob_idempotency_key",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[23]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "idempotency_key IS NOT NULL AND idempotency_key <> ''",
+				},
+			},
+			{
+				Name:    "batchimagejob_manifest_hash",
+				Unique:  true,
+				Columns: []*schema.Column{BatchImageJobsColumns[25]},
+				Annotation: &entsql.IndexAnnotation{
+					Where: "manifest_hash IS NOT NULL AND manifest_hash <> ''",
+				},
+			},
+			{
+				Name:    "batchimagejob_output_expires_at",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[28]},
+			},
+			{
+				Name:    "batchimagejob_downloaded_at",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[31]},
+			},
+			{
+				Name:    "batchimagejob_user_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{BatchImageJobsColumns[32]},
+			},
+		},
+	}
 	// ChannelMonitorsColumns holds the columns for the "channel_monitors" table.
 	ChannelMonitorsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -644,6 +826,68 @@ var (
 				Name:    "channelmonitorrequesttemplate_provider_api_mode",
 				Unique:  false,
 				Columns: []*schema.Column{ChannelMonitorRequestTemplatesColumns[4], ChannelMonitorRequestTemplatesColumns[5]},
+			},
+		},
+	}
+	// CompositeModelRoutesColumns holds the columns for the "composite_model_routes" table.
+	CompositeModelRoutesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "public_model", Type: field.TypeString, Size: 200},
+		{Name: "match_type", Type: field.TypeString, Size: 20, Default: "exact"},
+		{Name: "target_platform", Type: field.TypeString, Size: 50, Default: "openai"},
+		{Name: "upstream_model", Type: field.TypeString, Size: 200, Default: ""},
+		{Name: "endpoint", Type: field.TypeString, Size: 50, Default: "any"},
+		{Name: "priority", Type: field.TypeInt, Default: 100},
+		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "notes", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "group_id", Type: field.TypeInt64},
+	}
+	// CompositeModelRoutesTable holds the schema information for the "composite_model_routes" table.
+	CompositeModelRoutesTable = &schema.Table{
+		Name:       "composite_model_routes",
+		Columns:    CompositeModelRoutesColumns,
+		PrimaryKey: []*schema.Column{CompositeModelRoutesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "composite_model_routes_groups_group",
+				Columns:    []*schema.Column{CompositeModelRoutesColumns[12]},
+				RefColumns: []*schema.Column{GroupsColumns[0]},
+				OnDelete:   schema.NoAction,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "compositemodelroute_group_id",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[12]},
+			},
+			{
+				Name:    "compositemodelroute_group_id_enabled",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[12], CompositeModelRoutesColumns[10]},
+			},
+			{
+				Name:    "compositemodelroute_group_id_endpoint",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[12], CompositeModelRoutesColumns[8]},
+			},
+			{
+				Name:    "compositemodelroute_group_id_target_platform",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[12], CompositeModelRoutesColumns[6]},
+			},
+			{
+				Name:    "compositemodelroute_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[3]},
+			},
+			{
+				Name:    "compositemodelroute_priority",
+				Unique:  false,
+				Columns: []*schema.Column{CompositeModelRoutesColumns[9]},
 			},
 		},
 	}
@@ -2448,10 +2692,14 @@ var (
 		AnnouncementReadsTable,
 		AuthIdentitiesTable,
 		AuthIdentityChannelsTable,
+		BatchImageEventsTable,
+		BatchImageItemsTable,
+		BatchImageJobsTable,
 		ChannelMonitorsTable,
 		ChannelMonitorDailyRollupsTable,
 		ChannelMonitorHistoriesTable,
 		ChannelMonitorRequestTemplatesTable,
+		CompositeModelRoutesTable,
 		ConsumersTable,
 		DepartmentsTable,
 		ErrorPassthroughRulesTable,
@@ -2525,6 +2773,15 @@ func init() {
 	AuthIdentityChannelsTable.Annotation = &entsql.Annotation{
 		Table: "auth_identity_channels",
 	}
+	BatchImageEventsTable.Annotation = &entsql.Annotation{
+		Table: "batch_image_events",
+	}
+	BatchImageItemsTable.Annotation = &entsql.Annotation{
+		Table: "batch_image_items",
+	}
+	BatchImageJobsTable.Annotation = &entsql.Annotation{
+		Table: "batch_image_jobs",
+	}
 	ChannelMonitorsTable.ForeignKeys[0].RefTable = ChannelMonitorRequestTemplatesTable
 	ChannelMonitorsTable.Annotation = &entsql.Annotation{
 		Table: "channel_monitors",
@@ -2539,6 +2796,10 @@ func init() {
 	}
 	ChannelMonitorRequestTemplatesTable.Annotation = &entsql.Annotation{
 		Table: "channel_monitor_request_templates",
+	}
+	CompositeModelRoutesTable.ForeignKeys[0].RefTable = GroupsTable
+	CompositeModelRoutesTable.Annotation = &entsql.Annotation{
+		Table: "composite_model_routes",
 	}
 	ConsumersTable.ForeignKeys[0].RefTable = DepartmentsTable
 	ConsumersTable.ForeignKeys[1].RefTable = TeamsTable
