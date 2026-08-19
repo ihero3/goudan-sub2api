@@ -105,9 +105,8 @@ import Icon from '@/components/icons/Icon.vue'
 import { getLocale } from '@/i18n'
 import { sanitizeUrl } from '@/utils/url'
 import LogoSvg from '@/assets/icons/logo.svg'
-import type { LoginAgreementDocument, PublicSettings } from '@/types'
-import { useAppStore } from '@/stores/app'
 import type { LoginAgreementDocument } from '@/types'
+import { useAppStore } from '@/stores/app'
 import zhAdminCompliance from '../../../../docs/legal/admin-compliance.zh.md?raw'
 import enAdminCompliance from '../../../../docs/legal/admin-compliance.en.md?raw'
 
@@ -115,8 +114,6 @@ type LegalDocumentIcon = 'document' | 'shield' | 'globe' | 'cog'
 
 const { t } = useI18n()
 const route = useRoute()
-const settings = ref<PublicSettings | null>(null)
-const loading = ref(true)
 const appStore = useAppStore()
 const settings = computed(() => appStore.cachedPublicSettings)
 const loading = ref(!settings.value)

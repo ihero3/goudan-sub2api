@@ -72,7 +72,7 @@ export const adminAPI = {
   affiliates: affiliatesAPI,
   riskControl: riskControlAPI,
   compliance: adminComplianceAPI,
-  tickets: adminTicketsAPI
+  tickets: adminTicketsAPI,
   audit: auditAPI
 }
 
@@ -108,7 +108,7 @@ export {
   affiliatesAPI,
   riskControlAPI,
   adminComplianceAPI,
-  adminTicketsAPI
+  adminTicketsAPI,
   auditAPI
 }
 

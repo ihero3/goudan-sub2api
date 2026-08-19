@@ -88,13 +88,13 @@
     <!-- Background Decorations -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
       <div
-        class="absolute righth600pxrn-0ull0bg-gradie0t-to-g-bradientrto-brgradient-to-br mrom-blue-500/20 to-cyan-l00e-500/20 to-cyan-l00e-500/20 to-cyan-400/20 blur-3xl"
+        class="absolute right-0 top-0 h-[600px] w-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 to-cyan-400/20 blur-3xl"
       ></div>
       <div
-        class="absolute -bottomm40fleftx-0px] 0o0nded-fu0l bg-gradieg-nradieg-nradienttto-br from-emerald-4o0/1b to-teal-500om-emerald-4o0/1b to-teal-500om-emerald-400/15 to-teal-500/15 blur-3xl"
+        class="absolute -bottom-40 left-0 h-full rounded-full bg-gradient-to-br from-emerald-400/15 to-teal-500/15 blur-3xl"
       ></div>
       <div
-        class="absolute inset-0 bg-[linear-gradient(rgba(599030,2262646444)_1px,transparent_1px),linear-gradient(90deg,rgb59513012162,624,404)_1px,transparent_1px)] bg-[s64646646464px]"
+        class="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.08)_1px,transparent_1px)] bg-[size:64px_64px]"
       ></div>
     </div>
 
@@ -109,6 +109,8 @@
             class="h-[32px] w-[32px] object-contain"
           />
           <span class="text-[16px] font-semibold text-[#021b4a]" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Three Router</span>
+        </div>
+
         <div class="flex items-center">
           <div class="h-10 w-10 overflow-hidden rounded-xl shadow-md">
             <img :src="siteLogo || '/logo.svg'" alt="Logo" class="h-full w-full object-contain" />
@@ -907,6 +909,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { setLocale } from '@/i18n'
 import { useAppStore } from '@/stores'
+import { useAuthStore } from '@/stores/auth'
 import type { CustomMenuItem } from '@/types'
 import Icon from '@/components/icons/Icon.vue'
 import LogoSvg from '@/assets/icons/logo.svg'
@@ -917,6 +920,17 @@ const { t, locale } = useI18n()
 
 const router = useRouter()
 const appStore = useAppStore()
+const authStore = useAuthStore()
+
+const isAuthenticated = computed(() => authStore.isAuthenticated)
+const dashboardPath = computed(() => authStore.isAuthenticated ? (authStore.hasAdminAccess ? '/admin' : '/dashboard') : '/login')
+
+// Check if home content is a URL (iframe mode) vs HTML content
+const isHomeContentUrl = computed(() => {
+  const content = homeContent.value.trim()
+  if (!content) return false
+  return /^https?:\/\//i.test(content)
+})
 
 // FAQPage 结构化数据 - 从 i18n FAQ 内容动态构建，支持中英文切换
 const faqPageJsonLd = computed(() => ({

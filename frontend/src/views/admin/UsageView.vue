@@ -266,7 +266,7 @@ const handleUserClick = async (userId: number) => {
 // that user and jump to the usage-detail tab so the drill-down is visible.
 const handleRankingSelectUser = (userId: number, email: string) => {
   filters.value = { ...filters.value, user_id: userId }
-  usageFiltersRef.value?.setUserKeyword?.(email || '')
+  (usageFiltersRef.value as any)?.setUserKeyword?.(email || '')
   activeTab.value = 'usage'
   applyFilters()
 }
@@ -338,20 +338,20 @@ const applyRouteQueryFilters = () => {
 const loadRouteUserFilterLabel = async () => {
   const requestedUserId = filters.value.user_id
   if (!requestedUserId) return
-  const userSearchRevision = usageFiltersRef.value?.getUserSearchRevision?.()
+  const userSearchRevision = (usageFiltersRef.value as any)?.getUserSearchRevision?.()
 
   const routeUserFilterIsCurrent = () => (
     filters.value.user_id === requestedUserId
-    && usageFiltersRef.value?.getUserSearchRevision?.() === userSearchRevision
+    && (usageFiltersRef.value as any)?.getUserSearchRevision?.() === userSearchRevision
   )
 
   try {
     const user = await adminAPI.users.getById(requestedUserId, true)
     if (!routeUserFilterIsCurrent()) return
-    usageFiltersRef.value?.setUserKeyword?.(user.email || String(requestedUserId))
+    usageFiltersRef.value && ((usageFiltersRef.value as any).setUserKeyword?.((user.email || String(requestedUserId))))
   } catch {
     if (!routeUserFilterIsCurrent()) return
-    usageFiltersRef.value?.setUserKeyword?.(String(requestedUserId))
+    usageFiltersRef.value && ((usageFiltersRef.value as any).setUserKeyword?.(String(requestedUserId)))
   }
 }
 

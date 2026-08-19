@@ -242,9 +242,13 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: false,
       title: 'Submit Ticket',
       titleKey: 'tickets.new.title'
+    }
+  },
+  {
     path: '/model-plaza',
     name: 'ModelPlaza',
     component: () => import('@/views/ModelPlazaView.vue'),
+    meta: {
       title: 'Model Plaza',
       titleKey: 'modelPlaza.title'
     }
@@ -727,9 +731,13 @@ const routes: RouteRecordRaw[] = [
       title: 'AI Governance',
       titleKey: 'admin.governance.title',
       descriptionKey: 'admin.governance.description'
+    }
+  },
+  {
     path: '/admin/prompt-audit',
     name: 'AdminPromptAudit',
     component: () => import('@/features/prompt-audit/PromptAuditView.vue'),
+    meta: {
       title: 'Prompt Audit',
       titleKey: 'admin.promptAudit.title',
       descriptionKey: 'admin.promptAudit.description',

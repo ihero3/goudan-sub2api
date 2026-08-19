@@ -6,6 +6,18 @@ import (
 	"strings"
 )
 
+// itemIDCounter is a monotonic counter for generating unique item IDs.
+var itemIDCounter uint64
+
+// generateItemID produces a Responses protocol-compliant item ID.
+// Prefix must match the item type: "msg" for messages, "rs" for reasoning,
+// "fc" for function/custom/tool_search calls. Upstream providers reject
+// IDs that do not follow this convention.
+func generateItemID(prefix string) string {
+	itemIDCounter++
+	return fmt.Sprintf("%s_%d", prefix, itemIDCounter)
+}
+
 type chatMessageContent struct {
 	Text  *string
 	Parts []ChatContentPart
