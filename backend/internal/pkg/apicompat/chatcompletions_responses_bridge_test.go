@@ -80,3 +80,34 @@ func chatMessageRoles(messages []ChatMessage) []string {
 	}
 	return roles
 }
+
+// TestChatMessageMarshal_ReasoningContentOnToolCall verifies that assistant
+// tool-call messages always serialize reasoning_content (even empty), as
+// required by DeepSeek thinking mode.
+func TestChatMessageMarshal_ReasoningContentOnToolCall(t *testing.T) {
+	// Tool-call message with empty reasoning → must include "reasoning_content":""
+	msg := ChatMessage{
+		Role:      "assistant",
+		ToolCalls: []ChatToolCall{{ID: "call_1", Type: "function", Function: ChatFunctionCall{Name: "exec", Arguments: "{}"}}},
+	}
+	data, err := json.Marshal(msg)
+	require.NoError(t, err)
+	require.Contains(t, string(data), `"reasoning_content":""`)
+	require.Contains(t, string(data), `"tool_calls"`)
+
+	// Tool-call message with non-empty reasoning → must include the value
+	msg2 := ChatMessage{
+		Role:             "assistant",
+		ReasoningContent: "think step",
+		ToolCalls:        []ChatToolCall{{ID: "call_2", Type: "function", Function: ChatFunctionCall{Name: "exec", Arguments: "{}"}}},
+	}
+	data2, err := json.Marshal(msg2)
+	require.NoError(t, err)
+	require.Contains(t, string(data2), `"reasoning_content":"think step"`)
+
+	// Non-tool-call message with empty reasoning → must NOT include reasoning_content
+	msg3 := ChatMessage{Role: "assistant", Content: json.RawMessage(`"hello"`)}
+	data3, err := json.Marshal(msg3)
+	require.NoError(t, err)
+	require.NotContains(t, string(data3), "reasoning_content")
+}

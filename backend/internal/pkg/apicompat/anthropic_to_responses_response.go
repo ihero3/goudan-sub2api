@@ -36,7 +36,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 			if block.Thinking != "" {
 				outputs = append(outputs, ResponsesOutput{
 					Type: "reasoning",
-					ID:   generateItemID(),
+					ID:   generateReasoningID(),
 					Summary: []ResponsesSummary{{
 						Type: "summary_text",
 						Text: block.Thinking,
@@ -57,7 +57,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 			}
 			outputs = append(outputs, ResponsesOutput{
 				Type:      "function_call",
-				ID:        generateItemID(),
+				ID:        generateFunctionCallID(),
 				CallID:    toResponsesCallID(block.ID),
 				Name:      block.Name,
 				Arguments: args,
@@ -70,7 +70,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 	if len(msgParts) > 0 {
 		outputs = append(outputs, ResponsesOutput{
 			Type:    "message",
-			ID:      generateItemID(),
+			ID:      generateMessageID(),
 			Role:    "assistant",
 			Content: msgParts,
 			Status:  "completed",
@@ -80,7 +80,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 	if len(outputs) == 0 {
 		outputs = append(outputs, ResponsesOutput{
 			Type:    "message",
-			ID:      generateItemID(),
+			ID:      generateMessageID(),
 			Role:    "assistant",
 			Content: []ResponsesContentPart{{Type: "output_text", Text: ""}},
 			Status:  "completed",
@@ -260,7 +260,7 @@ func anthToResHandleContentBlockStart(evt *AnthropicStreamEvent, state *Anthropi
 
 	switch evt.ContentBlock.Type {
 	case "thinking":
-		state.CurrentItemID = generateItemID()
+		state.CurrentItemID = generateReasoningID()
 		state.CurrentItemType = "reasoning"
 		state.ContentIndex = 0
 
@@ -275,7 +275,7 @@ func anthToResHandleContentBlockStart(evt *AnthropicStreamEvent, state *Anthropi
 	case "text":
 		// If we don't have an open message item, open one
 		if state.CurrentItemType != "message" {
-			state.CurrentItemID = generateItemID()
+			state.CurrentItemID = generateMessageID()
 			state.CurrentItemType = "message"
 			state.ContentIndex = 0
 
@@ -294,7 +294,7 @@ func anthToResHandleContentBlockStart(evt *AnthropicStreamEvent, state *Anthropi
 		// Close previous item if any
 		events = append(events, closeCurrentResponsesItem(state)...)
 
-		state.CurrentItemID = generateItemID()
+		state.CurrentItemID = generateFunctionCallID()
 		state.CurrentItemType = "function_call"
 		state.CurrentCallID = toResponsesCallID(evt.ContentBlock.ID)
 		state.CurrentName = evt.ContentBlock.Name
@@ -533,13 +533,27 @@ func makeResponsesEvent(state *AnthropicEventToResponsesState, eventType string,
 }
 
 func generateResponsesID() string {
-	b := make([]byte, 12)
-	_, _ = rand.Read(b)
-	return "resp_" + hex.EncodeToString(b)
+	return "resp_" + generateRandomHex()
 }
 
-func generateItemID() string {
+func generateMessageID() string {
+	return "msg_" + generateRandomHex()
+}
+
+func generateReasoningID() string {
+	return "rs_" + generateRandomHex()
+}
+
+func generateFunctionCallID() string {
+	return "fc_" + generateRandomHex()
+}
+
+func generateCallID() string {
+	return "call_" + generateRandomHex()
+}
+
+func generateRandomHex() string {
 	b := make([]byte, 12)
 	_, _ = rand.Read(b)
-	return "item_" + hex.EncodeToString(b)
+	return hex.EncodeToString(b)
 }

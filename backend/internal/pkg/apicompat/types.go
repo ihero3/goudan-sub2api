@@ -462,6 +462,26 @@ type ChatMessage struct {
 	FunctionCall *ChatFunctionCall `json:"function_call,omitempty"`
 }
 
+// MarshalJSON ensures reasoning_content is always present (even empty) on
+// assistant tool-call messages. DeepSeek thinking mode requires this field
+// to be sent back on every tool-call turn; omitempty would drop it when empty.
+func (m ChatMessage) MarshalJSON() ([]byte, error) {
+	type chatMessage ChatMessage
+	data, err := json.Marshal(chatMessage(m))
+	if err != nil {
+		return nil, err
+	}
+	if len(m.ToolCalls) > 0 && m.ReasoningContent == "" {
+		var obj map[string]json.RawMessage
+		if err := json.Unmarshal(data, &obj); err != nil {
+			return nil, err
+		}
+		obj["reasoning_content"] = json.RawMessage(`""`)
+		return json.Marshal(obj)
+	}
+	return data, nil
+}
+
 // ChatContentPart is a typed content part in a multi-modal message.
 type ChatContentPart struct {
 	Type     string        `json:"type"` // "text" | "image_url"

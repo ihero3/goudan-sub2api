@@ -236,3 +236,57 @@ func TestStream_SSEWireComplete(t *testing.T) {
 	require.True(t, strings.Contains(addedLine, `"arguments":""`), "added line missing arguments: %s", addedLine)
 	require.Contains(t, addedLine, `"call_id":"call_a"`)
 }
+
+// TestStream_OutputItemIDsUseProtocolPrefixes guards the Responses protocol ID
+// prefixes: message items must be msg_*, reasoning items rs_*, and function_call
+// items fc_*. Upstream providers reject replaying message items whose id starts
+// with item_*, so a generic item_* id breaks the next turn.
+func TestStream_OutputItemIDsUseProtocolPrefixes(t *testing.T) {
+	events := collectStreamEvents(t, []string{
+		`{"choices":[{"index":0,"delta":{"role":"assistant","reasoning_content":"plan"}}]}`,
+		`{"choices":[{"index":0,"delta":{"content":"answer"}}]}`,
+		`{"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_a","type":"function","function":{"name":"exec","arguments":"{}"}}]}}]}`,
+		`{"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{}"}}]}}]}`,
+		`{"choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}`,
+	})
+
+	checkItemPrefixes := func(item *ResponsesOutput) {
+		require.NotNil(t, item)
+		switch item.Type {
+		case "message":
+			require.Truef(t, strings.HasPrefix(item.ID, "msg_"), "message item id must start with msg_, got %q", item.ID)
+		case "reasoning":
+			require.Truef(t, strings.HasPrefix(item.ID, "rs_"), "reasoning item id must start with rs_, got %q", item.ID)
+		case "function_call":
+			require.Truef(t, strings.HasPrefix(item.ID, "fc_"), "function_call item id must start with fc_, got %q", item.ID)
+		}
+	}
+
+	for _, e := range events {
+		switch e.Type {
+		case "response.output_item.added", "response.output_item.done":
+			checkItemPrefixes(e.Item)
+		case "response.completed":
+			require.NotNil(t, e.Response)
+			for _, item := range e.Response.Output {
+				checkItemPrefixes(&item)
+			}
+		}
+	}
+}
+
+// TestStream_FunctionCallFallbackCallIDPrefix guards the fallback call_id used
+// when an upstream Chat Completions chunk omits the tool_call id.
+func TestStream_FunctionCallFallbackCallIDPrefix(t *testing.T) {
+	events := collectStreamEvents(t, []string{
+		`{"choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"","type":"function","function":{"name":"exec","arguments":"{}"}}]}}]}`,
+		`{"choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}`,
+	})
+
+	for _, e := range events {
+		if e.Type == "response.output_item.added" && e.Item != nil && e.Item.Type == "function_call" {
+			require.Truef(t, strings.HasPrefix(e.Item.ID, "fc_"), "function_call item id must start with fc_, got %q", e.Item.ID)
+			require.Truef(t, strings.HasPrefix(e.Item.CallID, "call_"), "fallback call_id must start with call_, got %q", e.Item.CallID)
+		}
+	}
+}

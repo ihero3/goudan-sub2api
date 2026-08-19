@@ -2622,6 +2622,18 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 		return nil, errors.New("codex_cli_only restriction: only codex official clients are allowed")
 	}
 
+	// 修复历史会话中由旧版本网关生成的非法 item_* id：Responses API 要求
+	// message/function_call/reasoning 的 input item id 分别以 msg_/fc_/rs_ 开头。
+	// 客户端会把上一轮响应里的 item id 原样带回，旧 id 若不清洗会在续链时被上游 400 拒绝。
+	sanitizedBody, sanitized, err := sanitizeOpenAIResponsesInputItemIDs(body)
+	if err != nil {
+		logger.LegacyPrintf("service.openai_gateway", "[OpenAI] sanitize responses input item ids failed: %v", err)
+		return nil, err
+	}
+	if sanitized {
+		body = sanitizedBody
+	}
+
 	originalBody := body
 	requestView := newOpenAIRequestView(body)
 	reqModel, reqStream, promptCacheKey := requestView.Model, requestView.Stream, requestView.PromptCacheKey
@@ -7636,6 +7648,127 @@ func sanitizeEmptyBase64InputImagesInOpenAIBody(body []byte) ([]byte, bool, erro
 		return body, false, fmt.Errorf("serialize sanitized request body: %w", err)
 	}
 	return normalized, true, nil
+}
+
+func sanitizeOpenAIResponsesInputItemIDs(body []byte) ([]byte, bool, error) {
+	input := gjson.GetBytes(body, "input")
+	if !input.IsArray() {
+		return body, false, nil
+	}
+
+	needsSanitize := false
+	input.ForEach(func(_, item gjson.Result) bool {
+		itemType := strings.TrimSpace(item.Get("type").String())
+		itemID := item.Get("id").String()
+		if itemID != "" && !openAIResponsesItemIDValid(itemType, itemID) {
+			needsSanitize = true
+			return false
+		}
+		return true
+	})
+	if !needsSanitize {
+		return body, false, nil
+	}
+
+	var reqBody map[string]any
+	if err := json.Unmarshal(body, &reqBody); err != nil {
+		return body, false, fmt.Errorf("sanitize responses input item ids: %w", err)
+	}
+	if !sanitizeOpenAIResponsesInputItemIDsMap(reqBody) {
+		return body, false, nil
+	}
+	normalized, err := marshalOpenAIUpstreamJSON(reqBody)
+	if err != nil {
+		return body, false, fmt.Errorf("serialize sanitized responses input item ids: %w", err)
+	}
+	return normalized, true, nil
+}
+
+func sanitizeOpenAIResponsesInputItemIDsMap(reqBody map[string]any) bool {
+	if reqBody == nil {
+		return false
+	}
+	items, ok := reqBody["input"].([]any)
+	if !ok {
+		return false
+	}
+
+	replacements := make(map[string]string)
+	changed := false
+	for _, raw := range items {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		itemType, _ := item["type"].(string)
+		itemType = strings.TrimSpace(itemType)
+
+		// DeepSeek Responses API rejects reasoning input items with a content
+		// array. Strip content from reasoning items; the text is already
+		// extracted by the Responses→ChatCompletions bridge when needed.
+		if itemType == "reasoning" {
+			if _, hasContent := item["content"]; hasContent {
+				delete(item, "content")
+				changed = true
+			}
+		}
+
+		itemID, _ := item["id"].(string)
+		if itemID == "" || openAIResponsesItemIDValid(itemType, itemID) {
+			continue
+		}
+		newID := openAIResponsesItemIDForType(itemType)
+		if newID == "" {
+			continue
+		}
+		item["id"] = newID
+		replacements[itemID] = newID
+		changed = true
+	}
+	if !changed {
+		return false
+	}
+
+	// item_reference 的 id 可能指向被替换的旧 item id，需要同步修正。
+	if len(replacements) > 0 {
+		for _, raw := range items {
+			item, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			refID, _ := item["id"].(string)
+			if newID, ok := replacements[refID]; ok {
+				item["id"] = newID
+			}
+		}
+	}
+	return true
+}
+
+func openAIResponsesItemIDValid(itemType, itemID string) bool {
+	switch itemType {
+	case "message":
+		return strings.HasPrefix(itemID, "msg_")
+	case "function_call":
+		return strings.HasPrefix(itemID, "fc_")
+	case "reasoning":
+		return strings.HasPrefix(itemID, "rs_")
+	default:
+		return true
+	}
+}
+
+func openAIResponsesItemIDForType(itemType string) string {
+	switch itemType {
+	case "message":
+		return "msg_" + randomHex(12)
+	case "function_call":
+		return "fc_" + randomHex(12)
+	case "reasoning":
+		return "rs_" + randomHex(12)
+	default:
+		return ""
+	}
 }
 
 func sanitizeEmptyBase64InputImagesInOpenAIRequestBodyMap(reqBody map[string]any) bool {
