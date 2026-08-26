@@ -405,6 +405,16 @@ func CheckedAtLTE(v time.Time) predicate.ChannelMonitorHistory {
 	return predicate.ChannelMonitorHistory(sql.FieldLTE(FieldCheckedAt, v))
 }
 
+// QuotaIsNil applies the IsNil predicate on the "quota" field.
+func QuotaIsNil() predicate.ChannelMonitorHistory {
+	return predicate.ChannelMonitorHistory(sql.FieldIsNull(FieldQuota))
+}
+
+// QuotaNotNil applies the NotNil predicate on the "quota" field.
+func QuotaNotNil() predicate.ChannelMonitorHistory {
+	return predicate.ChannelMonitorHistory(sql.FieldNotNull(FieldQuota))
+}
+
 // HasMonitor applies the HasEdge predicate on the "monitor" edge.
 func HasMonitor() predicate.ChannelMonitorHistory {
 	return predicate.ChannelMonitorHistory(func(s *sql.Selector) {

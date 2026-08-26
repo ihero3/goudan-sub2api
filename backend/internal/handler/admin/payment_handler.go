@@ -333,7 +333,6 @@ func adminSubscriptionPlansForResponse(plans []*dbent.SubscriptionPlan, groupInf
 			Description:     p.Description,
 			Price:           p.Price,
 			OriginalPrice:   p.OriginalPrice,
-			Currency:        p.Currency,
 			ValidityDays:    p.ValidityDays,
 			ValidityUnit:    p.ValidityUnit,
 			Features:        p.Features,

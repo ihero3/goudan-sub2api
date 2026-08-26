@@ -29,6 +29,8 @@ const (
 	FieldMessage = "message"
 	// FieldCheckedAt holds the string denoting the checked_at field in the database.
 	FieldCheckedAt = "checked_at"
+	// FieldQuota holds the string denoting the quota field in the database.
+	FieldQuota = "quota"
 	// EdgeMonitor holds the string denoting the monitor edge name in mutations.
 	EdgeMonitor = "monitor"
 	// Table holds the table name of the channelmonitorhistory in the database.
@@ -52,6 +54,7 @@ var Columns = []string{
 	FieldPingLatencyMs,
 	FieldMessage,
 	FieldCheckedAt,
+	FieldQuota,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).

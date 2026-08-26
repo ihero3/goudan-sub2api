@@ -98,6 +98,8 @@ type Config struct {
 	Update                  UpdateConfig                  `mapstructure:"update"`
 	Idempotency             IdempotencyConfig             `mapstructure:"idempotency"`
 	Compliance              ComplianceConfig              `mapstructure:"compliance"`
+	BatchImage              BatchImageConfig              `mapstructure:"batch_image"`
+	ImageStorage            ImageStorageConfig            `mapstructure:"image_storage"`
 }
 
 // ComplianceConfig 配置 AI 治理与合规模块。
@@ -124,8 +126,6 @@ type GeoIPConfig struct {
 	DatabasePath string `mapstructure:"database_path"`
 	// FallbackEnabled 数据库不可用时是否降级（留空 jurisdiction，不阻断请求）
 	FallbackEnabled bool `mapstructure:"fallback_enabled"`
-	BatchImage              BatchImageConfig              `mapstructure:"batch_image"`
-	ImageStorage            ImageStorageConfig            `mapstructure:"image_storage"`
 }
 
 type LogConfig struct {

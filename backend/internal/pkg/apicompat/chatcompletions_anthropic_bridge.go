@@ -774,7 +774,7 @@ func handleCCAnthropicToolCall(state *ChatCompletionsToAnthropicStreamState, too
 
 		callID := toolCall.ID
 		if callID == "" {
-			callID = generateItemID()
+			callID = generateItemID("fc")
 		}
 		if name := toolCall.Function.Name; name != "" {
 			events = append(events, announceCCAnthropicToolBlock(state, idx, callID, name)...)

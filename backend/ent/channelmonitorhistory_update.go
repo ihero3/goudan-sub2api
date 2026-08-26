@@ -14,6 +14,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitor"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
 	"github.com/Wei-Shaw/sub2api/ent/predicate"
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
 // ChannelMonitorHistoryUpdate is the builder for updating ChannelMonitorHistory entities.
@@ -159,6 +160,18 @@ func (_u *ChannelMonitorHistoryUpdate) SetNillableCheckedAt(v *time.Time) *Chann
 	return _u
 }
 
+// SetQuota sets the "quota" field.
+func (_u *ChannelMonitorHistoryUpdate) SetQuota(v *domain.MonitorQuotaSnapshot) *ChannelMonitorHistoryUpdate {
+	_u.mutation.SetQuota(v)
+	return _u
+}
+
+// ClearQuota clears the value of the "quota" field.
+func (_u *ChannelMonitorHistoryUpdate) ClearQuota() *ChannelMonitorHistoryUpdate {
+	_u.mutation.ClearQuota()
+	return _u
+}
+
 // SetMonitor sets the "monitor" edge to the ChannelMonitor entity.
 func (_u *ChannelMonitorHistoryUpdate) SetMonitor(v *ChannelMonitor) *ChannelMonitorHistoryUpdate {
 	return _u.SetMonitorID(v.ID)
@@ -269,6 +282,12 @@ func (_u *ChannelMonitorHistoryUpdate) sqlSave(ctx context.Context) (_node int, 
 	}
 	if value, ok := _u.mutation.CheckedAt(); ok {
 		_spec.SetField(channelmonitorhistory.FieldCheckedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.Quota(); ok {
+		_spec.SetField(channelmonitorhistory.FieldQuota, field.TypeJSON, value)
+	}
+	if _u.mutation.QuotaCleared() {
+		_spec.ClearField(channelmonitorhistory.FieldQuota, field.TypeJSON)
 	}
 	if _u.mutation.MonitorCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -449,6 +468,18 @@ func (_u *ChannelMonitorHistoryUpdateOne) SetNillableCheckedAt(v *time.Time) *Ch
 	return _u
 }
 
+// SetQuota sets the "quota" field.
+func (_u *ChannelMonitorHistoryUpdateOne) SetQuota(v *domain.MonitorQuotaSnapshot) *ChannelMonitorHistoryUpdateOne {
+	_u.mutation.SetQuota(v)
+	return _u
+}
+
+// ClearQuota clears the value of the "quota" field.
+func (_u *ChannelMonitorHistoryUpdateOne) ClearQuota() *ChannelMonitorHistoryUpdateOne {
+	_u.mutation.ClearQuota()
+	return _u
+}
+
 // SetMonitor sets the "monitor" edge to the ChannelMonitor entity.
 func (_u *ChannelMonitorHistoryUpdateOne) SetMonitor(v *ChannelMonitor) *ChannelMonitorHistoryUpdateOne {
 	return _u.SetMonitorID(v.ID)
@@ -589,6 +620,12 @@ func (_u *ChannelMonitorHistoryUpdateOne) sqlSave(ctx context.Context) (_node *C
 	}
 	if value, ok := _u.mutation.CheckedAt(); ok {
 		_spec.SetField(channelmonitorhistory.FieldCheckedAt, field.TypeTime, value)
+	}
+	if value, ok := _u.mutation.Quota(); ok {
+		_spec.SetField(channelmonitorhistory.FieldQuota, field.TypeJSON, value)
+	}
+	if _u.mutation.QuotaCleared() {
+		_spec.ClearField(channelmonitorhistory.FieldQuota, field.TypeJSON)
 	}
 	if _u.mutation.MonitorCleared() {
 		edge := &sqlgraph.EdgeSpec{

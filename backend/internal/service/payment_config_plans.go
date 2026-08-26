@@ -108,17 +108,13 @@ func (s *PaymentConfigService) GetGroupInfoMap(ctx context.Context, plans []*dbe
 	m := make(map[int64]PlanGroupInfo, len(groups))
 	for _, g := range groups {
 		m[int64(g.ID)] = PlanGroupInfo{
-			Platform:           g.Platform,
-			Name:               g.Name,
-			RateMultiplier:     g.RateMultiplier,
-			PeakRateEnabled:    g.PeakRateEnabled,
-			PeakStart:          g.PeakStart,
-			PeakEnd:            g.PeakEnd,
-			PeakRateMultiplier: g.PeakRateMultiplier,
-			DailyLimitUSD:      g.DailyLimitUsd,
-			WeeklyLimitUSD:     g.WeeklyLimitUsd,
-			MonthlyLimitUSD:    g.MonthlyLimitUsd,
-			ModelScopes:        g.SupportedModelScopes,
+			Platform:        g.Platform,
+			Name:            g.Name,
+			RateMultiplier:  g.RateMultiplier,
+			DailyLimitUSD:   g.DailyLimitUsd,
+			WeeklyLimitUSD:  g.WeeklyLimitUsd,
+			MonthlyLimitUSD: g.MonthlyLimitUsd,
+			ModelScopes:     g.SupportedModelScopes,
 		}
 	}
 	return m
@@ -136,13 +132,9 @@ func (s *PaymentConfigService) CreatePlan(ctx context.Context, req CreatePlanReq
 	if err := validatePlanRequired(req.Name, req.GroupID, req.Price, req.ValidityDays, req.ValidityUnit, req.OriginalPrice); err != nil {
 		return nil, err
 	}
-	currency, err := normalizePlanCurrency(req.Currency)
-	if err != nil {
-		return nil, err
-	}
 	b := s.entClient.SubscriptionPlan.Create().
 		SetGroupID(req.GroupID).SetName(req.Name).SetDescription(req.Description).
-		SetPrice(req.Price).SetCurrency(currency).SetValidityDays(req.ValidityDays).SetValidityUnit(req.ValidityUnit).
+		SetPrice(req.Price).SetValidityDays(req.ValidityDays).SetValidityUnit(req.ValidityUnit).
 		SetFeatures(req.Features).SetProductName(req.ProductName).
 		SetForSale(req.ForSale).SetSortOrder(req.SortOrder)
 	if req.OriginalPrice != nil {
@@ -173,13 +165,6 @@ func (s *PaymentConfigService) UpdatePlan(ctx context.Context, id int64, req Upd
 	}
 	if req.OriginalPrice != nil {
 		u.SetOriginalPrice(*req.OriginalPrice)
-	}
-	if req.Currency != nil {
-		currency, err := normalizePlanCurrency(*req.Currency)
-		if err != nil {
-			return nil, err
-		}
-		u.SetCurrency(currency)
 	}
 	if req.ValidityDays != nil {
 		u.SetValidityDays(*req.ValidityDays)

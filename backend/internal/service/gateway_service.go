@@ -777,6 +777,12 @@ type GatewayService struct {
 	tlsFPProfileService   *TLSFingerprintProfileService
 	balanceNotifyService  *BalanceNotifyService
 	userPlatformQuotaRepo UserPlatformQuotaRepository
+	complianceProfileSvc  *UserComplianceProfileService
+}
+
+// SetUserComplianceProfileService 注入用户级合规档案服务（用于按用户 ZDR 设置写入 usage_logs）。
+func (s *GatewayService) SetUserComplianceProfileService(svc *UserComplianceProfileService) {
+	s.complianceProfileSvc = svc
 }
 
 // NewGatewayService creates a new GatewayService

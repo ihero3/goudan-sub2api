@@ -43,6 +43,7 @@ type OpenAIGatewayHandler struct {
 	imageLimiter               *imageConcurrencyLimiter
 	maxAccountSwitches         int
 	cfg                        *config.Config
+	complianceService          *service.ComplianceService
 }
 
 type openAIWSTurnChannelMappingSnapshot struct {
@@ -254,6 +255,7 @@ func NewOpenAIGatewayHandler(
 	contentModerationService *service.ContentModerationService,
 	opsService *service.OpsService,
 	cfg *config.Config,
+	complianceService *service.ComplianceService,
 ) *OpenAIGatewayHandler {
 	pingInterval := time.Duration(0)
 	maxAccountSwitches := 3
@@ -275,7 +277,53 @@ func NewOpenAIGatewayHandler(
 		imageLimiter:             &imageConcurrencyLimiter{},
 		maxAccountSwitches:       maxAccountSwitches,
 		cfg:                      cfg,
+		complianceService:        complianceService,
 	}
+}
+
+// checkRequiredConsents verifies the user has granted all required consent types
+// before allowing access to the gateway. It returns true when checks pass or
+// when compliance is not configured.
+func (h *OpenAIGatewayHandler) checkRequiredConsents(c *gin.Context, userID int64) bool {
+	if userID <= 0 || h.complianceService == nil {
+		return true
+	}
+
+	missingConsents := make([]string, 0, len(requiredConsentTypes))
+	consentNames := map[string]string{
+		"terms_of_service":     "Terms of Service",
+		"gdpr_data_processing": "GDPR Data Processing Agreement",
+	}
+
+	for _, ct := range requiredConsentTypes {
+		consent, err := h.complianceService.GetUserConsent(c.Request.Context(), userID, ct)
+		if err != nil {
+			reqLog := c.MustGet("req_log").(*zap.Logger)
+			reqLog.Warn("compliance.consent.check.error", zap.Int64("user_id", userID), zap.String("consent_type", ct), zap.Error(err))
+			continue
+		}
+		if consent == nil || !consent.Granted {
+			reqLog := c.MustGet("req_log").(*zap.Logger)
+			reqLog.Info("compliance.consent.missing", zap.Int64("user_id", userID), zap.String("consent_type", ct))
+			missingConsents = append(missingConsents, ct)
+		}
+	}
+
+	if len(missingConsents) > 0 {
+		names := make([]string, 0, len(missingConsents))
+		for _, ct := range missingConsents {
+			if name, ok := consentNames[ct]; ok {
+				names = append(names, name)
+			} else {
+				names = append(names, ct)
+			}
+		}
+		message := fmt.Sprintf("You must provide consent for the following before using this service: %s. Please visit /governance/consent to complete the consent process.", strings.Join(names, ", "))
+		h.errorResponse(c, http.StatusForbidden, "consent_required", message)
+		return false
+	}
+
+	return true
 }
 
 // Responses handles OpenAI Responses API endpoint

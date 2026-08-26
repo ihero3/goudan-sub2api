@@ -1,0 +1,3 @@
+# pnpm 11 将构建脚本配置从 package.json 迁移到此文件。
+# 允许 esbuild/vue-demi 等包的 postinstall 构建脚本运行。
+dangerouslyAllowAllBuilds: true

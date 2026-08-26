@@ -1167,7 +1167,7 @@ func chatMessageToResponsesOutput(message ChatMessage, customTools map[string]bo
 	if reasoning != "" {
 		outputs = append(outputs, ResponsesOutput{
 			Type: "reasoning",
-			ID:   generateItemID(),
+			ID:   generateItemID("rs"),
 			Summary: []ResponsesSummary{{
 				Type: "summary_text",
 				Text: reasoning,
@@ -1182,7 +1182,7 @@ func chatMessageToResponsesOutput(message ChatMessage, customTools map[string]bo
 	if text != "" || len(message.ToolCalls) == 0 {
 		outputs = append(outputs, ResponsesOutput{
 			Type: "message",
-			ID:   generateItemID(),
+			ID:   generateItemID("msg"),
 			Role: "assistant",
 			Content: []ResponsesContentPart{{
 				Type: "output_text",
@@ -1200,7 +1200,7 @@ func chatMessageToResponsesOutput(message ChatMessage, customTools map[string]bo
 		if customTools[toolCall.Function.Name] {
 			outputs = append(outputs, ResponsesOutput{
 				Type:   "custom_tool_call",
-				ID:     generateItemID(),
+				ID:     generateItemID("fc"),
 				CallID: toolCall.ID,
 				Name:   toolCall.Function.Name,
 				Input:  extractCustomToolCallInput(arguments),
@@ -1211,7 +1211,7 @@ func chatMessageToResponsesOutput(message ChatMessage, customTools map[string]bo
 		if toolSearch && toolCall.Function.Name == toolSearchProxyName {
 			outputs = append(outputs, ResponsesOutput{
 				Type:      "tool_search_call",
-				ID:        generateItemID(),
+				ID:        generateItemID("fc"),
 				CallID:    toolCall.ID,
 				Arguments: arguments,
 				Status:    "completed",
@@ -1221,7 +1221,7 @@ func chatMessageToResponsesOutput(message ChatMessage, customTools map[string]bo
 		if ns, ok := namespaceTools[toolCall.Function.Name]; ok {
 			outputs = append(outputs, ResponsesOutput{
 				Type:      "function_call",
-				ID:        generateItemID(),
+				ID:        generateItemID("fc"),
 				CallID:    toolCall.ID,
 				Name:      ns.Name,
 				Namespace: ns.Namespace,
@@ -1232,7 +1232,7 @@ func chatMessageToResponsesOutput(message ChatMessage, customTools map[string]bo
 		}
 		outputs = append(outputs, ResponsesOutput{
 			Type:      "function_call",
-			ID:        generateItemID(),
+			ID:        generateItemID("fc"),
 			CallID:    toolCall.ID,
 			Name:      toolCall.Function.Name,
 			Arguments: arguments,
@@ -1261,7 +1261,7 @@ func toolSearchCallArgumentsJSON(arguments string) json.RawMessage {
 func emptyResponsesMessageOutput() ResponsesOutput {
 	return ResponsesOutput{
 		Type:    "message",
-		ID:      generateItemID(),
+		ID:      generateItemID("msg"),
 		Role:    "assistant",
 		Content: []ResponsesContentPart{{Type: "output_text", Text: ""}},
 		Status:  "completed",
@@ -1475,7 +1475,7 @@ func ChatCompletionsChunkToResponsesEvents(
 				events = append(events, closeChatReasoningItem(state)...)
 				copyCall := toolCall
 				if copyCall.ID == "" {
-					copyCall.ID = generateItemID()
+					copyCall.ID = generateItemID("fc")
 				}
 				copyCall.Type = "function"
 				// Arguments are accumulated by the shared block below so the
@@ -1487,7 +1487,7 @@ func ChatCompletionsChunkToResponsesEvents(
 				copyCall.Function.Arguments = ""
 				state.ToolCalls[idx] = &copyCall
 				stored = &copyCall
-				state.ToolItemIDs[idx] = generateItemID()
+				state.ToolItemIDs[idx] = generateItemID("fc")
 				state.ToolOutputIndex[idx] = state.allocOutputIndex()
 			} else {
 				if toolCall.ID != "" {
@@ -1615,7 +1615,7 @@ func ensureChatReasoningItem(state *ChatCompletionsToResponsesStreamState) []Res
 		return nil
 	}
 	state.ReasoningOpen = true
-	state.ReasoningItemID = generateItemID()
+	state.ReasoningItemID = generateItemID("rs")
 	state.ReasoningIndex = state.allocOutputIndex()
 	return []ResponsesStreamEvent{
 		chatToResponsesEvent(state, "response.output_item.added", &ResponsesStreamEvent{
@@ -1696,7 +1696,7 @@ func ensureChatToResponsesMessageItem(state *ChatCompletionsToResponsesStreamSta
 	if state.MessageItemID != "" {
 		return nil
 	}
-	state.MessageItemID = generateItemID()
+	state.MessageItemID = generateItemID("msg")
 	state.MessageIndex = state.allocOutputIndex()
 	return []ResponsesStreamEvent{chatToResponsesEvent(state, "response.output_item.added", &ResponsesStreamEvent{
 		OutputIndex: state.MessageIndex,
@@ -1889,7 +1889,7 @@ func (state *ChatCompletionsToResponsesStreamState) chatOutput() []ResponsesOutp
 	if state.Reasoning.Len() > 0 {
 		outputs = append(outputs, ResponsesOutput{
 			Type: "reasoning",
-			ID:   generateItemID(),
+			ID:   generateItemID("rs"),
 			Summary: []ResponsesSummary{{
 				Type: "summary_text",
 				Text: state.Reasoning.String(),
@@ -1899,7 +1899,7 @@ func (state *ChatCompletionsToResponsesStreamState) chatOutput() []ResponsesOutp
 	if state.MessageItemID != "" || len(state.ToolCalls) == 0 {
 		outputs = append(outputs, ResponsesOutput{
 			Type: "message",
-			ID:   nonEmpty(state.MessageItemID, generateItemID()),
+			ID:   nonEmpty(state.MessageItemID, generateItemID("msg")),
 			Role: "assistant",
 			Content: []ResponsesContentPart{{
 				Type: "output_text",
@@ -1920,7 +1920,7 @@ func (state *ChatCompletionsToResponsesStreamState) chatOutput() []ResponsesOutp
 		if state.toolIsCustom[i] {
 			outputs = append(outputs, ResponsesOutput{
 				Type:   "custom_tool_call",
-				ID:     generateItemID(),
+				ID:     generateItemID("fc"),
 				CallID: toolCall.ID,
 				Name:   toolCall.Function.Name,
 				Input:  extractCustomToolCallInput(arguments),
@@ -1931,7 +1931,7 @@ func (state *ChatCompletionsToResponsesStreamState) chatOutput() []ResponsesOutp
 		if state.toolIsToolSearch[i] {
 			outputs = append(outputs, ResponsesOutput{
 				Type:      "tool_search_call",
-				ID:        generateItemID(),
+				ID:        generateItemID("fc"),
 				CallID:    toolCall.ID,
 				Arguments: arguments,
 				Status:    "completed",
@@ -1944,7 +1944,7 @@ func (state *ChatCompletionsToResponsesStreamState) chatOutput() []ResponsesOutp
 		}
 		outputs = append(outputs, ResponsesOutput{
 			Type:      "function_call",
-			ID:        generateItemID(),
+			ID:        generateItemID("fc"),
 			CallID:    toolCall.ID,
 			Name:      name,
 			Namespace: namespace,

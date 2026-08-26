@@ -262,15 +262,6 @@ const handleUserClick = async (userId: number) => {
   }
 }
 
-// Drill down from the per-user token ranking: scope the whole usage view to
-// that user and jump to the usage-detail tab so the drill-down is visible.
-const handleRankingSelectUser = (userId: number, email: string) => {
-  filters.value = { ...filters.value, user_id: userId }
-  (usageFiltersRef.value as any)?.setUserKeyword?.(email || '')
-  activeTab.value = 'usage'
-  applyFilters()
-}
-
 const granularityOptions = computed(() => [{ value: 'day', label: t('admin.dashboard.day') }, { value: 'hour', label: t('admin.dashboard.hour') }])
 // Use local timezone to avoid UTC timezone issues
 const formatLD = (d: Date) => {
@@ -296,6 +287,16 @@ const getGranularityForRange = (start: string, end: string): 'day' | 'hour' => {
 const defaultRange = getLast24HoursRangeDates()
 const startDate = ref(defaultRange.start); const endDate = ref(defaultRange.end)
 const filters = ref<AdminUsageQueryParams>({ user_id: undefined, model: undefined, group_id: undefined, request_type: undefined, billing_type: null, start_date: startDate.value, end_date: endDate.value })
+
+// Drill down from the per-user token ranking: scope the whole usage view to
+// that user and jump to the usage-detail tab so the drill-down is visible.
+const handleRankingSelectUser = (userId: number, email: string) => {
+  filters.value = { ...filters.value, user_id: userId }
+  ;(usageFiltersRef.value as any)?.setUserKeyword?.(email || '')
+  activeTab.value = 'usage'
+  applyFilters()
+}
+
 const pagination = reactive({ page: 1, page_size: getPersistedPageSize(), total: 0 })
 const sortState = reactive({
   sort_by: 'created_at',

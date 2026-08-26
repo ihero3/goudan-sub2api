@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitor"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
 // ChannelMonitorHistoryCreate is the builder for creating a ChannelMonitorHistory entity.
@@ -94,6 +95,12 @@ func (_c *ChannelMonitorHistoryCreate) SetNillableCheckedAt(v *time.Time) *Chann
 	if v != nil {
 		_c.SetCheckedAt(*v)
 	}
+	return _c
+}
+
+// SetQuota sets the "quota" field.
+func (_c *ChannelMonitorHistoryCreate) SetQuota(v *domain.MonitorQuotaSnapshot) *ChannelMonitorHistoryCreate {
+	_c.mutation.SetQuota(v)
 	return _c
 }
 
@@ -229,6 +236,10 @@ func (_c *ChannelMonitorHistoryCreate) createSpec() (*ChannelMonitorHistory, *sq
 	if value, ok := _c.mutation.CheckedAt(); ok {
 		_spec.SetField(channelmonitorhistory.FieldCheckedAt, field.TypeTime, value)
 		_node.CheckedAt = value
+	}
+	if value, ok := _c.mutation.Quota(); ok {
+		_spec.SetField(channelmonitorhistory.FieldQuota, field.TypeJSON, value)
+		_node.Quota = value
 	}
 	if nodes := _c.mutation.MonitorIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -413,6 +424,24 @@ func (u *ChannelMonitorHistoryUpsert) UpdateCheckedAt() *ChannelMonitorHistoryUp
 	return u
 }
 
+// SetQuota sets the "quota" field.
+func (u *ChannelMonitorHistoryUpsert) SetQuota(v *domain.MonitorQuotaSnapshot) *ChannelMonitorHistoryUpsert {
+	u.Set(channelmonitorhistory.FieldQuota, v)
+	return u
+}
+
+// UpdateQuota sets the "quota" field to the value that was provided on create.
+func (u *ChannelMonitorHistoryUpsert) UpdateQuota() *ChannelMonitorHistoryUpsert {
+	u.SetExcluded(channelmonitorhistory.FieldQuota)
+	return u
+}
+
+// ClearQuota clears the value of the "quota" field.
+func (u *ChannelMonitorHistoryUpsert) ClearQuota() *ChannelMonitorHistoryUpsert {
+	u.SetNull(channelmonitorhistory.FieldQuota)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create.
 // Using this option is equivalent to using:
 //
@@ -583,6 +612,27 @@ func (u *ChannelMonitorHistoryUpsertOne) SetCheckedAt(v time.Time) *ChannelMonit
 func (u *ChannelMonitorHistoryUpsertOne) UpdateCheckedAt() *ChannelMonitorHistoryUpsertOne {
 	return u.Update(func(s *ChannelMonitorHistoryUpsert) {
 		s.UpdateCheckedAt()
+	})
+}
+
+// SetQuota sets the "quota" field.
+func (u *ChannelMonitorHistoryUpsertOne) SetQuota(v *domain.MonitorQuotaSnapshot) *ChannelMonitorHistoryUpsertOne {
+	return u.Update(func(s *ChannelMonitorHistoryUpsert) {
+		s.SetQuota(v)
+	})
+}
+
+// UpdateQuota sets the "quota" field to the value that was provided on create.
+func (u *ChannelMonitorHistoryUpsertOne) UpdateQuota() *ChannelMonitorHistoryUpsertOne {
+	return u.Update(func(s *ChannelMonitorHistoryUpsert) {
+		s.UpdateQuota()
+	})
+}
+
+// ClearQuota clears the value of the "quota" field.
+func (u *ChannelMonitorHistoryUpsertOne) ClearQuota() *ChannelMonitorHistoryUpsertOne {
+	return u.Update(func(s *ChannelMonitorHistoryUpsert) {
+		s.ClearQuota()
 	})
 }
 
@@ -920,6 +970,27 @@ func (u *ChannelMonitorHistoryUpsertBulk) SetCheckedAt(v time.Time) *ChannelMoni
 func (u *ChannelMonitorHistoryUpsertBulk) UpdateCheckedAt() *ChannelMonitorHistoryUpsertBulk {
 	return u.Update(func(s *ChannelMonitorHistoryUpsert) {
 		s.UpdateCheckedAt()
+	})
+}
+
+// SetQuota sets the "quota" field.
+func (u *ChannelMonitorHistoryUpsertBulk) SetQuota(v *domain.MonitorQuotaSnapshot) *ChannelMonitorHistoryUpsertBulk {
+	return u.Update(func(s *ChannelMonitorHistoryUpsert) {
+		s.SetQuota(v)
+	})
+}
+
+// UpdateQuota sets the "quota" field to the value that was provided on create.
+func (u *ChannelMonitorHistoryUpsertBulk) UpdateQuota() *ChannelMonitorHistoryUpsertBulk {
+	return u.Update(func(s *ChannelMonitorHistoryUpsert) {
+		s.UpdateQuota()
+	})
+}
+
+// ClearQuota clears the value of the "quota" field.
+func (u *ChannelMonitorHistoryUpsertBulk) ClearQuota() *ChannelMonitorHistoryUpsertBulk {
+	return u.Update(func(s *ChannelMonitorHistoryUpsert) {
+		s.ClearQuota()
 	})
 }
 

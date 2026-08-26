@@ -53,6 +53,10 @@ const (
 	FieldBodyOverrideMode = "body_override_mode"
 	// FieldBodyOverride holds the string denoting the body_override field in the database.
 	FieldBodyOverride = "body_override"
+	// FieldCheckMode holds the string denoting the check_mode field in the database.
+	FieldCheckMode = "check_mode"
+	// FieldAccountID holds the string denoting the account_id field in the database.
+	FieldAccountID = "account_id"
 	// EdgeHistory holds the string denoting the history edge name in mutations.
 	EdgeHistory = "history"
 	// EdgeDailyRollups holds the string denoting the daily_rollups edge name in mutations.
@@ -106,6 +110,8 @@ var Columns = []string{
 	FieldExtraHeaders,
 	FieldBodyOverrideMode,
 	FieldBodyOverride,
+	FieldCheckMode,
+	FieldAccountID,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -157,6 +163,10 @@ var (
 	DefaultBodyOverrideMode string
 	// BodyOverrideModeValidator is a validator for the "body_override_mode" field. It is called by the builders before save.
 	BodyOverrideModeValidator func(string) error
+	// DefaultCheckMode holds the default value on creation for the "check_mode" field.
+	DefaultCheckMode string
+	// CheckModeValidator is a validator for the "check_mode" field. It is called by the builders before save.
+	CheckModeValidator func(string) error
 )
 
 // Provider defines the type for the "provider" enum field.
@@ -269,6 +279,16 @@ func ByTemplateID(opts ...sql.OrderTermOption) OrderOption {
 // ByBodyOverrideMode orders the results by the body_override_mode field.
 func ByBodyOverrideMode(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldBodyOverrideMode, opts...).ToFunc()
+}
+
+// ByCheckMode orders the results by the check_mode field.
+func ByCheckMode(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCheckMode, opts...).ToFunc()
+}
+
+// ByAccountID orders the results by the account_id field.
+func ByAccountID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAccountID, opts...).ToFunc()
 }
 
 // ByHistoryCount orders the results by history count.

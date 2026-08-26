@@ -90,6 +90,18 @@ func (ChannelMonitor) Fields() []ent.Field {
 		// body_override: 同 ChannelMonitorRequestTemplate.body_override
 		field.JSON("body_override", map[string]any{}).
 			Optional(),
+
+		// ---- 配额模式字段（迁移 226） ----
+		// check_mode: probe（默认，LLM 探活）/ quota（仅查关联账号用量）/ quota_probe（探活 + 配额）
+		field.String("check_mode").
+			Default("probe").
+			MaxLen(32).
+			Comment("probe = LLM 探活（默认）；quota = 仅查关联账号用量；quota_probe = 探活 + 配额"),
+		// account_id: 配额模式关联的账号 ID（数据源）；账号删除时置空（DB ON DELETE SET NULL）
+		field.Int64("account_id").
+			Optional().
+			Nillable().
+			Comment("配额模式关联的账号 ID（数据源）；账号删除时置空"),
 	}
 }
 

@@ -14,8 +14,8 @@ func TestCleanPageImageRelativePath(t *testing.T) {
 		ok   bool
 	}{
 		{name: "single filename", in: "logo.png", want: "logo.png", ok: true},
-		{name: "nested path", in: "images/logo.png", want: filepath.Join("images", "logo.png"), ok: true},
-		{name: "dot prefix", in: "./logo.png", want: "logo.png", ok: true},
+		{name: "nested path", in: "images/src/assets/icons/logo.webp", want: filepath.Join("images", "logo.png"), ok: true},
+		{name: "dot prefix", in: "./src/assets/icons/logo.webp", want: "logo.png", ok: true},
 		{name: "url escaped slash", in: "images%2Flogo.png", want: filepath.Join("images", "logo.png"), ok: true},
 		{name: "parent traversal", in: "../secret.png", ok: false},
 		{name: "encoded parent traversal", in: "%2e%2e/secret.png", ok: false},
@@ -63,7 +63,7 @@ func TestResolvePageImagePath(t *testing.T) {
 		t.Fatalf("path = %q, want %q", got, want)
 	}
 
-	got, ok = resolvePageImagePath(pagesDir, base, "images/logo.png")
+	got, ok = resolvePageImagePath(pagesDir, base, "images/src/assets/icons/logo.webp")
 	if !ok {
 		t.Fatal("expected nested image path to be accepted")
 	}

@@ -97,6 +97,68 @@ func (Group) Fields() []ent.Field {
 			Nillable().
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}),
 
+		// 批量图片生成开关 (added by migration 162)
+		field.Bool("allow_batch_image_generation").
+			Default(false).
+			Comment("是否允许该分组使用批量图片生成能力"),
+		field.Float("batch_image_discount_multiplier").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
+			Default(0.5).
+			Comment("批量图片生成折扣倍率，最终单价会乘以该值；0 表示免费"),
+		field.Float("batch_image_hold_multiplier").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
+			Default(0.6).
+			Comment("批量图片生成冻结价格比例，按普通生图原价乘以该比例冻结，结算后释放差额"),
+
+		// 视频生成计费配置（Grok 平台使用）(added by migration 170 / 217)
+		field.Bool("video_rate_independent").
+			Default(false).
+			Comment("视频生成是否使用独立倍率；false 表示共享分组有效倍率"),
+		field.Float("video_rate_multiplier").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
+			Default(1.0).
+			Comment("视频生成独立倍率，仅 video_rate_independent=true 时生效"),
+		field.Float("video_price_480p").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}),
+		field.Float("video_price_720p").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}),
+		field.Float("video_price_1080p").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}),
+		field.JSON("video_model_prices", map[string]map[string]float64{}).
+			Optional().
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
+			Comment("视频模型定价：模型 -> 分辨率 -> 每秒单价 (USD/s)"),
+
+		// 搜索计费配置 (added by migration 174 / 219)
+		field.Float("web_search_price_per_call").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}),
+		field.Float("search_price_per_1k").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}),
+
+		// 音频计费配置 (added by migration 218)
+		field.Float("audio_realtime_price_per_min").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}),
+		field.Float("audio_tts_price_per_million_chars").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}),
+		field.Float("audio_stt_price_per_hour").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}),
+
 		// Claude Code 客户端限制 (added by migration 029)
 		field.Bool("claude_code_only").
 			Default(false).
@@ -109,6 +171,13 @@ func (Group) Fields() []ent.Field {
 			Optional().
 			Nillable().
 			Comment("无效请求兜底使用的分组 ID"),
+
+		// 去重操作标识 (added by migration 181)
+		field.String("duplicate_operation_id").
+			Optional().
+			Nillable().
+			MaxLen(64).
+			Comment("用于幂等/去重的操作标识，唯一索引仅在未删除时生效"),
 
 		// 模型路由配置 (added by migration 040)
 		field.JSON("model_routing", map[string][]int64{}).
@@ -164,6 +233,60 @@ func (Group) Fields() []ent.Field {
 		field.Int("rpm_limit").
 			Default(0).
 			Comment("分组 RPM 上限，0 表示不限制；设置后接管该分组用户的限流"),
+
+		// 实时流开关 (added by migration 189)
+		field.Bool("allow_live").
+			Default(false).
+			Comment("是否允许该分组使用实时流（live）能力"),
+
+		// 峰值倍率配置 (added by migration 158)
+		field.Bool("peak_rate_enabled").
+			Default(false).
+			Comment("是否启用峰值倍率；在 peak_start~peak_end 时段内使用峰值倍率"),
+		field.String("peak_start").
+			MaxLen(5).
+			Default("").
+			Comment("峰值时段开始（HH:mm）"),
+		field.String("peak_end").
+			MaxLen(5).
+			Default("").
+			Comment("峰值时段结束（HH:mm）"),
+		field.Float("peak_rate_multiplier").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
+			Default(1.0).
+			Comment("峰值时段倍率，仅 peak_rate_enabled=true 时生效"),
+
+		// 推理努力策略 (added by migration 185)
+		field.String("max_reasoning_effort").
+			MaxLen(20).
+			Default("").
+			Comment("分组推理努力上限：min/low/medium/high/xhigh"),
+		field.JSON("reasoning_effort_mappings", []domain.ReasoningEffortMapping{}).
+			Default([]domain.ReasoningEffortMapping{}).
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
+			Comment("推理努力改写映射：在分组上限前将显式值改写为另一值"),
+
+		// 分组利润控制 (added by migration 192)
+		field.Bool("profit_control_enabled").
+			Default(false).
+			Comment("是否启用分组利润控制"),
+		field.Float("profit_min_margin").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
+			Default(0).
+			Comment("最小利润率阈值"),
+		field.Float("profit_safety_buffer").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
+			Default(0).
+			Comment("利润率安全缓冲"),
+
+		// 长上下文定价开关与模型定价覆盖 (added by migration 221)
+		field.Bool("long_context_pricing_enabled").
+			Default(true).
+			Comment("是否启用长上下文定价覆盖"),
+		field.Bytes("model_pricing").
+			Optional().
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
+			Comment("分组级模型定价覆盖 JSON，优先级高于渠道/内置定价"),
 	}
 }
 

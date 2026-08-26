@@ -4,7 +4,7 @@
     <header class="relative z-20 px-6 py-4">
       <nav class="mx-auto flex max-w-7xl items-center justify-between">
         <router-link to="/home" class="flex items-center gap-[12px] pl-0">
-          <img :src="siteLogo || '/logo.png'" alt="Three Router Logo" class="h-[32px] w-[32px] object-contain" />
+          <img :src="siteLogo || '/src/assets/icons/logo.webp'" alt="Three Router Logo" class="h-[32px] w-[32px] object-contain" />
           <span class="text-[16px] font-semibold text-[#021b4a] dark:text-white" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">{{ siteName }}</span>
         </router-link>
 
@@ -625,7 +625,7 @@
         <div class="flex flex-col items-center justify-between gap-6 text-center sm:flex-row sm:text-left">
           <div>
             <div class="mb-3 flex items-center justify-center gap-3 sm:justify-start">
-              <img :src="siteLogo || '/logo.png'" alt="Logo" class="h-8 w-8 object-contain" />
+              <img :src="siteLogo || '/src/assets/icons/logo.webp'" alt="Logo" class="h-8 w-8 object-contain" />
               <span class="text-lg font-semibold text-[#021b4a] dark:text-white">{{ siteName }}</span>
             </div>
             <p class="max-w-md text-sm text-gray-500 dark:text-gray-400">{{ t('enterprise.footer.brandDesc') }}</p>
@@ -712,7 +712,7 @@ useSEO({
   description: 'ThreeRouter 企业服务：统一团队管理、安全合规、Token 使用精细化管理。企业级 AI API 网关，支持部门配额、密钥管控、成本归因、合规审计，让每一个 Token 都被追踪。',
   keywords: '企业AI,企业API管理,Token精细化管理,团队管理,API网关,企业合规,API密钥管理,成本管控,Token配额,用量监控',
   ogType: 'website',
-  ogImage: 'https://www.threerouter.com/logo.png',
+  ogImage: 'https://www.threerouter.com/src/assets/icons/logo.webp',
   ogUrl: 'https://www.threerouter.com/enterprise',
   ogSiteName: 'ThreeRouter',
   canonicalUrl: 'https://www.threerouter.com/enterprise',

@@ -116,24 +116,24 @@ func TestInjectSiteTitle(t *testing.T) {
 
 func TestInjectSiteFavicon(t *testing.T) {
 	t.Run("replaces_favicon_with_site_logo", func(t *testing.T) {
-		html := []byte(`<html><head><link rel="icon" type="image/png" href="/logo.png" /></head></html>`)
+		html := []byte(`<html><head><link rel="icon" type="image/png" href="/src/assets/icons/logo.webp" /></head></html>`)
 		settingsJSON := []byte(`{"site_logo":"https://example.com/custom-logo.png"}`)
 
 		result := injectSiteFavicon(html, settingsJSON)
 
 		assert.Contains(t, string(result), `<link rel="icon" href="https://example.com/custom-logo.png" />`)
-		assert.NotContains(t, string(result), `/logo.png`)
+		assert.NotContains(t, string(result), `/src/assets/icons/logo.webp`)
 	})
 
 	t.Run("supports_relative_and_data_image_urls", func(t *testing.T) {
-		html := []byte(`<link rel="icon" href="/logo.png" />`)
+		html := []byte(`<link rel="icon" href="/src/assets/icons/logo.webp" />`)
 
 		assert.Contains(t, string(injectSiteFavicon(html, []byte(`{"site_logo":"/uploads/logo.svg"}`))), `/uploads/logo.svg`)
 		assert.Contains(t, string(injectSiteFavicon(html, []byte(`{"site_logo":"data:image/png;base64,abc"}`))), `data:image/png;base64,abc`)
 	})
 
 	t.Run("rejects_unsafe_logo_urls", func(t *testing.T) {
-		html := []byte(`<link rel="icon" href="/logo.png" />`)
+		html := []byte(`<link rel="icon" href="/src/assets/icons/logo.webp" />`)
 
 		result := injectSiteFavicon(html, []byte(`{"site_logo":"javascript:alert(1)"}`))
 
@@ -141,9 +141,9 @@ func TestInjectSiteFavicon(t *testing.T) {
 	})
 
 	t.Run("escapes_logo_url_for_html", func(t *testing.T) {
-		html := []byte(`<link rel="icon" href="/logo.png" />`)
+		html := []byte(`<link rel="icon" href="/src/assets/icons/logo.webp" />`)
 
-		result := injectSiteFavicon(html, []byte(`{"site_logo":"https://example.com/logo.png?a=1&b=2"}`))
+		result := injectSiteFavicon(html, []byte(`{"site_logo":"https://example.com/src/assets/icons/logo.webp?a=1&b=2"}`))
 
 		assert.Contains(t, string(result), `a=1&amp;b=2`)
 	})
@@ -650,7 +650,7 @@ func TestFrontendServer_Middleware(t *testing.T) {
 
 		// Request for existing static file
 		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/logo.png", nil)
+		req := httptest.NewRequest(http.MethodGet, "/src/assets/icons/logo.webp", nil)
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -735,7 +735,7 @@ func TestServeEmbeddedFrontend(t *testing.T) {
 		router.Use(middleware)
 
 		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/logo.png", nil)
+		req := httptest.NewRequest(http.MethodGet, "/src/assets/icons/logo.webp", nil)
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)

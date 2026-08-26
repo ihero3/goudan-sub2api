@@ -301,38 +301,25 @@ type APIKeyService struct {
 	cache                 APIKeyCache
 	rateLimitCacheInvalid RateLimitCacheInvalidator // optional: invalidate Redis rate limit cache
 	consumerRepo          ConsumerRepository        // optional: for auto-filling team_id from consumer
+	concurrencyService    *ConcurrencyService
 	cfg                   *config.Config
 	authCacheL1           *ristretto.Cache
+	authNegativeCacheL1   *ristretto.Cache
 	authCfg               apiKeyAuthCacheConfig
 	authGroup             singleflight.Group
-	lastUsedTouchL1       sync.Map // keyID -> nextAllowedAt(time.Time)
-	lastUsedTouchSF       singleflight.Group
-	apiKeyRepo                APIKeyRepository
-	userRepo                  UserRepository
-	groupRepo                 GroupRepository
-	userSubRepo               UserSubscriptionRepository
-	userGroupRateRepo         UserGroupRateRepository
-	cache                     APIKeyCache
-	rateLimitCacheInvalid     RateLimitCacheInvalidator // optional: invalidate Redis rate limit cache
-	concurrencyService        *ConcurrencyService
-	cfg                       *config.Config
-	authCacheL1               *ristretto.Cache
-	authNegativeCacheL1       *ristretto.Cache
-	authCfg                   apiKeyAuthCacheConfig
-	authGroup                 singleflight.Group
-	authLookupSlots           chan struct{}
-	authLookupTotal           atomic.Uint64
-	authLookupRejected        atomic.Uint64
-	authLookupInFlight        atomic.Int64
-	invalidAuthAbuse          *invalidAuthAbuseLimiter
-	authInvalidationStart     sync.Once
-	authInvalidationStop      sync.Once
-	authInvalidationCancel    context.CancelFunc
-	authInvalidationWG        sync.WaitGroup
+	authLookupSlots       chan struct{}
+	authLookupTotal       atomic.Uint64
+	authLookupRejected    atomic.Uint64
+	authLookupInFlight    atomic.Int64
+	invalidAuthAbuse      *invalidAuthAbuseLimiter
+	authInvalidationStart sync.Once
+	authInvalidationStop  sync.Once
+	authInvalidationCancel context.CancelFunc
+	authInvalidationWG     sync.WaitGroup
 	authInvalidationConnected atomic.Bool
 	authInvalidationFailures  atomic.Uint64
-	lastUsedTouchL1           sync.Map // keyID -> nextAllowedAt(time.Time)
-	lastUsedTouchSF           singleflight.Group
+	lastUsedTouchL1        sync.Map // keyID -> nextAllowedAt(time.Time)
+	lastUsedTouchSF        singleflight.Group
 }
 
 type APIKeyAuthLookupMetrics struct {
@@ -392,6 +379,8 @@ func (s *APIKeyService) SetRateLimitCacheInvalidator(inv RateLimitCacheInvalidat
 // SetConsumerRepo sets the optional consumer repository for auto-filling team_id.
 func (s *APIKeyService) SetConsumerRepo(repo ConsumerRepository) {
 	s.consumerRepo = repo
+}
+
 func (s *APIKeyService) SetConcurrencyService(concurrencyService *ConcurrencyService) {
 	s.concurrencyService = concurrencyService
 }

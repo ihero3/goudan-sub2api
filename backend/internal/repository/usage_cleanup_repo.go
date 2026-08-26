@@ -349,37 +349,65 @@ func (r *usageCleanupRepository) DeleteExpiredRetentionLogs(ctx context.Context,
 		deleted++
 	}
 	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	return deleted, nil
+}
+
+// deleteUsageLogsBatchWithRollupInvalidation 在事务中删除 usage_logs 并失效受影响的分组用量汇总。
 func (r *usageCleanupRepository) deleteUsageLogsBatchWithRollupInvalidation(ctx context.Context, db *sql.DB, whereClause string, args []any) (int64, error) {
 	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
 	rollback := func(err error) (int64, error) {
 		_ = tx.Rollback()
+		return 0, err
+	}
 	if err := lockGroupUsageRollupState(ctx, tx); err != nil {
 		return rollback(err)
+	}
 	query := fmt.Sprintf(`
+		WITH target AS (
+			SELECT id, created_at
+			FROM usage_logs
 			WHERE %s
 			ORDER BY created_at ASC, id ASC
 			LIMIT $%d
+		)
+		DELETE FROM usage_logs
+		WHERE id IN (SELECT id FROM target)
 		RETURNING created_at
 	`, whereClause, len(args))
 	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
 		return rollback(err)
+	}
 	var earliestDeletedAt time.Time
+	var deleted int64
+	for rows.Next() {
 		var deletedAt time.Time
 		if err := rows.Scan(&deletedAt); err != nil {
 			_ = rows.Close()
 			return rollback(err)
 		}
+		deleted++
 		if earliestDeletedAt.IsZero() || deletedAt.Before(earliestDeletedAt) {
 			earliestDeletedAt = deletedAt
 		}
+	}
+	if err := rows.Err(); err != nil {
 		_ = rows.Close()
 		return rollback(err)
+	}
 	if err := rows.Close(); err != nil {
 		return rollback(err)
+	}
 	if deleted > 0 {
 		if err := invalidateGroupUsageRollupsAt(ctx, tx, earliestDeletedAt); err != nil {
 			return rollback(err)
 		}
+	}
 	if err := tx.Commit(); err != nil {
 		return 0, err
 	}
