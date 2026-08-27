@@ -21,6 +21,8 @@ export type OpsUpstreamErrorEvent = {
   upstream_status_code?: number
   upstream_request_id?: string
   kind?: string
+  next_account_id?: number
+  next_account_name?: string
   message?: string
   detail?: string
 }

@@ -555,6 +555,15 @@ func (s *OpenAIGatewayService) ResolveChannelMapping(ctx context.Context, groupI
 	return s.channelService.ResolveChannelMapping(ctx, groupID, model)
 }
 
+// IsDisableSameAccountRetryEnabled 检查全局设置：出错后是否禁止同账号重试。
+// 开启后池模式账号出错也不再同账号重试，直接 failover 切换。
+func (s *OpenAIGatewayService) IsDisableSameAccountRetryEnabled(ctx context.Context) bool {
+	if s.settingService == nil {
+		return false
+	}
+	return s.settingService.IsDisableSameAccountRetryEnabled(ctx)
+}
+
 // IsModelRestricted 检查模型是否被渠道限制（代理到 ChannelService）
 func (s *OpenAIGatewayService) IsModelRestricted(ctx context.Context, groupID int64, model string) bool {
 	if s.channelService == nil {

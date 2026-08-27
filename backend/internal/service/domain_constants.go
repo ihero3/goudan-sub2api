@@ -636,6 +636,9 @@ const (
 	SettingKeyEnableClientDatelineNormalization = "enable_client_dateline_normalization"
 	// SettingKeyRewriteMessageCacheControl 是否改写 messages[*].content[*].cache_control（默认 false）
 	SettingKeyRewriteMessageCacheControl = "rewrite_message_cache_control"
+	// SettingKeyDisableSameAccountRetry 出错后是否禁止同账号重试（默认 false = 保留原有重试逻辑）。
+	// 置 true 后，上游返回可重试的错误时不再在同一账号上退避重试，而是直接进行 failover 切换。
+	SettingKeyDisableSameAccountRetry = "disable_same_account_retry"
 	// SettingKeyAntigravityUserAgentVersion Antigravity 上游 User-Agent 版本号（空值使用环境变量/默认值）
 	SettingKeyAntigravityUserAgentVersion = "antigravity_user_agent_version"
 	// SettingKeyOpenAICodexUserAgent OpenAI Codex 完整 User-Agent（空值使用内置默认）

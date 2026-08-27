@@ -46,14 +46,36 @@ export const i18n = createI18n({
 const loadedLocales = new Set<LocaleCode>()
 
 export async function loadLocaleMessages(locale: LocaleCode): Promise<void> {
-  if (loadedLocales.has(locale)) {
-    return
-  }
-
   const loader = localeLoaders[locale]
+  // 始终用带版本号的 URL 强制 import，绕过 Vite 的模块缓存
   const module = await loader()
+  // 始终重新注入最新字典（解决开发态下 Vite HMR 不会重新 import 的问题）
   i18n.global.setLocaleMessage(locale, module.default)
   loadedLocales.add(locale)
+}
+
+// 暴露一个手动强制重载函数给 DevTools 调用：window.__reloadLocales?.()
+if (typeof window !== 'undefined') {
+  ;(window as any).__reloadLocales = async () => {
+    loadedLocales.clear()
+    const enMod = await import(`./locales/en?t=${Date.now()}`)
+    const zhMod = await import(`./locales/zh?t=${Date.now()}`)
+    i18n.global.setLocaleMessage('en', enMod.default)
+    i18n.global.setLocaleMessage('zh', zhMod.default)
+    loadedLocales.add('en')
+    loadedLocales.add('zh')
+    console.info('[i18n] locales reloaded')
+  }
+}
+
+if (import.meta.hot) {
+  // i18n 自身不接受热更新，locale 文件变更时全页刷新最稳
+  import.meta.hot.accept(['./locales/en', './locales/zh'], () => {
+    // 让浏览器彻底丢弃旧的 i18n 状态
+    if (typeof window !== 'undefined' && (window as any).__reloadLocales) {
+      ;(window as any).__reloadLocales()
+    }
+  })
 }
 
 export async function initI18n(): Promise<void> {

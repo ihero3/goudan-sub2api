@@ -182,6 +182,23 @@
               </div>
             </div>
 
+            <!-- failover 切换配对 A→B -->
+            <div
+              v-for="(switchInfo, si) in failoverSwitchInfos(ev)"
+              :key="si"
+              class="mt-2 flex flex-wrap items-center gap-1.5 text-xs"
+            >
+              <span
+                class="rounded-md bg-amber-50 px-2 py-0.5 font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+              >
+                {{ switchInfo.fromName || switchInfo.fromId }}
+              </span>
+              <Icon name="arrowRight" size="xs" />
+              <span class="rounded-md bg-primary-50 px-2 py-0.5 font-medium text-primary-600 dark:bg-primary-500/10 dark:text-primary-300">
+                {{ switchInfo.toName }}
+              </span>
+            </div>
+
             <div v-if="ev.message" class="mt-3 break-words text-sm font-medium text-gray-900 dark:text-white">{{ ev.message }}</div>
 
             <pre
@@ -201,7 +218,7 @@ import { useI18n } from 'vue-i18n'
 import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { useAppStore } from '@/stores'
-import { opsAPI, type OpsErrorDetail } from '@/api/admin/ops'
+import { opsAPI, type OpsErrorDetail, type OpsUpstreamErrorEvent } from '@/api/admin/ops'
 import { formatDateTime } from '@/utils/format'
 import { resolvePrimaryResponseBody, resolveUpstreamPayload } from '../utils/errorDetailResponse'
 
@@ -278,6 +295,32 @@ const correlatedUpstream = ref<OpsErrorDetail[]>([])
 const correlatedUpstreamLoading = ref(false)
 
 const correlatedUpstreamErrors = computed<OpsErrorDetail[]>(() => correlatedUpstream.value)
+
+type SwitchInfo = { fromName: string; fromId: string; toName: string }
+
+function parseUpstreamEvents(ev: OpsErrorDetail): OpsUpstreamErrorEvent[] {
+  const raw = String(ev.upstream_errors || '').trim()
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? (parsed as OpsUpstreamErrorEvent[]) : []
+  } catch {
+    return []
+  }
+}
+
+function failoverSwitchInfos(ev: OpsErrorDetail): SwitchInfo[] {
+  const out: SwitchInfo[] = []
+  for (const event of parseUpstreamEvents(ev)) {
+    if (event.kind !== 'failover' || !event.next_account_id) continue
+    out.push({
+      fromName: event.account_name || '',
+      fromId: event.account_id ? String(event.account_id) : '',
+      toName: event.next_account_name || `#${event.next_account_id}`,
+    })
+  }
+  return out
+}
 
 const expandedUpstreamDetailIds = ref(new Set<number>())
 

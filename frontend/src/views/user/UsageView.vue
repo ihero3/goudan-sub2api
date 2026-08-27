@@ -188,6 +188,7 @@
           </div>
         </div>
       </div>
+      </div>
 
       <div v-if="errorViewEnabled" class="flex gap-2 border-b border-gray-200 dark:border-dark-700">
         <button class="tab" :class="{ 'tab-active': activeTab === 'usage' }" @click="activeTab = 'usage'">

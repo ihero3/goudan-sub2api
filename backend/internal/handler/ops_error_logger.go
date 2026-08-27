@@ -463,7 +463,7 @@ func setOpsEndpointContext(c *gin.Context, upstreamModel string, requestType int
 	c.Set(opsRequestTypeKey, requestType)
 }
 
-func setOpsSelectedAccount(c *gin.Context, accountID int64, platform ...string) {
+func setOpsSelectedAccount(c *gin.Context, accountID int64, accountName string, platform ...string) {
 	if c == nil || accountID <= 0 {
 		return
 	}
@@ -478,6 +478,9 @@ func setOpsSelectedAccount(c *gin.Context, accountID int64, platform ...string) 
 		}
 		c.Request = c.Request.WithContext(ctx)
 	}
+	// failover 切换后重新选号成功：把新账号回填到上一个 failover 事件，形成 A→B 配对。
+	// 首次选号时上游错误事件数组为空，此调用为 no-op。
+	service.SetOpsFailoverNextAccount(c, accountID, accountName)
 }
 
 func markOpsRoutingCapacityLimited(c *gin.Context) {

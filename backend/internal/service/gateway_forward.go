@@ -33,7 +33,12 @@ const (
 	maxRetryElapsed = 10 * time.Second
 )
 
-func (s *GatewayService) shouldRetryUpstreamError(account *Account, statusCode int) bool {
+func (s *GatewayService) shouldRetryUpstreamError(ctx context.Context, account *Account, statusCode int) bool {
+	// 全局设置：出错后禁止同账号重试，直接进入 failover 切换
+	if s.settingService != nil && s.settingService.IsDisableSameAccountRetryEnabled(ctx) {
+		return false
+	}
+
 	// OAuth/Setup Token 账号：仅 403 重试
 	if account.IsOAuth() {
 		return statusCode == 403
@@ -43,10 +48,19 @@ func (s *GatewayService) shouldRetryUpstreamError(account *Account, statusCode i
 	return !account.ShouldHandleErrorCode(statusCode)
 }
 
+// shouldPoolModeRetryOnSameAccount 判断池模式账号是否应在同一账号上重试。
+// 全局设置 DisableSameAccountRetry 开启时，池模式也不再同账号重试（直接切换）。
+func (s *GatewayService) shouldPoolModeRetryOnSameAccount(ctx context.Context, account *Account, statusCode int) bool {
+	if s.settingService != nil && s.settingService.IsDisableSameAccountRetryEnabled(ctx) {
+		return false
+	}
+	return account.IsPoolMode() && account.IsPoolModeRetryableStatus(statusCode)
+}
+
 // shouldFailoverUpstreamError determines whether an upstream error should trigger account failover.
 func (s *GatewayService) shouldFailoverUpstreamError(statusCode int) bool {
 	switch statusCode {
-	case 401, 403, 429, 529:
+	case 401, 403, 404, 429, 529:
 		return true
 	default:
 		return statusCode >= 500
@@ -607,7 +621,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 		}
 
 		// 检查是否需要通用重试（排除400，因为400已经在上面特殊处理过了）
-		if resp.StatusCode >= 400 && resp.StatusCode != 400 && s.shouldRetryUpstreamError(account, resp.StatusCode) {
+		if resp.StatusCode >= 400 && resp.StatusCode != 400 && s.shouldRetryUpstreamError(ctx, account, resp.StatusCode) {
 			if attempt < maxRetryAttempts {
 				elapsed := time.Since(retryStart)
 				if elapsed >= maxRetryElapsed {
@@ -668,7 +682,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 	defer func() { _ = resp.Body.Close() }()
 
 	// 处理重试耗尽的情况
-	if resp.StatusCode >= 400 && s.shouldRetryUpstreamError(account, resp.StatusCode) {
+	if resp.StatusCode >= 400 && s.shouldRetryUpstreamError(ctx, account, resp.StatusCode) {
 		if s.shouldFailoverUpstreamError(resp.StatusCode) {
 			respBody, _ := s.readUpstreamErrorBody(resp)
 			_ = resp.Body.Close()
@@ -697,7 +711,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 			return nil, &UpstreamFailoverError{
 				StatusCode:             resp.StatusCode,
 				ResponseBody:           respBody,
-				RetryableOnSameAccount: account.IsPoolMode() && account.IsPoolModeRetryableStatus(resp.StatusCode),
+				RetryableOnSameAccount: s.shouldPoolModeRetryOnSameAccount(ctx, account, resp.StatusCode),
 			}
 		}
 		return s.handleRetryExhaustedError(ctx, resp, c, account)
@@ -731,7 +745,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 		return nil, &UpstreamFailoverError{
 			StatusCode:             resp.StatusCode,
 			ResponseBody:           respBody,
-			RetryableOnSameAccount: account.IsPoolMode() && account.IsPoolModeRetryableStatus(resp.StatusCode),
+			RetryableOnSameAccount: s.shouldPoolModeRetryOnSameAccount(ctx, account, resp.StatusCode),
 		}
 	}
 	if resp.StatusCode >= 400 {

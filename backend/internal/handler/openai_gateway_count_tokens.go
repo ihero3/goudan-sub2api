@@ -130,7 +130,7 @@ func (h *OpenAIGatewayHandler) ResponsesInputTokens(c *gin.Context) {
 	}
 
 	account := selection.Account
-	setOpsSelectedAccount(c, account.ID, account.Platform)
+	setOpsSelectedAccount(c, account.ID, account.Name, account.Platform)
 	if selection.Acquired && selection.ReleaseFunc != nil {
 		defer selection.ReleaseFunc()
 	}
@@ -314,7 +314,7 @@ func (h *OpenAIGatewayHandler) CountTokens(c *gin.Context) {
 	}
 
 	account := selection.Account
-	setOpsSelectedAccount(c, account.ID, account.Platform)
+	setOpsSelectedAccount(c, account.ID, account.Name, account.Platform)
 	if selection.Acquired && selection.ReleaseFunc != nil {
 		defer selection.ReleaseFunc()
 	}

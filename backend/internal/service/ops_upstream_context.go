@@ -205,6 +205,11 @@ type OpsUpstreamErrorEvent struct {
 	UpstreamStatusCode int    `json:"upstream_status_code,omitempty"`
 	UpstreamRequestID  string `json:"upstream_request_id,omitempty"`
 
+	// NextAccountID / NextAccountName 记录 failover 切换后实际尝试的下一个账号
+	// （由 handler 层在重新选号成功后回填，用于管理员查看 A→B 切换配对）。
+	NextAccountID   int64  `json:"next_account_id,omitempty"`
+	NextAccountName string `json:"next_account_name,omitempty"`
+
 	// UpstreamURL is the actual upstream URL that was called (host + path, query/fragment stripped).
 	// Helps debug 404/routing errors by showing which endpoint was targeted.
 	UpstreamURL string `json:"upstream_url,omitempty"`
@@ -257,6 +262,36 @@ func appendOpsUpstreamError(c *gin.Context, ev OpsUpstreamErrorEvent) {
 	c.Set(OpsUpstreamErrorsKey, existing)
 
 	checkSkipMonitoringForUpstreamEvent(c, &evCopy)
+}
+
+// SetOpsFailoverNextAccount 在 failover 后重新选号成功时，把「切换后实际尝试的下一个账号」
+// 回填到最近一个尚未关联 next_account 的 failover 事件上。这样管理员在请求错误详情里
+// 能看到完整的 A→B 切换配对（A 即 failover 事件自身的 account，B 即 next_account）。
+// 由各 handler 在「选出一个新账号开始尝试」的统一入口（setOpsSelectedAccount）调用。
+func SetOpsFailoverNextAccount(c *gin.Context, nextAccountID int64, nextAccountName string) {
+	if c == nil || nextAccountID <= 0 {
+		return
+	}
+	v, ok := c.Get(OpsUpstreamErrorsKey)
+	if !ok {
+		return
+	}
+	events, ok := v.([]*OpsUpstreamErrorEvent)
+	if !ok || len(events) == 0 {
+		return
+	}
+	// 只回填最后一个待关联的 failover 事件：若最后一个事件不是 failover，
+	// 说明当前选号就是请求的第一个账号，没有前一个被切换的账号可关联。
+	last := events[len(events)-1]
+	if last == nil || last.Kind != "failover" || last.NextAccountID != 0 {
+		return
+	}
+	last.NextAccountID = nextAccountID
+	if name := strings.TrimSpace(nextAccountName); name != "" {
+		last.NextAccountName = name
+	}
+	events[len(events)-1] = last
+	c.Set(OpsUpstreamErrorsKey, events)
 }
 
 // checkSkipMonitoringForUpstreamEvent checks whether the upstream error event
