@@ -992,7 +992,7 @@ const showHarnessMenu = ref(false)
 const harnessReleaseBase = 'https://github.com/976905690/deepseek-harness-desktop'
 const harnessWindowsUrl = `${harnessReleaseBase}/releases/download/v2.0.3/DSH-Desktop-2.0.3-x64-Setup.exe`
 const harnessMacUrl = `${harnessReleaseBase}/releases/download/v2.0.3/DSH.Desktop-2.0.3-universal.dmg`
-const harnessMenuTitle = 'Harness'
+const harnessMenuTitle = 'Deepseek Harness for Threerouter'
 const harnessMenuSubtitle = computed(() => currentLang.value === 'zh' ? '选择你的平台下载桌面端' : 'Select your platform to download the desktop client')
 const harnessWinHint = computed(() => currentLang.value === 'zh' ? 'Windows 安装包 (x64)' : 'Windows installer (x64)')
 const harnessMacHint = computed(() => currentLang.value === 'zh' ? 'macOS 安装包 (DMG)' : 'macOS installer (DMG)')
