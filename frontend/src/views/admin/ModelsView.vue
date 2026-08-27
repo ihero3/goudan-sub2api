@@ -197,8 +197,8 @@ const modelUsdTokenRates: Record<string, string> = {
   'deepseek-v4-pro': '29.49M',
   'kimi-k3': '6.18M',
   'minimax-m3': '3.40M',
-  'qwen3.7-max': '3.06M',
-  'glm-5.2': '3.35M',
+  'qwen3.8-max': '3.06M',
+  'glm-5.3': '3.35M',
   'seedance-2.0': '-',
   'gpt-image-2': '-',
 }
@@ -216,11 +216,11 @@ const providerDescriptions: Record<string, { en: string; zh: string }> = {
     en: 'Kimi-K3 is Moonshot\'s open MoE flagship with 256K context, excelling in long-horizon coding and agent swarm (300 sub-agents) for complex, multi-step tasks.',
     zh: 'Kimi-K3 是月之暗面的开源 MoE 旗舰模型，拥有 256K 上下文，擅长长期编码和智能体集群（300 个子智能体）处理复杂多步骤任务。'
   },
-  'qwen3.7-max': {
+  'qwen3.8-max': {
     en: 'Qwen3.7-Max is Alibaba\'s agent‑centric flagship with 1M context, top-tier coding, excelling in complex workflows and multi-framework generalization.',
     zh: 'Qwen3.7-Max 是阿里的智能体旗舰模型，拥有 100 万上下文、顶级编码能力和擅长复杂工作流和多框架泛化。'
   },
-  'glm-5.2': {
+  'glm-5.3': {
     en: 'GLM-5.1 is Zhipu AI\'s open MoE flagship with 200K context, excelling in 8‑hour autonomous agentic coding and topping SWE‑Bench Pro for complex software engineering tasks.',
     zh: 'GLM-5.1 是智谱 AI 的开源 MoE 旗舰模型，拥有 200K 上下文，擅长 8 小时自主智能体编码，在 SWE-Bench Pro 复杂软件工程任务中排名第一。'
   },
@@ -329,8 +329,8 @@ const models = computed<Model[]>(() => {
     { id: '1', name: 'deepseek-v4-pro', provider: 'deepseek-v4-pro', vendor: 'deepseek', category: 'text', icon: '' },
     { id: '2', name: 'minimax-m3', provider: 'minimax-m3', vendor: 'minimax', category: 'text', icon: '' },
     { id: '3', name: 'kimi-k3', provider: 'kimi-k3', vendor: 'moonshot', category: 'text', icon: '' },
-    { id: '4', name: 'qwen3.7-max', provider: 'qwen3.7-max', vendor: 'alibaba', category: 'text', icon: '' },
-    { id: '5', name: 'glm-5.2', provider: 'glm-5.2', vendor: 'zhipu', category: 'text', icon: '' },
+    { id: '4', name: 'qwen3.8-max', provider: 'qwen3.8-max', vendor: 'alibaba', category: 'text', icon: '' },
+    { id: '5', name: 'glm-5.3', provider: 'glm-5.3', vendor: 'zhipu', category: 'text', icon: '' },
     { id: '6', name: 'seedance-2.0', provider: 'seedance-2.0', vendor: 'bytedance', category: 'multimodal', icon: '' },
     { id: '8', name: 'gpt-image-2', provider: 'gpt-image-2', vendor: 'openai', category: 'image', icon: '' },
   ]

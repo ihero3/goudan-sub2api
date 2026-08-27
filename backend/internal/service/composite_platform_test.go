@@ -27,7 +27,7 @@ func TestDetectModelPlatform(t *testing.T) {
 		{name: "xai prefix", model: "xai/grok-4", platform: PlatformGrok, ok: true},
 		{name: "kimi", model: "kimi-k2-thinking", platform: PlatformKimi, ok: true},
 		{name: "moonshot prefix", model: "moonshot/moonshot-v1-32k", platform: PlatformKimi, ok: true},
-		{name: "zhipu", model: "glm-5.2", platform: PlatformZhipu, ok: true},
+		{name: "zhipu", model: "glm-5.3", platform: PlatformZhipu, ok: true},
 		{name: "deepseek", model: "deepseek-v4-pro", platform: PlatformDeepseek, ok: true},
 		{name: "unknown", model: "llama-4-maverick", ok: false},
 	}

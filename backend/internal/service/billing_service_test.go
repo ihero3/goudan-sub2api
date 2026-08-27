@@ -130,14 +130,14 @@ func TestGetModelPricing_FallbackWarnLoggedOncePerModel(t *testing.T) {
 	svc := newTestBillingService()
 	buf := captureStdLog(t)
 
-	// glm-5.2 不在 LiteLLM,经 strings.Contains 命中 glm-5 兜底价 → 触发 fallback warn。
+	// glm-5.3 不在 LiteLLM,经 strings.Contains 命中 glm-5 兜底价 → 触发 fallback warn。
 	for i := 0; i < 5; i++ {
-		pricing, err := svc.GetModelPricing("glm-5.2")
+		pricing, err := svc.GetModelPricing("glm-5.3")
 		require.NoError(t, err)
 		require.NotNil(t, pricing)
 	}
 
-	got := strings.Count(buf.String(), "Using fallback pricing for model: glm-5.2")
+	got := strings.Count(buf.String(), "Using fallback pricing for model: glm-5.3")
 	require.Equal(t, 1, got, "同一模型的 fallback warn 应只打一条,实际日志:\n%s", buf.String())
 }
 
@@ -147,23 +147,23 @@ func TestGetModelPricing_FallbackWarnPerModelNotGlobal(t *testing.T) {
 	buf := captureStdLog(t)
 
 	for i := 0; i < 3; i++ {
-		_, _ = svc.GetModelPricing("glm-5.2")
+		_, _ = svc.GetModelPricing("glm-5.3")
 		_, _ = svc.GetModelPricing("GLM-5.2") // 与上一行同模型(ToLower 后),去重后不再打
 		_, _ = svc.GetModelPricing("glm-4.6")
 	}
 
 	out := buf.String()
-	require.Equal(t, 1, strings.Count(out, "model: glm-5.2"), out)
+	require.Equal(t, 1, strings.Count(out, "model: glm-5.3"), out)
 	require.Equal(t, 1, strings.Count(out, "model: glm-4.6"), out)
 	require.Equal(t, 0, strings.Count(out, "model: GLM-5.2"), out) // 大写经 ToLower 归一,不应单独成行
 }
 
-// 回归:glm-5.2 必须命中自己的兜底价,不能被 strings.Contains("glm-5") 抢成 glm-5 价。
-// 历史 bug:兜底表缺 glm-5.2 条目,使用记录按 $1.00/$3.20 计费,比官方 $1.40/$4.40 少收约 27%。
+// 回归:glm-5.3 必须命中自己的兜底价,不能被 strings.Contains("glm-5") 抢成 glm-5 价。
+// 历史 bug:兜底表缺 glm-5.3 条目,使用记录按 $1.00/$3.20 计费,比官方 $1.40/$4.40 少收约 27%。
 func TestGetModelPricing_GLM52UsesOwnPrice(t *testing.T) {
 	svc := newTestBillingService()
 
-	got, err := svc.GetModelPricing("glm-5.2")
+	got, err := svc.GetModelPricing("glm-5.3")
 	require.NoError(t, err)
 	require.NotNil(t, got)
 
@@ -493,7 +493,7 @@ func TestGetFallbackPricing_FamilyMatching(t *testing.T) {
 		// ---- 智谱 GLM（z.ai USD 口径）----
 		{
 			name:              "glm 5.2 flagship",
-			model:             "glm-5.2",
+			model:             "glm-5.3",
 			expectedInput:     1.4e-6,
 			expectedOutput:    floatPtr(4.4e-6),
 			expectedCacheRead: floatPtr(0.26e-6),
@@ -591,8 +591,8 @@ func TestGetFallbackPricing_FamilyMatching(t *testing.T) {
 		},
 		{
 			name:              "glm 5.2 vs glm 5 ordering (verbatim 5.2)",
-			model:             "glm-5.2",
-			expectedInput:     1.4e-6, // = glm-5.2 价格（不是 glm-5 的 1e-6）
+			model:             "glm-5.3",
+			expectedInput:     1.4e-6, // = glm-5.3 价格（不是 glm-5 的 1e-6）
 			expectedOutput:    floatPtr(4.4e-6),
 			expectedCacheRead: floatPtr(0.26e-6),
 		},

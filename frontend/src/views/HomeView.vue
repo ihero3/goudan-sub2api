@@ -40,14 +40,7 @@
           >
             <Icon name="book" size="md" />
           </a>
-          <button
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 dark:text-dark-400 dark:hover:bg-dark-800"
-            :title="isDark ? t('home.switchToLight') : t('home.switchToDark')"
-            @click="toggleTheme"
-          >
-            <Icon v-if="isDark" name="sun" size="md" />
-            <Icon v-else name="moon" size="md" />
-          </button>
+         
           <router-link
             :to="isAuthenticated ? dashboardPath : '/login'"
             class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
@@ -196,36 +189,6 @@
           >
             {{ t('home.models') }}
           </button>
-          <button
-            @click="router.push('/admin')"
-            class="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
-          >
-            {{ t('home.dashboard') }}
-          </button>
-          <button
-            @click="router.push('/enterprise')"
-            class="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
-          >
-            {{ t('home.enterprise') }}
-          </button>
-
-          <!-- Language Toggle -->
-          <button
-            @click="toggleLanguage"
-            class="rounded-lg p-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
-          >
-            {{ currentLang === 'zh' ? '中文' : 'EN' }}
-          </button>
-
-          <!-- Theme Toggle -->
-          <button
-            @click="toggleTheme"
-            class="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
-          >
-            <Icon v-if="isDark" name="sun" size="md" />
-            <Icon v-else name="moon" size="md" />
-          </button>
-
           <!-- Login / User Button -->
           <button
             @click="router.push(isAuthenticated ? dashboardPath : '/login')"
@@ -377,17 +340,17 @@
             </span>
             <span class="flex items-center gap-2 rounded-xl border border-indigo-100 bg-white px-4 py-2.5">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500 text-xs font-bold text-white">K</span>
-              <span class="text-sm font-medium text-gray-700">kimi-k2.7</span>
+              <span class="text-sm font-medium text-gray-700">kimi-k3</span>
               <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-600">{{ t('home.providers.supported') }}</span>
             </span>
             <span class="flex items-center gap-2 rounded-xl border border-orange-100 bg-white px-4 py-2.5">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white">Q</span>
-              <span class="text-sm font-medium text-gray-700">qwen3.7-max</span>
+              <span class="text-sm font-medium text-gray-700">qwen3.8-max</span>
               <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-600">{{ t('home.providers.supported') }}</span>
             </span>
             <span class="flex items-center gap-2 rounded-xl border border-blue-100 bg-white px-4 py-2.5">
               <span class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-xs font-bold text-white">G</span>
-              <span class="text-sm font-medium text-gray-700">glm-5.2</span>
+              <span class="text-sm font-medium text-gray-700">glm-5.3</span>
               <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-600">{{ t('home.providers.supported') }}</span>
             </span>
             <span class="flex items-center gap-2 rounded-xl border border-emerald-100 bg-white px-4 py-2.5">
@@ -960,6 +923,26 @@
             <span class="text-gray-400">{{ contactInfo }}</span>
           </div>
         </div>
+        <div class="mt-4 flex items-center justify-center gap-6">
+          <button
+            @click="router.push('/admin')"
+            class="text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+          >
+            {{ t('home.dashboard') }}
+          </button>
+          <button
+            @click="router.push('/enterprise')"
+            class="text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+          >
+            {{ t('home.enterprise') }}
+          </button>
+          <button
+            @click="toggleLanguage"
+            class="text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+          >
+            {{ currentLang === 'zh' ? '中文' : 'EN' }}
+          </button>
+        </div>
         <div class="mt-4 text-center">
           <p class="text-xs text-gray-400">{{ t('home.footer.legalNotice') }}</p>
         </div>
@@ -1175,11 +1158,6 @@ const customMenuItems = computed<CustomMenuItem[]>(() => {
   return settings.custom_menu_items.filter(item => item.visibility === 'user')
 })
 
-function toggleTheme() {
-  isDark.value = !isDark.value
-  document.documentElement.classList.toggle('dark', isDark.value)
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-}
 
 function toggleLanguage() {
   const newLang = currentLang.value === 'zh' ? 'en' : 'zh'

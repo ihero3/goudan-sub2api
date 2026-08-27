@@ -53,9 +53,9 @@ https://threerouter.com/generate/xxxxx      200 OK
 |---|---|
 | deepseek-v4-pro | 已支持 |
 | minimax-m3 | 已支持 |
-| kimi-k2.7 | 已支持 |
-| qwen3.7-max | 已支持 |
-| glm-5.2 | 已支持 |
+| kimi-k3 | 已支持 |
+| qwen3.8-max | 已支持 |
+| glm-5.3 | 已支持 |
 | seedance-2.0 | 已支持 |
 | 更多 | 登录查看 |
 

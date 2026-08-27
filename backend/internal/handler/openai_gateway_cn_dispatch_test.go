@@ -44,7 +44,7 @@ func TestAllowOpenAICompatibleMessagesDispatch_CompositeResolvedTargets(t *testi
 	}
 
 	// 解析到 grok/CN 目标：与对应独立分组同语义豁免。
-	for _, model := range []string{"grok-4.3", "kimi-k2-thinking", "glm-5.2", "deepseek-v3.2"} {
+	for _, model := range []string{"grok-4.3", "kimi-k2-thinking", "glm-5.3", "deepseek-v3.2"} {
 		c, apiKey := newCompositeCtx(model)
 		require.True(t, allowOpenAICompatibleMessagesDispatch(c, apiKey), "model=%s", model)
 	}
@@ -65,7 +65,7 @@ func TestAllowOpenAICompatibleMessagesDispatch_CompositeResolvedTargets(t *testi
 func TestResolveOpenAIMessagesDispatchMappedModel_CompositeCNTargetsSkipGroupMapping(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	for _, model := range []string{"kimi-k2-thinking", "glm-5.2", "deepseek-v3.2", "grok-4.3"} {
+	for _, model := range []string{"kimi-k2-thinking", "glm-5.3", "deepseek-v3.2", "grok-4.3"} {
 		c, _ := gin.CreateTestContext(httptest.NewRecorder())
 		c.Request = httptest.NewRequest("POST", "/v1/messages", nil)
 		apiKey := &service.APIKey{Group: &service.Group{Platform: service.PlatformComposite}}
