@@ -152,10 +152,10 @@
             <Transition name="harness-fade">
               <div
                 v-if="showHarnessMenu"
-                class="absolute right-0 top-full z-40 mt-2 w-56 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-dark-800 dark:bg-dark-900"
+                class="absolute right-0 top-full z-40 mt-2 w-64 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-dark-800 dark:bg-dark-900"
               >
                 <div class="border-b border-gray-100 px-4 py-3 dark:border-dark-800">
-                  <p class="text-sm font-semibold text-gray-900 dark:text-white">{{ harnessMenuTitle }}</p>
+                  <p class="truncate text-xs font-semibold text-gray-900 dark:text-white">{{ harnessMenuTitle }}</p>
                   <p class="mt-0.5 text-xs text-gray-500">{{ harnessMenuSubtitle }}</p>
                 </div>
                 <a
