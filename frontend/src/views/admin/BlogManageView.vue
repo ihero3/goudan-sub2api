@@ -524,7 +524,7 @@ function handleSearch() {
   searchTimer = setTimeout(loadBlogs, 300)
 }
 
-function toDatetimeLocal(iso?: string) {
+function toDatetimeLocal(iso?: string | null) {
   if (!iso) return ''
   try {
     const d = new Date(iso)

@@ -2418,6 +2418,58 @@ export interface UpdateScheduledTestPlanRequest {
   auto_recover?: boolean
 }
 
+// ==================== Blog Types ====================
+
+export type BlogStatus = 'draft' | 'published'
+
+export interface Blog {
+  id: number
+  title: string
+  content: string
+  summary: string
+  cover_image: string
+  status: BlogStatus
+  tags: string
+  published_at?: string | null
+  created_by?: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface UserBlog {
+  id: number
+  title: string
+  content: string
+  summary: string
+  cover_image: string
+  tags: string
+  published_at?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateBlogRequest {
+  title: string
+  content: string
+  summary?: string
+  cover_image?: string
+  status?: BlogStatus
+  tags?: string
+  /** Unix seconds, 0 = auto set on publish */
+  published_at?: number | null
+}
+
+export interface UpdateBlogRequest {
+  title?: string
+  content?: string
+  summary?: string
+  cover_image?: string
+  status?: BlogStatus
+  tags?: string
+  /** Unix seconds, 0 = clear */
+  published_at?: number | null
+}
+
 // Payment types
 export type { SubscriptionPlan, PaymentOrder, CheckoutInfoResponse } from './payment'
 
