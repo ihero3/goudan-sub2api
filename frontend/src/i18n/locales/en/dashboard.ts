@@ -656,7 +656,8 @@ export default {
       line1: 'Share your affiliate code or invite link with new users.',
       line2: 'When invitees recharge, you receive {rate} of the recharge as rebate quota.',
       line3: 'Transfer rebate quota to balance at any time.',
-      line4: 'Newly earned rebates may have a waiting period before they can be transferred.'
+      line4: 'Newly earned rebates may have a waiting period before they can be transferred.',
+      registerReward: 'You also earn a $1 registration reward for every new user who signs up through your invite link (credited to your rebate quota immediately).'
     }
   },
 

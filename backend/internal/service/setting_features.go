@@ -161,6 +161,24 @@ func (s *SettingService) GetAffiliateRebatePerInviteeCap(ctx context.Context) fl
 	return cap
 }
 
+// GetAffiliateRegisterReward 返回邀请注册奖励金额（美元）。
+// 被邀请人成功注册后，立即发放给邀请人（计入邀请人 affiliate 配额，冻结 0 小时、可随时转入余额）。
+// 返回 0 表示不发放注册奖励。缺失/解析失败回退到默认 AffiliateRegisterRewardDefault（1.0）。
+func (s *SettingService) GetAffiliateRegisterReward(ctx context.Context) float64 {
+	raw, err := s.settingRepo.GetValue(ctx, SettingKeyAffiliateRegisterReward)
+	if err != nil {
+		return AffiliateRegisterRewardDefault
+	}
+	v, err := strconv.ParseFloat(strings.TrimSpace(raw), 64)
+	if err != nil || v < 0 || math.IsNaN(v) || math.IsInf(v, 0) {
+		return AffiliateRegisterRewardDefault
+	}
+	if v > AffiliateRegisterRewardMax {
+		return AffiliateRegisterRewardMax
+	}
+	return v
+}
+
 // IsPasswordResetEnabled 检查是否启用密码重置功能
 // 要求：必须同时开启邮件验证
 func (s *SettingService) IsPasswordResetEnabled(ctx context.Context) bool {

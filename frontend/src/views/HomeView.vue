@@ -20,14 +20,14 @@
   >
     <header class="border-b border-gray-200 px-4 py-4 sm:px-6 dark:border-dark-800">
       <nav class="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 sm:gap-4">
-        <div class="flex min-w-0 flex-1 items-center gap-3">
+        <router-link to="/" class="flex min-w-0 flex-1 items-center gap-3" :aria-label="siteName + ' Home'">
           <img
             :src="siteLogo || '/logo.svg'"
             alt="Logo"
             class="h-9 w-9 shrink-0 rounded-lg object-contain"
           />
           <span class="min-w-0 truncate text-base font-semibold">{{ siteName }}</span>
-        </div>
+        </router-link>
         <div class="flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
           <LocaleSwitcher />
           <a
@@ -95,14 +95,14 @@
     <header class="relative z-20 px-6 py-4">
       <nav class="mx-auto flex max-w-7xl items-center justify-between">
         <!-- Logo -->
-        <div class="flex items-center gap-[12px] pl-0">
+        <router-link to="/" class="flex items-center gap-[12px] pl-0" aria-label="Three Router Home">
           <img 
             :src="LogoSvg"
             alt="Three Router Logo" 
             class="h-[32px] w-[32px] object-contain"
           />
           <span class="text-[16px] font-semibold text-[#021b4a]" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">Three Router</span>
-        </div>
+        </router-link>
  
 
         <!-- Nav Actions -->
@@ -941,6 +941,12 @@
             class="text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
           >
             {{ currentLang === 'zh' ? '中文' : 'EN' }}
+          </button>
+          <button
+            @click="router.push('/blog')"
+            class="text-sm font-medium text-gray-500 transition-colors hover:text-gray-700"
+          >
+            {{ t('nav.blog') }}
           </button>
         </div>
         <div class="mt-4 text-center">

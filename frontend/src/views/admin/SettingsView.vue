@@ -5654,6 +5654,29 @@
                 <Toggle v-model="form.disable_same_account_retry" />
               </div>
 
+              <!-- failover 名单内错误时永久禁用出错账号 -->
+              <div class="flex items-center justify-between">
+                <div>
+                  <label
+                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {{
+                      t(
+                        "admin.settings.gatewayForwarding.disableFailedAccountOnFailover",
+                      )
+                    }}
+                  </label>
+                  <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {{
+                      t(
+                        "admin.settings.gatewayForwarding.disableFailedAccountOnFailoverHint",
+                      )
+                    }}
+                  </p>
+                </div>
+                <Toggle v-model="form.disable_failed_account_on_failover" />
+              </div>
+
               <!-- Antigravity UA 版本 -->
               <div>
                 <label
@@ -9744,6 +9767,7 @@ const form = reactive<SettingsForm>({
   rewrite_message_cache_control: false,
   enable_client_dateline_normalization: true,
   disable_same_account_retry: false,
+  disable_failed_account_on_failover: false,
   antigravity_user_agent_version: "",
   openai_codex_user_agent: "",
   openai_codex_client_version: "",
@@ -11321,6 +11345,7 @@ async function saveSettings() {
       enable_client_dateline_normalization:
         form.enable_client_dateline_normalization,
       disable_same_account_retry: form.disable_same_account_retry,
+      disable_failed_account_on_failover: form.disable_failed_account_on_failover,
       antigravity_user_agent_version:
         form.antigravity_user_agent_version?.trim() || "",
       openai_codex_user_agent:

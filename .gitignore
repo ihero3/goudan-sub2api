@@ -168,9 +168,10 @@ vite.config.js
 .serena/
 .codex/
 frontend/coverage/
+frontend/.npmrc/
 aicodex
 output/
 
 # Vitest / Vite cache at repo root
 .vite/
-.workbuddy/memory/2026-08-27.md
+.workbuddy/

@@ -183,6 +183,18 @@
     color-scheme: dark;
   }
 
+  /* 多行文本域：与 .input 保持一致，默认纵向可拖拽调整 */
+  .textarea {
+    @apply w-full resize-y rounded-xl px-4 py-2.5 text-sm leading-relaxed;
+    @apply bg-white dark:bg-dark-800;
+    @apply border border-gray-200 dark:border-dark-600;
+    @apply text-gray-900 dark:text-gray-100;
+    @apply placeholder:text-gray-400 dark:placeholder:text-dark-400;
+    @apply transition-all duration-200;
+    @apply focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/30;
+    @apply disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-dark-900;
+  }
+
   .input-error {
     @apply border-red-500 focus:border-red-500 focus:ring-red-500/30;
   }

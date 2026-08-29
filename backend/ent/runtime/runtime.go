@@ -15,6 +15,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/batchimageevent"
 	"github.com/Wei-Shaw/sub2api/ent/batchimageitem"
 	"github.com/Wei-Shaw/sub2api/ent/batchimagejob"
+	"github.com/Wei-Shaw/sub2api/ent/blog"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitor"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitordailyrollup"
 	"github.com/Wei-Shaw/sub2api/ent/channelmonitorhistory"
@@ -613,6 +614,62 @@ func init() {
 	batchimagejob.DefaultUpdatedAt = batchimagejobDescUpdatedAt.Default.(func() time.Time)
 	// batchimagejob.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	batchimagejob.UpdateDefaultUpdatedAt = batchimagejobDescUpdatedAt.UpdateDefault.(func() time.Time)
+	blogFields := schema.Blog{}.Fields()
+	_ = blogFields
+	// blogDescTitle is the schema descriptor for title field.
+	blogDescTitle := blogFields[0].Descriptor()
+	// blog.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	blog.TitleValidator = func() func(string) error {
+		validators := blogDescTitle.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(title string) error {
+			for _, fn := range fns {
+				if err := fn(title); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// blogDescContent is the schema descriptor for content field.
+	blogDescContent := blogFields[1].Descriptor()
+	// blog.ContentValidator is a validator for the "content" field. It is called by the builders before save.
+	blog.ContentValidator = blogDescContent.Validators[0].(func(string) error)
+	// blogDescSummary is the schema descriptor for summary field.
+	blogDescSummary := blogFields[2].Descriptor()
+	// blog.DefaultSummary holds the default value on creation for the summary field.
+	blog.DefaultSummary = blogDescSummary.Default.(string)
+	// blog.SummaryValidator is a validator for the "summary" field. It is called by the builders before save.
+	blog.SummaryValidator = blogDescSummary.Validators[0].(func(string) error)
+	// blogDescCoverImage is the schema descriptor for cover_image field.
+	blogDescCoverImage := blogFields[3].Descriptor()
+	// blog.DefaultCoverImage holds the default value on creation for the cover_image field.
+	blog.DefaultCoverImage = blogDescCoverImage.Default.(string)
+	// blog.CoverImageValidator is a validator for the "cover_image" field. It is called by the builders before save.
+	blog.CoverImageValidator = blogDescCoverImage.Validators[0].(func(string) error)
+	// blogDescStatus is the schema descriptor for status field.
+	blogDescStatus := blogFields[4].Descriptor()
+	// blog.DefaultStatus holds the default value on creation for the status field.
+	blog.DefaultStatus = blogDescStatus.Default.(string)
+	// blog.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	blog.StatusValidator = blogDescStatus.Validators[0].(func(string) error)
+	// blogDescTags is the schema descriptor for tags field.
+	blogDescTags := blogFields[5].Descriptor()
+	// blog.DefaultTags holds the default value on creation for the tags field.
+	blog.DefaultTags = blogDescTags.Default.(string)
+	// blogDescCreatedAt is the schema descriptor for created_at field.
+	blogDescCreatedAt := blogFields[8].Descriptor()
+	// blog.DefaultCreatedAt holds the default value on creation for the created_at field.
+	blog.DefaultCreatedAt = blogDescCreatedAt.Default.(func() time.Time)
+	// blogDescUpdatedAt is the schema descriptor for updated_at field.
+	blogDescUpdatedAt := blogFields[9].Descriptor()
+	// blog.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	blog.DefaultUpdatedAt = blogDescUpdatedAt.Default.(func() time.Time)
+	// blog.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	blog.UpdateDefaultUpdatedAt = blogDescUpdatedAt.UpdateDefault.(func() time.Time)
 	channelmonitorMixin := schema.ChannelMonitor{}.Mixin()
 	channelmonitorMixinFields0 := channelmonitorMixin[0].Fields()
 	_ = channelmonitorMixinFields0

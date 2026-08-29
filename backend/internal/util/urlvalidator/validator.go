@@ -36,12 +36,19 @@ func ValidateHTTPURL(raw string, allowInsecureHTTP bool, opts ValidationOptions)
 		return "", fmt.Errorf("invalid url: %s", trimmed)
 	}
 
+	// 拒绝前后包裹反引号 / 引号 / 不可见空白字符的“伪 URL”（常见于用户从
+	// Markdown 文案（`https://...`）复制粘贴导致 base_url 端多出反引号）。
+	host := strings.TrimSpace(parsed.Hostname())
+	if host != strings.Trim(host, "`'\"") {
+		return "", fmt.Errorf("invalid host: %s", host)
+	}
+
 	scheme := strings.ToLower(parsed.Scheme)
 	if scheme != "https" && (!allowInsecureHTTP || scheme != "http") {
 		return "", fmt.Errorf("invalid url scheme: %s", parsed.Scheme)
 	}
 
-	host := strings.ToLower(strings.TrimSpace(parsed.Hostname()))
+	host = strings.ToLower(host)
 	if host == "" {
 		return "", errors.New("invalid host")
 	}
@@ -89,6 +96,10 @@ func ValidateURLFormat(raw string, allowInsecureHTTP bool) (string, error) {
 	host := strings.TrimSpace(parsed.Hostname())
 	if host == "" {
 		return "", errors.New("invalid host")
+	}
+	// 同样拒绝前后包裹反引号 / 引号的"伪 URL"。
+	if host != strings.Trim(host, "`'\"") {
+		return "", fmt.Errorf("invalid host: %s", host)
 	}
 
 	if port := parsed.Port(); port != "" {

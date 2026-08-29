@@ -136,10 +136,10 @@ const industryTemplates = computed(() => [
 
     <header class="relative z-20 px-6 py-4">
       <nav class="mx-auto flex max-w-7xl items-center justify-between">
-        <div class="flex items-center gap-3">
+        <router-link to="/" class="flex items-center gap-3" aria-label="Three Router Home">
           <img :src="LogoSvg" alt="Three Router Logo" class="h-8 w-8 object-contain" />
           <span :class="['text-lg font-semibold', isDark ? 'text-white' : 'text-[#021b4a]']">ThreeRouter</span>
-        </div>
+        </router-link>
         <div class="flex items-center gap-4">
           <button @click="toggleLanguage" :class="['rounded-lg px-4 py-2 text-sm font-medium transition-colors', isDark ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100']">
             {{ currentLang === 'zh' ? 'EN' : '中文' }}

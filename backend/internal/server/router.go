@@ -132,4 +132,7 @@ func registerRoutes(
 	routes.RegisterPaymentRoutes(v1, h.Payment, h.PaymentWebhook, h.Admin.Payment, jwtAuth, adminAuth, auditLog, settingService, panelRateLimiter)
 
 	handler.RegisterPageRoutes(v1, cfg.Pricing.DataDir, gin.HandlerFunc(jwtAuth), gin.HandlerFunc(adminAuth), settingService)
+
+	// 博客图片上传（管理端上传 + 公开静态访问）
+	handler.RegisterBlogUploadRoutes(v1, cfg.Pricing.DataDir, gin.HandlerFunc(adminAuth), gin.HandlerFunc(auditLog), settingService)
 }

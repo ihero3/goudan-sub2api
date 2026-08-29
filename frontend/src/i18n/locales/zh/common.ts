@@ -27,6 +27,7 @@ export default {
     submit: '提交',
     back: '返回',
     next: '下一步',
+    previous: '上一步',
     yes: '是',
     no: '否',
     all: '全部',
@@ -159,6 +160,7 @@ export default {
   nav: {
     dashboard: '仪表盘',
     announcements: '公告',
+    blog: '博客',
     apiKeys: 'API 密钥',
     batchImage: '批量生图',
     usage: '使用记录',
@@ -444,6 +446,53 @@ export default {
     verifyFailed: '验证失败，请重试',
     notEnabled: '此操作需要开启二次验证，请先在个人资料中启用 TOTP。',
     adminApiKeyForbidden: '管理 API Key 无法执行此操作，请使用已通过二次验证的管理员会话。'
+  },
+
+  // Public Blog
+  blog: {
+    title: '博客',
+    subtitle: '最新资讯、教程与产品更新',
+    searchPlaceholder: '搜索博客...',
+    empty: '暂无博客',
+    notFound: '博客不存在',
+    backToList: '返回列表'
+  },
+
+  // Admin Blog
+  admin: {
+    blog: {
+      title: '博客管理',
+      description: '创建、编辑与管理博客文章',
+      searchPlaceholder: '按标题、摘要或内容搜索...',
+      createBlog: '新建博客',
+      editBlog: '编辑博客',
+      allStatuses: '全部状态',
+      statusDraft: '草稿',
+      statusPublished: '已发布',
+      titleContentRequired: '标题和内容不能为空',
+      confirmDelete: '确定删除博客「{title}」吗？',
+      saveFailed: '保存博客失败',
+      deleteFailed: '删除博客失败',
+      tagsPlaceholder: '标签，多个用英文逗号分隔',
+      publishedAtHint: '留空时：状态=已发布将立即以当前时间发布；状态=草稿将清空发布时间。',
+      uploadCover: '上传图片',
+      uploading: '上传中...',
+      imageUploadFailed: '图片上传失败',
+      insertImage: '插入图片',
+      insertImageHint: '选择本地图片，自动上传并插入到光标处',
+      coverUrlPlaceholder: '也可以直接粘贴图片链接',
+      removeCover: '移除',
+      fields: {
+        title: '标题',
+        summary: '摘要',
+        coverImage: '封面图片',
+        tags: '标签',
+        content: '内容',
+        status: '状态',
+        publishedAt: '发布时间',
+        actions: '操作'
+      }
+    }
   },
 
   // Dashboard

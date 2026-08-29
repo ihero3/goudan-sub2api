@@ -177,6 +177,7 @@ type UpdateSettingsRequest struct {
 	AffiliateRebateDurationDays               *int                              `json:"affiliate_rebate_duration_days"`
 	AffiliateRebatePerInviteeCap              *float64                          `json:"affiliate_rebate_per_invitee_cap"`
 	AdminRechargeRebateEnabled                *bool                             `json:"affiliate_admin_recharge_enabled"`
+	AffiliateRegisterReward                    *float64                          `json:"affiliate_register_reward"`
 	DefaultUserRPMLimit                       int                               `json:"default_user_rpm_limit"`
 	DefaultSubscriptions                      []dto.DefaultSubscriptionSetting  `json:"default_subscriptions"`
 	AuthSourceDefaultEmailBalance             *float64                          `json:"auth_source_default_email_balance"`
@@ -253,6 +254,7 @@ type UpdateSettingsRequest struct {
 	RewriteMessageCacheControl             *bool   `json:"rewrite_message_cache_control"`
 	EnableClientDatelineNormalization      *bool   `json:"enable_client_dateline_normalization"`
 	DisableSameAccountRetry                *bool   `json:"disable_same_account_retry"`
+	DisableFailedAccountOnFailover         *bool   `json:"disable_failed_account_on_failover"`
 	AntigravityUserAgentVersion            *string `json:"antigravity_user_agent_version"`
 	OpenAICodexUserAgent                   *string `json:"openai_codex_user_agent"`
 	OpenAICodexClientVersion               *string `json:"openai_codex_client_version"`
@@ -595,6 +597,16 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 	adminRechargeRebateEnabled := previousSettings.AdminRechargeRebateEnabled
 	if req.AdminRechargeRebateEnabled != nil {
 		adminRechargeRebateEnabled = *req.AdminRechargeRebateEnabled
+	}
+	affiliateRegisterReward := previousSettings.AffiliateRegisterReward
+	if req.AffiliateRegisterReward != nil {
+		affiliateRegisterReward = *req.AffiliateRegisterReward
+	}
+	if affiliateRegisterReward < 0 {
+		affiliateRegisterReward = 0
+	}
+	if affiliateRegisterReward > service.AffiliateRegisterRewardMax {
+		affiliateRegisterReward = service.AffiliateRegisterRewardMax
 	}
 	// 通用表格配置：兼容旧客户端未传字段时保留当前值。
 	if req.TableDefaultPageSize <= 0 {
@@ -1632,6 +1644,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		AffiliateRebateDurationDays:            affiliateRebateDurationDays,
 		AffiliateRebatePerInviteeCap:           affiliateRebatePerInviteeCap,
 		AdminRechargeRebateEnabled:             adminRechargeRebateEnabled,
+		AffiliateRegisterReward:                affiliateRegisterReward,
 		DefaultUserRPMLimit:                    req.DefaultUserRPMLimit,
 		DefaultSubscriptions:                   defaultSubscriptions,
 		EnableModelFallback:                    req.EnableModelFallback,
@@ -1734,6 +1747,12 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 				return *req.DisableSameAccountRetry
 			}
 			return previousSettings.DisableSameAccountRetry
+		}(),
+		DisableFailedAccountOnFailover: func() bool {
+			if req.DisableFailedAccountOnFailover != nil {
+				return *req.DisableFailedAccountOnFailover
+			}
+			return previousSettings.DisableFailedAccountOnFailover
 		}(),
 		AntigravityUserAgentVersion: func() string {
 			if req.AntigravityUserAgentVersion != nil {
@@ -2281,6 +2300,7 @@ func (h *SettingHandler) UpdateSettings(c *gin.Context) {
 		RewriteMessageCacheControl:                             updatedSettings.RewriteMessageCacheControl,
 		EnableClientDatelineNormalization:                      updatedSettings.EnableClientDatelineNormalization,
 		DisableSameAccountRetry:                                updatedSettings.DisableSameAccountRetry,
+		DisableFailedAccountOnFailover:                         updatedSettings.DisableFailedAccountOnFailover,
 		AntigravityUserAgentVersion:                            updatedSettings.AntigravityUserAgentVersion,
 		OpenAICodexUserAgent:                                   updatedSettings.OpenAICodexUserAgent,
 		OpenAICodexClientVersion:                               updatedSettings.OpenAICodexClientVersion,

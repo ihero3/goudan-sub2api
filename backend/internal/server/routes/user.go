@@ -23,6 +23,13 @@ func RegisterUserRoutes(
 		publicTickets.POST("", h.Ticket.Create)
 	}
 
+	// 公开博客（游客可访问，仅展示已发布内容）
+	publicBlogs := v1.Group("/public/blogs")
+	{
+		publicBlogs.GET("", h.Blog.List)
+		publicBlogs.GET("/:id", h.Blog.GetByID)
+	}
+
 	authenticated := v1.Group("")
 	authenticated.Use(gin.HandlerFunc(jwtAuth))
 	authenticated.Use(middleware.BackendModeUserGuard(settingService))

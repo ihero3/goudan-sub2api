@@ -186,6 +186,24 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/blog',
+    name: 'BlogList',
+    component: () => import('@/views/public/BlogListView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Blog'
+    }
+  },
+  {
+    path: '/blog/:id',
+    name: 'BlogDetail',
+    component: () => import('@/views/public/BlogDetailView.vue'),
+    meta: {
+      requiresAuth: false,
+      title: 'Blog'
+    }
+  },
+  {
     path: '/compliance',
     name: 'Compliance',
     component: () => import('@/views/ComplianceView.vue'),
@@ -646,6 +664,18 @@ const routes: RouteRecordRaw[] = [
       title: 'Announcements',
       titleKey: 'admin.announcements.title',
       descriptionKey: 'admin.announcements.description'
+    }
+  },
+  {
+    path: '/admin/blogs',
+    name: 'AdminBlogs',
+    component: () => import('@/views/admin/BlogManageView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Blogs',
+      titleKey: 'admin.blog.title',
+      descriptionKey: 'admin.blog.description'
     }
   },
   {

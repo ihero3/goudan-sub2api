@@ -63,6 +63,7 @@ type cachedGatewayForwardingSettings struct {
 	rewriteMessageCacheControl       bool
 	clientDatelineNormalization      bool
 	disableSameAccountRetry          bool
+	disableFailedAccountOnFailover   bool
 	expiresAt                        int64 // unix nano
 }
 
@@ -709,6 +710,7 @@ type gatewayForwardingSettingsResult struct {
 	fp, mp, cch, claudeOAuthSystemPromptInjection, cacheTTL1h, rewriteMessageCacheControl bool
 	clientDatelineNormalization                                                           bool
 	disableSameAccountRetry                                                               bool
+	disableFailedAccountOnFailover                                                        bool
 	claudeOAuthSystemPrompt, claudeOAuthSystemPromptBlocks                                string
 }
 
@@ -726,6 +728,7 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 				rewriteMessageCacheControl:       cached.rewriteMessageCacheControl,
 				clientDatelineNormalization:      cached.clientDatelineNormalization,
 				disableSameAccountRetry:          cached.disableSameAccountRetry,
+				disableFailedAccountOnFailover:   cached.disableFailedAccountOnFailover,
 			}
 		}
 	}
@@ -759,6 +762,7 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 			SettingKeyRewriteMessageCacheControl,
 			SettingKeyEnableClientDatelineNormalization,
 			SettingKeyDisableSameAccountRetry,
+			SettingKeyDisableFailedAccountOnFailover,
 		})
 		if err != nil {
 			slog.Warn("failed to get gateway forwarding settings", "error", err)
@@ -796,6 +800,7 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 			clientDatelineNormalization = v == "true"
 		}
 		disableSameAccountRetry := values[SettingKeyDisableSameAccountRetry] == "true"
+		disableFailedAccountOnFailover := values[SettingKeyDisableFailedAccountOnFailover] == "true"
 		gatewayForwardingCache.Store(&cachedGatewayForwardingSettings{
 			fingerprintUnification:           fp,
 			metadataPassthrough:              mp,
@@ -807,6 +812,7 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 			rewriteMessageCacheControl:       rewriteMessageCacheControl,
 			clientDatelineNormalization:      clientDatelineNormalization,
 			disableSameAccountRetry:          disableSameAccountRetry,
+			disableFailedAccountOnFailover:   disableFailedAccountOnFailover,
 			expiresAt:                        time.Now().Add(gatewayForwardingCacheTTL).UnixNano(),
 		})
 		return gatewayForwardingSettingsResult{
@@ -820,6 +826,7 @@ func (s *SettingService) getGatewayForwardingSettingsCached(ctx context.Context)
 			rewriteMessageCacheControl:       rewriteMessageCacheControl,
 			clientDatelineNormalization:      clientDatelineNormalization,
 			disableSameAccountRetry:          disableSameAccountRetry,
+			disableFailedAccountOnFailover:   disableFailedAccountOnFailover,
 		}, nil
 	})
 	if r, ok := val.(gatewayForwardingSettingsResult); ok {
@@ -856,6 +863,13 @@ func (s *SettingService) IsClientDatelineNormalizationEnabled(ctx context.Contex
 // 默认关闭（保留原有重试逻辑）。
 func (s *SettingService) IsDisableSameAccountRetryEnabled(ctx context.Context) bool {
 	return s.getGatewayForwardingSettingsCached(ctx).disableSameAccountRetry
+}
+
+// IsDisableFailedAccountOnFailoverEnabled 检查出现 shouldFailoverUpstreamError 名单内
+// 错误时是否同时将出错的上游账号永久禁用（status=error 移出调度池，需管理员测试恢复）。
+// 默认关闭（保留原有行为：仅切换账号，不关闭）。
+func (s *SettingService) IsDisableFailedAccountOnFailoverEnabled(ctx context.Context) bool {
+	return s.getGatewayForwardingSettingsCached(ctx).disableFailedAccountOnFailover
 }
 
 // GetClaudeOAuthSystemPromptInjectionSettings returns the Claude OAuth mimic

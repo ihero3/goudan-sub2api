@@ -27,6 +27,7 @@ export default {
     submit: 'Submit',
     back: 'Back',
     next: 'Next',
+    previous: 'Previous',
     yes: 'Yes',
     no: 'No',
     all: 'All',
@@ -159,6 +160,7 @@ export default {
   nav: {
     dashboard: 'Dashboard',
     announcements: 'Announcements',
+    blog: 'Blog',
     apiKeys: 'API Keys',
     batchImage: 'Batch Images',
     usage: 'Usage',
@@ -445,6 +447,53 @@ export default {
     verifyFailed: 'Verification failed, please try again',
     notEnabled: 'This operation requires two-factor authentication. Please enable TOTP in your profile first.',
     adminApiKeyForbidden: 'Admin API keys cannot perform this operation. Use a two-factor verified admin session.'
+  },
+
+  // Public Blog
+  blog: {
+    title: 'Blog',
+    subtitle: 'Latest news, tutorials and product updates',
+    searchPlaceholder: 'Search blogs...',
+    empty: 'No blogs yet',
+    notFound: 'Blog not found',
+    backToList: 'Back to list'
+  },
+
+  // Admin Blog
+  admin: {
+    blog: {
+      title: 'Blog Management',
+      description: 'Create, edit, and manage blog posts',
+      searchPlaceholder: 'Search by title, summary or content...',
+      createBlog: 'New Blog',
+      editBlog: 'Edit Blog',
+      allStatuses: 'All Statuses',
+      statusDraft: 'Draft',
+      statusPublished: 'Published',
+      titleContentRequired: 'Title and content are required',
+      confirmDelete: 'Delete blog "{title}"?',
+      saveFailed: 'Failed to save blog',
+      deleteFailed: 'Failed to delete blog',
+      tagsPlaceholder: 'Tags, comma separated',
+      publishedAtHint: 'Leave empty to auto-set on publish. Status=Published will publish immediately if blank.',
+      uploadCover: 'Upload Image',
+      uploading: 'Uploading...',
+      imageUploadFailed: 'Failed to upload image',
+      insertImage: 'Insert Image',
+      insertImageHint: 'Pick a local image, it uploads and inserts at the cursor',
+      coverUrlPlaceholder: 'Or paste an image URL',
+      removeCover: 'Remove',
+      fields: {
+        title: 'Title',
+        summary: 'Summary',
+        coverImage: 'Cover Image',
+        tags: 'Tags',
+        content: 'Content',
+        status: 'Status',
+        publishedAt: 'Published At',
+        actions: 'Actions'
+      }
+    }
   },
 
   // Dashboard

@@ -162,6 +162,48 @@ VALUES ($1, 'accrue', $2, $3, $4, NOW(), NOW())`, inviterID, amount, inviteeUser
 	return applied, nil
 }
 
+// AccrueRegistrationReward 发放邀请注册奖励：被邀请人成功注册后，立即计入邀请人的
+// 可用 affiliate 配额（aff_quota，冻结 0 小时），并记录一条 action='register_reward' 的账本。
+// amount <= 0 时直接跳过（视为未启用）。该操作在 BindInviterByCode 绑定成功后调用，
+// 每个被邀请人仅触发一次（邀请关系绑定是一次性的）。
+func (r *affiliateRepository) AccrueRegistrationReward(ctx context.Context, inviterID, inviteeUserID int64, amount float64) (bool, error) {
+	if amount <= 0 {
+		return false, nil
+	}
+	if inviterID <= 0 || inviteeUserID <= 0 {
+		return false, nil
+	}
+
+	var applied bool
+	err := r.withTx(ctx, func(txCtx context.Context, txClient *dbent.Client) error {
+		if _, err := ensureUserAffiliateWithClient(txCtx, txClient, inviterID); err != nil {
+			return fmt.Errorf("ensure inviter affiliate profile: %w", err)
+		}
+		res, err := txClient.ExecContext(txCtx,
+			"UPDATE user_affiliates SET aff_quota = aff_quota + $1, aff_history_quota = aff_history_quota + $1, updated_at = NOW() WHERE user_id = $2",
+			amount, inviterID)
+		if err != nil {
+			return err
+		}
+		if affected, _ := res.RowsAffected(); affected == 0 {
+			applied = false
+			return nil
+		}
+		if _, err = txClient.ExecContext(txCtx, `
+INSERT INTO user_affiliate_ledger (user_id, action, amount, source_user_id, created_at, updated_at)
+VALUES ($1, 'register_reward', $2, $3, NOW(), NOW())`,
+			inviterID, amount, inviteeUserID); err != nil {
+			return fmt.Errorf("insert register reward ledger: %w", err)
+		}
+		applied = true
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return applied, nil
+}
+
 func (r *affiliateRepository) GetAccruedRebateFromInvitee(ctx context.Context, inviterID, inviteeUserID int64) (float64, error) {
 	client := clientFromContext(ctx, r.client)
 	rows, err := client.QueryContext(ctx,

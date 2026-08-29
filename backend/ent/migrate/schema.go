@@ -653,6 +653,44 @@ var (
 			},
 		},
 	}
+	// BlogsColumns holds the columns for the "blogs" table.
+	BlogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "title", Type: field.TypeString, Size: 500},
+		{Name: "content", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "summary", Type: field.TypeString, Nullable: true, Size: 1000, Default: ""},
+		{Name: "cover_image", Type: field.TypeString, Nullable: true, Size: 1000, Default: ""},
+		{Name: "status", Type: field.TypeString, Size: 20, Default: "draft"},
+		{Name: "tags", Type: field.TypeString, Nullable: true, Default: ""},
+		{Name: "published_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "created_by", Type: field.TypeInt64, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// BlogsTable holds the schema information for the "blogs" table.
+	BlogsTable = &schema.Table{
+		Name:       "blogs",
+		Columns:    BlogsColumns,
+		PrimaryKey: []*schema.Column{BlogsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "blog_status",
+				Unique:  false,
+				Columns: []*schema.Column{BlogsColumns[5]},
+			},
+			{
+				Name:    "blog_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{BlogsColumns[9]},
+			},
+			{
+				Name:    "blog_published_at",
+				Unique:  false,
+				Columns: []*schema.Column{BlogsColumns[7]},
+			},
+		},
+	}
 	// ChannelMonitorsColumns holds the columns for the "channel_monitors" table.
 	ChannelMonitorsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
@@ -2726,6 +2764,7 @@ var (
 		BatchImageEventsTable,
 		BatchImageItemsTable,
 		BatchImageJobsTable,
+		BlogsTable,
 		ChannelMonitorsTable,
 		ChannelMonitorDailyRollupsTable,
 		ChannelMonitorHistoriesTable,
@@ -2812,6 +2851,9 @@ func init() {
 	}
 	BatchImageJobsTable.Annotation = &entsql.Annotation{
 		Table: "batch_image_jobs",
+	}
+	BlogsTable.Annotation = &entsql.Annotation{
+		Table: "blogs",
 	}
 	ChannelMonitorsTable.ForeignKeys[0].RefTable = ChannelMonitorRequestTemplatesTable
 	ChannelMonitorsTable.Annotation = &entsql.Annotation{

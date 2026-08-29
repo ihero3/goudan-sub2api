@@ -99,6 +99,8 @@ type AffiliateRepository interface {
 	GetAffiliateByCode(ctx context.Context, code string) (*AffiliateSummary, error)
 	BindInviter(ctx context.Context, userID, inviterID int64) (bool, error)
 	AccrueQuota(ctx context.Context, inviterID, inviteeUserID int64, amount float64, freezeHours int, sourceOrderID *int64) (bool, error)
+	// AccrueRegistrationReward 发放邀请注册奖励：被邀请人注册即计入邀请人可用配额（冻结 0 小时）。
+	AccrueRegistrationReward(ctx context.Context, inviterID, inviteeUserID int64, amount float64) (bool, error)
 	GetAccruedRebateFromInvitee(ctx context.Context, inviterID, inviteeUserID int64) (float64, error)
 	ThawFrozenQuota(ctx context.Context, userID int64) (float64, error)
 	TransferQuotaToBalance(ctx context.Context, userID int64) (float64, float64, error)
@@ -307,6 +309,17 @@ func (s *AffiliateService) BindInviterByCode(ctx context.Context, userID int64, 
 	}
 	if !bound {
 		return ErrAffiliateAlreadyBound
+	}
+
+	// 邀请注册奖励：被邀请人注册成功后，按系统配置金额立即发放给邀请人。
+	// 计入邀请人可用 affiliate 配额（冻结 0 小时，可由邀请人在后台转入余额）。
+	// 失败不影响注册主流程，仅记录日志。
+	if reward := s.settingService.GetAffiliateRegisterReward(ctx); reward > 0 {
+		if _, err := s.repo.AccrueRegistrationReward(ctx, inviterSummary.UserID, userID, reward); err != nil {
+			logger.LegacyPrintf("service.affiliate", "[Affiliate] Failed to accrue registration reward for inviter %d (invitee %d): %v", inviterSummary.UserID, userID, err)
+		} else {
+			logger.LegacyPrintf("service.affiliate", "[Affiliate] Registration reward %.2f credited to inviter %d (invitee %d)", reward, inviterSummary.UserID, userID)
+		}
 	}
 	return nil
 }

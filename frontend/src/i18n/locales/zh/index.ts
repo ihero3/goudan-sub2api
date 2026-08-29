@@ -12,6 +12,8 @@ export default {
   ...dashboard,
   ...channelMonitorV2,
   ...batchImage,
-  admin,
+  // admin 命名空间由 ./admin/* 与 common.ts 中的 admin 段（如 admin.blog）合并而成。
+  // 不能直接用 `admin,` 覆盖，否则 common 里的 admin.* 键会丢失。
+  admin: { ...common.admin, ...admin },
   ...misc,
 }
