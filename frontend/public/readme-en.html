@@ -73,7 +73,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            background: #ffffff;
+            background: #f9fafb;
             color: #1e293b;
             line-height: 1.6;
         }
@@ -420,20 +420,224 @@
                 padding: 16px;
             }
         }
+
+        /* ---- Blog-style header ---- */
+        .blog-header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 0 24px;
+            height: 60px;
+            background: #fff;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .blog-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+        .blog-brand img {
+            height: 32px;
+            width: 32px;
+            object-fit: contain;
+        }
+        .blog-brand .name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #021b4a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .blog-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .harness-chip {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 8px;
+            padding: 1px;
+            text-decoration: none;
+            background: linear-gradient(135deg, rgba(0,90,190,0.35) 0%, rgba(0,90,190,0.06) 35%, rgba(0,90,190,0.03) 65%, rgba(0,90,190,0.22) 100%);
+            box-shadow: 0 0 14px rgba(7,87,184,0.08);
+        }
+        .harness-chip span {
+            border-radius: 7px;
+            padding: 4px 9px 3px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1;
+            color: #0757b8;
+            background: #fff;
+        }
+        .blog-btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            text-decoration: none;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        .blog-btn:hover {
+            background: #f3f4f6;
+        }
+        .blog-login {
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            background: #0757b8;
+            text-decoration: none;
+        }
+        .blog-login:hover {
+            background: #064ea8;
+        }
+        .nav-links-mobile {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 4px 20px;
+            padding: 8px 24px;
+            background: #fff;
+            border-bottom: 1px solid #eef2f7;
+            position: sticky;
+            top: 60px;
+            z-index: 99;
+        }
+        .nav-links-mobile a {
+            text-decoration: none;
+            color: #475569;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 0;
+        }
+        .nav-links-mobile a:hover {
+            color: #2563eb;
+        }
+        @media (max-width: 700px) {
+            .blog-actions .blog-btn { display: none; }
+            .harness-chip + .blog-btn { display: none; }
+        }
+
+        /* ---- Blog PublicSiteFooter-style footer ---- */
+        .blog-footer {
+            border-top: 1px solid #f3f4f6;
+            padding: 24px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .blog-footer .container {
+            max-width: 80rem;
+            margin: 0 auto;
+        }
+        .blog-footer .top-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            text-align: center;
+        }
+        @media (min-width: 640px) {
+            .blog-footer .top-row {
+                flex-direction: row;
+                text-align: left;
+            }
+        }
+        .blog-footer .top-row p {
+            margin: 0;
+        }
+        .blog-footer .links-group {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+        .blog-footer .links-group a {
+            color: #6b7280;
+            text-decoration: none;
+            transition: color .2s;
+        }
+        .blog-footer .links-group a:hover {
+            color: #374151;
+        }
+        .blog-footer .btn-row {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .blog-footer .btn-row a,
+        .blog-footer .btn-row button {
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: color .2s;
+            text-decoration: none;
+            font-family: inherit;
+            padding: 0;
+        }
+        .blog-footer .btn-row a:hover,
+        .blog-footer .btn-row button:hover {
+            color: #374151;
+        }
+        .blog-footer .legal-row {
+            margin-top: 16px;
+            text-align: center;
+        }
+        .blog-footer .legal-row p {
+            font-size: 12px;
+            color: #9ca3af;
+            margin: 0;
+        }
     </style>
+    <!-- Google Analytics (gtag.js)（仅生产域名加载，避免本地开发污染统计数据） -->
+    <script>
+      if (location.hostname.indexOf("threerouter.com") !== -1) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-TG1LBX3QN6');
+      }
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TG1LBX3QN6"></script>
 </head>
 <body>
 
-<nav class="navbar">
-    <div class="logo"><a href="http://api.threerouter.com">ThreeRouter</a></div>
-    <div class="nav-links">
-        <a href="#product">Product</a>     
-        <a href="#strategy">Call Strategy</a>
-        <a href="#models">Smart Routing</a>
-        <a href="#why">Market Context</a>
-        <a href="#pricing">Pricing</a>
+<header class="blog-header">
+    <a href="/" class="blog-brand" aria-label="Three Router Home">
+        <img src="/logo.svg" alt="Three Router Logo" />
+        <span class="name">Three Router</span>
+    </a>
+    <div class="blog-actions">
+        <a href="/dsh.html" target="_blank" rel="noopener noreferrer" class="harness-chip" title="Deepseek Harness for Threerouter">
+            <span>Harness</span>
+        </a>
+        <a href="/admin/models" class="blog-btn">Models</a>
+        <a href="/login" class="blog-login">Login</a>
     </div>
-    <a href="http://api.threerouter.com" class="btn-outline" style="cursor: pointer;">Console →</a>
+</header>
+
+<nav class="nav-links-mobile">
+    <a href="#product">Product</a>
+    <a href="#strategy">Call Strategy</a>
+    <a href="#models">Smart Routing</a>
+    <a href="#why">Market Context</a>
+    <a href="#pricing">Pricing</a>
 </nav>
 
 <main>
@@ -674,14 +878,45 @@ curl https://api.threerouter.ai/v1/chat/completions \
     </div>
 </main>
 
-<footer class="footer">
+<footer class="blog-footer">
     <div class="container">
-        <p>© 2026 ThreeRouter — Unified AI Gateway | Smart Routing Drives Cost Optimization</p>
-        <p style="margin-top: 10px; font-size: 11px;">Hong Kong Entity | Beijing R&D | <a href="http://api.threerouter.com" style="color: #64748b;">api.threerouter.com</a></p>
+        <div class="top-row">
+            <p>&copy; <span id="year">2026</span> Three Router. All rights reserved.</p>
+            <div class="links-group">
+                <a href="/readme-en.html">Our Advantages</a>
+            </div>
+            <div class="links-group">
+                <a href="/help-en.html">Documentation</a>
+            </div>
+            <div class="links-group">
+                <a href="/help-en.html#contact">Contact Us</a>
+            </div>
+        </div>
+        <div class="btn-row">
+            <a href="/admin">Dashboard</a>
+            <a href="/enterprise">Enterprise</a>
+            <button id="lang-toggle" type="button">EN</button>
+            <a href="/blog">Blog</a>
+        </div>
+        <div class="legal-row">
+            <p>For legal notices, please contact us via email first</p>
+        </div>
     </div>
 </footer>
 
 <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+    (function() {
+        var langBtn = document.getElementById('lang-toggle');
+        if (!langBtn) return;
+        var path = location.pathname;
+        var isEn = /-en\.html$/.test(path);
+        langBtn.textContent = isEn ? 'EN' : '中文';
+        langBtn.addEventListener('click', function() {
+            var next = isEn ? path.replace(/-en\.html$/, '-cn.html') : path.replace(/-cn\.html$/, '-en.html');
+            location.href = next;
+        });
+    })();
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function(e) {
             const href = this.getAttribute('href');

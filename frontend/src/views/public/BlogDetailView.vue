@@ -79,6 +79,8 @@
         </article>
       </main>
     </div>
+
+    <PublicSiteFooter />
   </div>
 </template>
 
@@ -91,6 +93,7 @@ import { publicBlogAPI } from '@/api'
 import { formatDateTime } from '@/utils/format'
 import type { UserBlog } from '@/types'
 import PublicSiteHeader from '@/components/layout/PublicSiteHeader.vue'
+import PublicSiteFooter from '@/components/layout/PublicSiteFooter.vue'
 
 const { t } = useI18n()
 const route = useRoute()

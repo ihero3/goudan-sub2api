@@ -44,17 +44,15 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
-    <!-- Baidu Analytics（仅生产域名加载，避免本地开发污染统计数据） -->
+    <!-- Google Analytics (gtag.js)（仅生产域名加载，避免本地开发污染统计数据） -->
     <script>
-      var _hmt = _hmt || [];
       if (location.hostname.indexOf("threerouter.com") !== -1) {
-        (function() {
-          var hm = document.createElement("script");
-          hm.src = "https://hm.baidu.com/hm.js?b57482524d59421e685e595d722b8088";
-          var s = document.getElementsByTagName("script")[0];
-          s.parentNode.insertBefore(hm, s);
-        })();
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-TG1LBX3QN6');
       }
     </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TG1LBX3QN6"></script>
   </body>
 </html>

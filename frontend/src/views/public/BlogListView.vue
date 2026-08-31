@@ -80,6 +80,8 @@
         </button>
       </div>
     </main>
+
+    <PublicSiteFooter />
   </div>
 </template>
 
@@ -90,6 +92,7 @@ import { RouterLink } from 'vue-router'
 import { publicBlogAPI } from '@/api'
 import { formatDateTime } from '@/utils/format'
 import PublicSiteHeader from '@/components/layout/PublicSiteHeader.vue'
+import PublicSiteFooter from '@/components/layout/PublicSiteFooter.vue'
 
 const { t } = useI18n()
 

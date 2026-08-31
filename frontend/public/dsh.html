@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deepseek Harness for Threerouter · dsh-image-video — 在对话中生成图片与视频</title>
+<meta name="description" content="Deepseek Harness for Threerouter 桌面客户端，内置 dsh-image-video 插件，为模型注册 generate_image / generate_video 工具，在对话中直接生成 AI 图片与短视频，无需离开终端。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===== 主题与调色板 ===== */
+:root {
+  --bg-0: #f6f9fd;
+  --bg-1: #eef3fb;
+  --bg-2: #e5ecf7;
+  --panel: rgba(255, 255, 255, .78);
+  --panel-solid: #ffffff;
+  --line: rgba(20, 80, 160, .12);
+  --line-strong: rgba(20, 80, 160, .22);
+  --blue: #2e5bd8;
+  --blue-hi: #3b6bfd;
+  --blue-soft: #4a7dff;
+  --cyan: #0aa8e0;
+  --green: #0fa97a;
+  --amber: #e8910f;
+  --text-0: #0f172a;
+  --text-1: #475569;
+  --text-2: #75839d;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  --radius-1: 14px;
+  --radius-2: 20px;
+  --radius-3: 30px;
+  --max: 1180px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Noto Sans SC", "Sora", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--text-0);
+  background: var(--bg-0);
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 氛围背景层：渐变网格 + 噪点 */
+.atmosphere {
+  position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background:
+    radial-gradient(900px 600px at 82% -8%, rgba(59,107,253,.20), transparent 60%),
+    radial-gradient(720px 540px at 6% 8%, rgba(10,168,224,.13), transparent 55%),
+    radial-gradient(1000px 800px at 50% 118%, rgba(59,107,253,.12), transparent 62%),
+    var(--bg-0);
+}
+.grid-lines {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .5;
+  background-image:
+    linear-gradient(rgba(30,90,180,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30,90,180,.06) 1px, transparent 1px);
+  background-size: 58px 58px;
+  mask-image: radial-gradient(1100px 800px at 50% 12%, #000 22%, transparent 78%);
+}
+.noise {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+
+/* ===== 顶栏 ===== */
+.nav {
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(16px) saturate(1.2);
+  background: rgba(255,255,255,.82);
+  border-bottom: 1px solid var(--line);
+}
+.nav-inner { display: flex; align-items: center; gap: 18px; height: 66px; }
+.brand { display: flex; align-items: center; gap: 12px; font-family: "Sora", sans-serif; font-weight: 800; letter-spacing: .4px; text-decoration: none; color: var(--text-0); }
+.brand-mark { width: 34px; height: 34px; border-radius: 10px; overflow: hidden; background: transparent; box-shadow: 0 0 24px rgba(77,107,254,.6); display: block; }
+.brand-mark img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.brand small { display: block; font-family: var(--mono); font-size: 10px; font-weight: 500; color: var(--blue-soft); letter-spacing: 1.4px; }
+.nav-links { display: flex; gap: 4px; margin-left: 26px; }
+.nav-links a { color: var(--text-1); text-decoration: none; font-size: 14px; padding: 8px 12px; border-radius: 10px; transition: .2s; }
+.nav-links a:hover { color: var(--text-0); background: rgba(30,90,180,.08); }
+.nav-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.lang-switch { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: rgba(30,90,180,.06); }
+.lang-switch button { border: 0; background: transparent; color: var(--text-1); font-family: inherit; font-weight: 600; font-size: 13px; padding: 5px 11px; border-radius: 7px; cursor: pointer; transition: .2s; }
+.lang-switch button.active { background: var(--blue); color: #fff; box-shadow: 0 0 16px rgba(77,107,254,.5); }
+.btn { font-family: inherit; font-weight: 700; font-size: 15px; color: #fff; background: linear-gradient(135deg, var(--blue), #3d54e0); border: 0; border-radius: 12px; padding: 11px 20px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: .22s; box-shadow: 0 8px 28px rgba(77,107,254,.3); }
+.btn:hover { transform: translateY(-2px); box-shadow: 0 14px 38px rgba(77,107,254,.45); }
+.btn.ghost { background: rgba(30,90,180,.06); color: var(--text-0); border: 1px solid var(--line-strong); box-shadow: none; }
+.btn.ghost:hover { background: rgba(30,90,180,.12); }
+.btn svg { width: 17px; height: 17px; }
+
+/* ===== Hero ===== */
+.hero { position: relative; padding: 92px 0 74px; }
+.hero-grid { display: grid; grid-template-columns: 1.02fr .98fr; gap: 56px; align-items: center; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12.5px; letter-spacing: 1px; color: var(--cyan); background: rgba(10,168,224,.08); border: 1px solid rgba(10,168,224,.25); padding: 6px 12px; border-radius: 999px; margin-bottom: 26px; }
+.eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 12px var(--cyan); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.hero h1 { font-family: "Sora", sans-serif; font-size: clamp(38px, 5.4vw, 64px); line-height: 1.06; font-weight: 800; letter-spacing: -1px; }
+.hero h1 .grad { background: linear-gradient(110deg, #1d4ed8 5%, #3b6bfd 40%, #0aa8e0 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hero-sub { margin-top: 22px; font-size: 17px; color: var(--text-1); max-width: 560px; }
+.hero-sub b { color: var(--text-0); font-weight: 600; }
+.hero-ctas { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
+.hero-stats { display: flex; gap: 40px; margin-top: 44px; }
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat b { font-family: "Sora", sans-serif; font-size: 30px; font-weight: 800; color: var(--text-0); }
+.stat b em { font-style: normal; color: var(--blue-hi); }
+.stat span { font-size: 13px; color: var(--text-2); }
+
+/* hero 应用窗口 */
+.app-shot { position: relative; }
+.app-glow { position: absolute; inset: -12%; z-index: -1; background: radial-gradient(60% 60% at 50% 40%, rgba(77,107,254,.35), transparent 70%); filter: blur(20px); }
+.app {
+  position: relative; border: 1px solid var(--line-strong); border-radius: var(--radius-3);
+  background: linear-gradient(180deg, rgba(20,29,52,.92), rgba(10,15,29,.92));
+  box-shadow: 0 40px 90px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05);
+  padding: 9px; overflow: hidden;
+}
+.app-bar { display: flex; align-items: center; gap: 8px; padding: 6px 8px 12px; }
+.app-bar i { width: 11px; height: 11px; border-radius: 50%; }
+.app-bar i:nth-child(1){background:#ff5f57}.app-bar i:nth-child(2){background:#febc2e}.app-bar i:nth-child(3){background:#28c840}
+.app-bar b { margin-left: 8px; font-family: var(--mono); font-size: 11.5px; color: #a9b4d6; letter-spacing: .5px; }
+.app-shot img { width: 100%; display: block; border-radius: var(--radius-2); border: 1px solid var(--line); }
+.app-cap { margin-top: 14px; text-align: center; font-family: var(--mono); font-size: 12px; color: var(--text-2); }
+
+/* 滚动出现 */
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
+.reveal.in { opacity: 1; transform: none; }
+
+/* ===== 区块通用 ===== */
+section { padding: 96px 0; position: relative; }
+.sec-head { text-align: center; max-width: 720px; margin: 0 auto 60px; }
+.sec-head .tag { font-family: var(--mono); font-size: 13px; letter-spacing: 2px; color: var(--cyan); text-transform: uppercase; }
+.sec-head h2 { font-family: "Sora", sans-serif; font-size: clamp(28px, 3.6vw, 42px); font-weight: 800; letter-spacing: -.6px; margin: 16px 0 14px; }
+.sec-head p { color: var(--text-1); font-size: 16px; }
+
+/* 价值卡片 */
+.values { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.vcard { padding: 28px 24px; border: 1px solid var(--line); border-radius: var(--radius-2); background: var(--panel); backdrop-filter: blur(10px); transition: .3s; position: relative; overflow: hidden; }
+.vcard::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(135deg, rgba(124,155,255,.5), transparent 40%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0; transition: .3s; }
+.vcard:hover { transform: translateY(-6px); border-color: var(--line-strong); }
+.vcard:hover::after { opacity: 1; }
+.vcard .ico { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 20px; background: rgba(77,107,254,.12); color: var(--blue-hi); }
+.vcard .ico svg { width: 26px; height: 26px; }
+.vcard h3 { font-family: "Sora", sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+.vcard p { font-size: 14px; color: var(--text-1); }
+
+/* ===== 双工具对比 ===== */
+.tools { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.tool { border: 1px solid var(--line); border-radius: var(--radius-3); background: var(--panel); overflow: hidden; }
+.tool-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 22px 24px; border-bottom: 1px solid var(--line); }
+.tool-head .t-title { display: flex; align-items: center; gap: 12px; font-family: var(--mono); font-weight: 600; font-size: 17px; color: var(--text-0); }
+.tool-head .t-title span { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; }
+.tool-head .t-title span.img { background: rgba(77,107,254,.15); color: var(--blue-hi); }
+.tool-head .t-title span.vid { background: rgba(57,208,255,.15); color: var(--cyan); }
+.badge { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; }
+.badge.sync { color: var(--green); background: rgba(61,220,151,.12); }
+.badge.async { color: var(--amber); background: rgba(255,180,84,.12); }
+.tool-body { padding: 24px; }
+.trow { display: grid; grid-template-columns: 92px 1fr; gap: 14px; padding: 13px 0; border-bottom: 1px dashed var(--line); }
+.trow:last-child { border-bottom: 0; }
+.trow dt { color: var(--text-2); font-size: 13px; }
+.trow dd { color: var(--text-1); font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12.5px; padding: 3px 9px; border-radius: 7px; background: rgba(30,90,180,.08); border: 1px solid var(--line); color: var(--blue-soft); }
+
+/* ===== 画廊 / 示例 ===== */
+.gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.gitem { position: relative; border-radius: var(--radius-2); overflow: hidden; border: 1px solid var(--line); }
+.gitem img, .gitem video { width: 100%; height: 100%; object-fit: cover; transition: transform .5s ease, filter .5s ease; display: block; }
+.gitem:hover img, .gitem:hover video { transform: scale(1.06); }
+.gitem .glabel { position: absolute; left: 14px; bottom: 14px; right: 14px; padding: 9px 12px; border-radius: 10px; background: rgba(6,9,16,.72); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.14); font-family: var(--mono); font-size: 12px; color: #dfe5ff; }
+.gitem .glabel b { color: #a6c1ff; }
+.gallery-wide { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* 示例卡片 */
+.showcase { display: grid; gap: 22px; }
+.shot-card { border: 1px solid var(--line); border-radius: var(--radius-3); background: var(--panel); overflow: hidden; }
+.shot-head { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 13px; color: var(--text-1); }
+.shot-head .tagdot { width: 10px; height: 10px; border-radius: 50%; }
+.tagdot.img { background: var(--blue-hi); box-shadow: 0 0 10px rgba(124,155,255,.8); }
+.tagdot.vid { background: var(--cyan); box-shadow: 0 0 10px rgba(57,208,255,.8); }
+.shot-media { padding: 20px; }
+.shot-media img { width: 100%; border-radius: var(--radius-2); border: 1px solid var(--line-strong); box-shadow: 0 16px 40px rgba(15,23,42,.16); }
+.shot-media video { width: 50%; margin: 0 auto; border-radius: var(--radius-2); border: 1px solid var(--line-strong); box-shadow: 0 16px 40px rgba(15,23,42,.16); display: block; }
+.shot-cap { padding: 0 20px 20px; color: var(--text-1); font-size: 14px; }
+.shot-cap code { font-family: var(--mono); font-size: 12px; color: var(--cyan); }
+
+/* ===== provider 表格 ===== */
+.tbl-wrap { border: 1px solid var(--line); border-radius: var(--radius-2); overflow-x: auto; background: var(--panel); }
+table { width: 100%; border-collapse: collapse; min-width: 720px; }
+th, td { text-align: left; padding: 16px 20px; border-bottom: 1px solid var(--line); font-size: 14px; }
+th { font-family: "Sora", sans-serif; font-size: 13px; color: var(--text-2); font-weight: 700; letter-spacing: .4px; background: rgba(30,90,180,.04); }
+td { color: var(--text-1); }
+td strong { color: var(--text-0); }
+.yes { color: var(--green); font-weight: 600; }
+.no { color: var(--text-2); }
+tr:last-child td { border-bottom: 0; }
+.dflt { font-size: 11px; color: var(--cyan); border: 1px solid rgba(57,208,255,.3); padding: 1px 7px; border-radius: 999px; margin-left: 6px; }
+
+/* ===== 快速开始 ===== */
+.code-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.code { border: 1px solid var(--line); border-radius: var(--radius-2); background: #0a0f1d; overflow: hidden; }
+.code-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); background: rgba(59,107,253,.10); }
+.code-head span { font-family: var(--mono); font-size: 12.5px; color: #c6ccf0; }
+.code-head .copy { margin-left: auto; border: 1px solid var(--line); background: rgba(59,107,253,.14); color: #a6c1ff; font-size: 12px; font-family: inherit; padding: 5px 11px; border-radius: 7px; cursor: pointer; transition: .2s; }
+.code-head .copy:hover { background: rgba(59,107,253,.26); color: #fff; }
+.code pre { padding: 18px; font-family: var(--mono); font-size: 13px; line-height: 1.75; color: #d6dcff; overflow-x: auto; }
+.code .tok { color: var(--cyan); }
+.code .cm { color: #8b96c0; }
+
+/* ===== FAQ ===== */
+.faq { max-width: 780px; margin: 0 auto; }
+.faq details { border: 1px solid var(--line); border-radius: var(--radius-1); background: var(--panel); margin-bottom: 12px; overflow: hidden; }
+.faq summary { cursor: pointer; list-style: none; padding: 20px 24px; font-weight: 600; font-size: 15.5px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font-family: "Sora", sans-serif; font-size: 24px; color: var(--blue-hi); transition: .25s; }
+.faq details[open] summary::after { transform: rotate(45deg); }
+.faq .faq-body { padding: 0 24px 22px; color: var(--text-1); font-size: 14.5px; }
+
+/* ===== 页脚 ===== */
+.footer { border-top: 1px solid var(--line); padding: 60px 0 40px; }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 40px; }
+.footer h4 { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: var(--text-0); }
+.footer p, .footer a { font-size: 13.5px; color: var(--text-1); }
+.footer a { text-decoration: none; display: block; margin-bottom: 9px; }
+.footer a:hover { color: var(--blue-soft); }
+.legal { margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--line); color: var(--text-2); font-size: 12.5px; line-height: 1.9; }
+.footer-lang { margin-top: 26px; display: flex; justify-content: center; }
+
+/* ===== 响应式 ===== */
+@media (max-width: 980px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 44px; }
+  .values { grid-template-columns: repeat(2, 1fr); }
+  .tools, .code-grid, .footer-grid, .gallery-wide { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+  .gallery { grid-template-columns: repeat(2, 1fr); }
+  .nav-links { display: none; }
+}
+@media (max-width: 560px) {
+  .values, .gallery, .footer-grid { grid-template-columns: 1fr; }
+  .hero-stats { gap: 26px; flex-wrap: wrap; }
+  .hero-ctas { flex-direction: column; }
+  .btn { justify-content: center; }
+}
+</style>
+    <!-- Google Analytics (gtag.js)（仅生产域名加载，避免本地开发污染统计数据） -->
+    <script>
+      if (location.hostname.indexOf("threerouter.com") !== -1) {
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-TG1LBX3QN6');
+      }
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TG1LBX3QN6"></script>
+</head>
+<body>
+<div class="atmosphere"></div>
+<div class="grid-lines"></div>
+<div class="noise"></div>
+
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="/" title="返回 Threerouter 首页">
+      <span class="brand-mark"><img src="/logo.svg" alt="Threerouter Logo" /></span>
+      <span>Deepseek Harness<small>for Threerouter · dsh-image-video</small></span>
+    </a>
+    <div class="nav-links">
+      <a href="#features" data-i18n="nav_feat">功能</a>
+      <a href="#demo" data-i18n="nav_demo">演示</a>
+      <a href="#start" data-i18n="nav_start">快速开始</a>
+    </div>
+    <div class="nav-actions">
+      <a class="btn" href="https://github.com/976905690/deepseek-harness-desktop/releases/download/v2.0.3/DSH-Desktop-2.0.3-x64-Setup.exe" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span data-i18n="nav_download">免费下载</span></a>
+    </div>
+  </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow" data-i18n="hero_tag">Deepseek Harness for Threerouter · AI 文生图 / 文生视频</span>
+      <h1><span data-i18n="hero_title1">对话即创作</span><br><span class="grad" data-i18n="hero_title2">在对话中生成图片与视频</span></h1>
+      <p class="hero-sub" data-i18n="hero_sub"><b>Deepseek Harness for Threerouter</b> 为对话模型注册 <b>generate_image</b> / <b>generate_video</b> 两个工具。模型在对话中自主决策调用，生成结果自动落地本地 <b>outputs文件夹</b>，图片内嵌渲染——<b>无需离开终端，无需切换窗口</b>。</p>
+      <div class="hero-ctas">
+        <a class="btn" href="https://github.com/976905690/deepseek-harness-desktop/releases/download/v2.0.3/DSH-Desktop-2.0.3-x64-Setup.exe" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span data-i18n="nav_download">免费下载</span></a>
+        <a class="btn" href="https://github.com/976905690/deepseek-harness-desktop/releases/download/v2.0.3/DSH.Desktop-2.0.3-universal.dmg" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span data-i18n="hero_cta_mac">下载 macOS 版</span></a>
+        <a class="btn ghost" href="#start"><span data-i18n="hero_cta2">快速开始</span></a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><b>2<em>+</em></b><span data-i18n="stat1">个创作工具</span></div>
+        <div class="stat"><b>3</b><span data-i18n="stat2">家服务商热切换</span></div>
+        <div class="stat"><b>0<em>+</em></b><span data-i18n="stat3">外部运行时依赖</span></div>
+      </div>
+    </div>
+
+    <div class="app-shot">
+      <div class="app-glow"></div>
+      <div class="app" aria-label="Deepseek Harness for Threerouter 界面">
+        <div class="app-bar"><i></i><i></i><i></i><b>Deepseek Harness for Threerouter — deepseek-v4-pro</b></div>
+        <img src="media/DSH1.png" alt="Deepseek Harness for Threerouter 聊天界面截图" loading="lazy">
+      </div>
+      <div class="app-cap" data-i18n="app_cap">在主界面中随时打字，模型自主调用 dsh-image-video</div>
+    </div>
+  </div>
+</header>
+
+<!-- ===== 价值 ===== -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="tag">Why</div>
+      <h2 data-i18n="feat_h">为什么是 dsh-image-video</h2>
+      <p data-i18n="feat_p">轻量、即装即用的文生图 / 文生视频入口。两个工具、三家服务商、零外部依赖，热插拔即用。</p>
+    </div>
+    <div class="values">
+      <div class="vcard reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 17l6-6-6-6M12 19h8"/></svg></div>
+        <h3 data-i18n="v1_h">自然语言触发</h3>
+        <p data-i18n="v1_p">模型在对话中自主决策何时调用工具，无需手动指令。一句「帮我画…」即可创作。</p>
+      </div>
+      <div class="vcard reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3L4 7l4 4M16 21l4-4-4-4M7 7h10M17 17H7"/></svg></div>
+        <h3 data-i18n="v2_h">多服务商热切换</h3>
+        <p data-i18n="v2_p">万象 wanx、Seedance2.5、bxinle 一键切换 provider，HMR 即时生效，无需重启。</p>
+      </div>
+      <div class="vcard reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
+        <h3 data-i18n="v3_h">异步不阻塞对话</h3>
+        <p data-i18n="v3_p">TaskManager 托管轮询生命周期，插件卸载自动取消排队任务、清理定时器，杜绝内存泄漏。</p>
+      </div>
+      <div class="vcard reveal">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l9 5-9 5-9-5 9-5zM3 12l9 5 9-5M3 16l9 5 9-5"/></svg></div>
+        <h3 data-i18n="v4_h">本地落地 + 内嵌渲染</h3>
+        <p data-i18n="v4_p">图片字节持久化到 attachment，模型只见文本摘要，纯文本模型照常工作；UI 可内嵌渲染。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 双工具 ===== -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="tag">Tools</div>
+      <h2 data-i18n="tools_h">两个工具，覆盖图片与视频</h2>
+    </div>
+    <div class="tools">
+      <div class="tool reveal">
+        <div class="tool-head">
+          <div class="t-title"><span class="img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></span>generate_image</div>
+          <span class="badge sync" data-i18n="badge_img">同步 / 异步自适应</span>
+        </div>
+        <div class="tool-body">
+          <div class="trow"><dt data-i18n="row_cap">能力</dt><dd data-i18n="tool_img_cap">文本生成图片（文生图）</dd></div>
+          <div class="trow"><dt data-i18n="row_prov">服务商</dt><dd><span class="chip">万象 wanx</span><span class="chip">Seedance2.5</span></dd></div>
+          <div class="trow"><dt data-i18n="row_exec">执行</dt><dd data-i18n="tool_img_ex">同步或异步（自动适配，纯文本模型照常工作）</dd></div>
+          <div class="trow"><dt data-i18n="row_render">渲染</dt><dd data-i18n="tool_img_render">图片经 presentationMeta 内嵌渲染；模型只见文本摘要</dd></div>
+        </div>
+      </div>
+      <div class="tool reveal">
+        <div class="tool-head">
+          <div class="t-title"><span class="vid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="14" height="14" rx="3"/><path d="M17 9l4-2v10l-4-2"/></svg></span>generate_video</div>
+          <span class="badge async" data-i18n="badge_vid">始终异步轮询</span>
+        </div>
+        <div class="tool-body">
+          <div class="trow"><dt data-i18n="row_cap">能力</dt><dd data-i18n="tool_vid_cap">文本生成短视频（上限 10s）</dd></div>
+          <div class="trow"><dt data-i18n="row_prov">服务商</dt><dd><span class="chip">bxinle（默认）</span><span class="chip">万象 wanx</span><span class="chip">Seedance2.5</span></dd></div>
+          <div class="trow"><dt data-i18n="row_exec">执行</dt><dd data-i18n="tool_vid_ex">始终异步轮询，不阻塞对话</dd></div>
+          <div class="trow"><dt data-i18n="row_render">渲染</dt><dd data-i18n="tool_vid_render">本地文件路径 + 源地址；后台轮询任务状态</dd></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 示例展示 ===== -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="tag">Showcase</div>
+      <h2 data-i18n="show_h">在对话里长出来的作品</h2>
+      <p data-i18n="show_p">模型自主调用 dsh-image-video 生成的图像与视频示例，自动落地到本地 outputs文件夹，图片内嵌渲染。</p>
+    </div>
+    <div class="showcase">
+      <div class="shot-card reveal">
+        <div class="shot-head"><span class="tagdot img"></span><span data-i18n="show_img_h">文生图 · generate_image</span></div>
+        <div class="shot-media"><img src="media/DSH2.png" alt="dsh-image-video 文生图示例：白兔在花海" loading="lazy"></div>
+        <div class="shot-cap"><span data-i18n="show_img_cap">示例：</span> <code data-i18n="show_img_prompt">"一只白色兔子坐在阳光明媚的花海中"</code> · outputs/flower-rabbit-…​.png</div>
+      </div>
+      <div class="shot-card reveal">
+        <div class="shot-head"><span class="tagdot vid"></span><span data-i18n="show_vid_h">文生视频 · generate_video</span></div>
+        <div class="shot-media">
+          <video src="media/dsh.mp4" controls playsinline preload="metadata" loop poster="media/DSH3.png"></video>
+        </div>
+        <div class="shot-cap"><span data-i18n="show_vid_cap">示例：</span> <code data-i18n="show_vid_prompt">"花瓣随风飘落，镜头缓缓推进"</code> · outputs/…​.mp4</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== Provider 矩阵 ===== -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="tag">Providers</div>
+      <h2 data-i18n="prov_h">服务商矩阵</h2>
+      <p data-i18n="prov_p">三家中立服务商，一个 provider 字段一键切换。</p>
+    </div>
+    <div class="tbl-wrap reveal">
+      <table>
+        <thead><tr><th data-i18n="th_prov">服务商</th><th data-i18n="th_channel">渠道</th><th data-i18n="th_img">文生图</th><th data-i18n="th_vid">文生视频</th><th data-i18n="th_note">备注</th></tr></thead>
+        <tbody>
+          <tr><td><strong>bxinle</strong><span class="dflt" data-i18n="tbl_dflt">默认</span></td><td>bxinle.com Bearer Key</td><td class="no">—</td><td class="yes">✓ <span data-i18n="tbl_adapter_ready">适配器已实现</span></td><td data-i18n="tbl_bxinle_notes">统一 /v1/videos 端点；provider=bxinle 时图片回退到 wanx</td></tr>
+          <tr><td><strong><span data-i18n="prov_wanx">万象 wanx</span></strong><span class="chip" style="margin-left:6px" data-i18n="tbl_bailian">阿里云百炼</span></td><td>DashScope sk- Key</td><td class="yes">✓ <span data-i18n="tbl_verified">已验证</span></td><td class="yes">✓ <span data-i18n="tbl_verified">已验证</span></td><td data-i18n="tbl_wanx_notes">wanx2.1-t2i-turbo / wan2.2-t2v-plus；视频始终异步</td></tr>
+          <tr><td><strong>Seedance2.5</strong><span class="chip" style="margin-left:6px" data-i18n="tbl_ark">火山引擎 Ark</span></td><td>ARK API Key</td><td class="yes">✓ <span data-i18n="tbl_adapter_ready">适配器已实现</span></td><td class="yes">✓ <span data-i18n="tbl_adapter_ready">适配器已实现</span></td><td data-i18n="tbl_seedance_notes">即梦 3.0；图片同步返回 URL，视频走异步任务</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 交互演示 ===== -->
+<section id="demo" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="tag">Live Demo</div>
+      <h2 data-i18n="demo_h">点一下，看它如何创作</h2>
+      <p data-i18n="demo_p">选择一个示例提示词，观察模型自主调用工具并生成结果。</p>
+    </div>
+    <div class="code-grid" style="grid-template-columns: 1fr">
+      <div class="code reveal">
+        <div class="code-head"><span data-i18n="demo_cmd">dsh --profile headless "为你创作一张图…"</span></div>
+        <pre id="demo-out"><span data-i18n="demo_idle">// 等待你选择一个示例提示词…</span></pre>
+      </div>
+    </div>
+    <div class="demo-actions" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:24px">
+      <button class="btn ghost demo-trigger" data-sample="img" data-key="demo_p1">白兔在花海</button>
+      <button class="btn ghost demo-trigger" data-sample="vid" data-key="demo_p2">花瓣飘落视频</button>
+      <button class="btn ghost demo-trigger" data-sample="img" data-key="demo_p3">星云中的宇航员</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 快速开始 ===== -->
+<section id="start" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="tag">Get Started</div>
+      <h2 data-i18n="start_h">一步开始创作</h2>
+    </div>
+      <div class="code reveal">
+        <div class="code-head"><span>$ install</span><button class="copy" data-copy-target="code-install" data-i18n="copy">复制</button></div>
+        <pre id="code-install"><span data-i18n="gs_cm"><span class="cm"># 下载并安装 Deepseek Harness for Threerouter</span><br><span class="cm"># Windows: 运行 DSH-Desktop-2.0.3-x64-Setup.exe</span><br><span class="cm"># macOS:   运行 DSH.Desktop-2.0.3-universal.dmg</span></span>
+ 
+      </div>
+   
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="tag">FAQ</div>
+      <h2 data-i18n="faq_h">常见问题</h2>
+    </div>
+    <div class="faq">
+      <details class="reveal" open><summary data-i18n="q1">API Key 安全吗？会上传我的数据吗</summary>
+        <div class="faq-body" data-i18n="a1">API Key 仅在本地使用，不上传任何远程服务，本插件不附属于任何云厂商。生成由你配置的服务商模型完成，调用前请确认各服务商的服务条款。</div>
+      </details>
+      <details class="reveal"><summary data-i18n="q2">生成质量由谁决定？</summary>
+        <div class="faq-body" data-i18n="a2">模型输出质量由服务商模型决定。插件负责正确传参、可靠轮询和统一异常分类，不改变模型本身的能力。</div>
+      </details>
+      <details class="reveal"><summary data-i18n="q3">需要先安装 Deepseek Harness for Threerouter 吗？</summary>
+        <div class="faq-body" data-i18n="a3">dsh-image-video 是 Deepseek Harness for Threerouter 的插件，运行在 DSH 运行时中。使用桌面端可从 GUI 直接安装，也可通过 CLI 插件命令添加到任意 profile。</div>
+      </details>
+      <details class="reveal"><summary data-i18n="q4">图片为什么不用 image 内容块给模型？</summary>
+        <div class="faq-body" data-i18n="a4">纯文本模型或网关不支持图片输入时，把图片作为 image 内容块注入工具结果会让下一轮请求直接 400。插件只向模型返回文本摘要，图片经 presentationMeta 持久化交给 UI 内嵌渲染。</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 页脚 ===== -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <a class="brand" href="/" title="返回 Threerouter 首页" style="margin-bottom:18px">
+          <span class="brand-mark"><img src="/logo.svg" alt="Threerouter Logo" /></span>
+          <span>Deepseek Harness<small>· for Threerouter</small></span>
+        </a>
+        <p data-i18n="footer_p">基于 Deepseek Harness 构建，面向 Threerouter 的桌面客户端。dsh-image-video 插件让模型在对话中自主生成图片与视频。</p>
+      </div>
+      <div>
+        <h4 data-i18n="f_docs">文档</h4>
+        <a href="readme-cn.html" data-i18n="f_guide">项目说明</a>
+        <a href="help-cn.html" data-i18n="f_faq">帮助文档</a>
+        <a href="help-cn.html#contact" data-i18n="f_contact">联系我们</a>
+      </div>
+      <div>
+        <h4 data-i18n="f_dl">下载</h4>
+        <a href="https://github.com/976905690/deepseek-harness-desktop/releases/download/v2.0.3/DSH-Desktop-2.0.3-x64-Setup.exe" target="_blank" rel="noopener" data-i18n="f_win">Windows x64</a>
+        <a href="https://github.com/976905690/deepseek-harness-desktop/releases/download/v2.0.3/DSH.Desktop-2.0.3-universal.dmg" target="_blank" rel="noopener" data-i18n="f_mac">macOS Universal</a>
+        <a href="https://github.com/976905690/deepseek-harness-desktop/releases/latest" target="_blank" rel="noopener" data-i18n="f_rel">GitHub Releases</a>
+      </div>
+    </div>
+    <div class="legal" data-i18n="legal">Deepseek Harness for Threerouter 是独立的社区开源项目，与深度求索不存在隶属、合作、授权或背书关系。dsh-image-video 为 MIT 协议开源，不附属于阿里云或火山引擎。使用各服务商 API 前请确认其服务条款。</div>
+    <div class="footer-lang">
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button id="lang-zh" class="active">中</button>
+        <button id="lang-en">EN</button>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+const I18N = {
+  zh: {
+    nav_feat:"功能", nav_demo:"演示", nav_start:"快速开始", nav_download:"免费下载",
+    hero_tag:"Deepseek Harness for Threerouter · AI 文生图 / 文生视频",
+    hero_title1:"对话即创作",
+    hero_title2:"在对话中生成图片与视频",
+    hero_sub:'<b>Deepseek Harness for Threerouter</b> 为对话模型注册 <b>generate_image</b> / <b>generate_video</b> 两个工具。模型在对话中自主决策调用，生成结果自动落地本地 <b>outputs文件夹</b>，图片内嵌渲染——<b>无需离开终端，无需切换窗口</b>。',
+    hero_cta_mac:"下载 macOS 版", hero_cta2:"快速开始",
+    stat1:"个创作工具", stat2:"家服务商热切换", stat3:"外部运行时依赖",
+    app_cap:"在主界面中随时打字，模型自主调用 dsh-image-video",
+    feat_h:"为什么是 dsh-image-video", feat_p:"轻量、即装即用的文生图 / 文生视频入口。两个工具、三家服务商、零外部依赖，热插拔即用。",
+    v1_h:"自然语言触发", v1_p:"模型在对话中自主决策何时调用工具，无需手动指令。一句「帮我画…」即可创作。",
+    v2_h:"多服务商热切换", v2_p:"万象 wanx、Seedance2.5、bxinle 一键切换 provider，HMR 即时生效，无需重启。",
+    v3_h:"异步不阻塞对话", v3_p:"TaskManager 托管轮询生命周期，插件卸载自动取消排队任务、清理定时器，杜绝内存泄漏。",
+    v4_h:"本地落地 + 内嵌渲染", v4_p:"图片字节持久化到 attachment，模型只见文本摘要，纯文本模型照常工作；UI 可内嵌渲染。",
+    tools_h:"两个工具，覆盖图片与视频",
+    badge_img:"同步 / 异步自适应", badge_vid:"始终异步轮询",
+    row_cap:"能力", row_prov:"服务商", row_exec:"执行", row_render:"渲染",
+    tool_img_cap:"文本生成图片（文生图）", tool_img_ex:"同步或异步（自动适配，纯文本模型照常工作）", tool_img_render:"图片经 presentationMeta 内嵌渲染；模型只见文本摘要",
+    tool_vid_cap:"文本生成短视频（上限 10s）", tool_vid_ex:"始终异步轮询，不阻塞对话", tool_vid_render:"本地文件路径 + 源地址；后台轮询任务状态",
+    show_h:"在对话里长出来的作品", show_p:"模型自主调用 dsh-image-video 生成的图像与视频示例，自动落地到本地 outputs文件夹，图片内嵌渲染。",
+    show_img_h:"文生图 · generate_image", show_img_cap:"示例：", show_img_prompt:'"一只白色兔子坐在阳光明媚的花海中"',
+    show_vid_h:"文生视频 · generate_video", show_vid_cap:"示例：", show_vid_prompt:'"花瓣随风飘落，镜头缓缓推进"',
+    prov_h:"服务商矩阵", prov_p:"三家中立服务商，一个 provider 字段一键切换。",
+    th_prov:"服务商", th_channel:"渠道", th_img:"文生图", th_vid:"文生视频", th_note:"备注",
+    demo_h:"点一下，看它如何创作", demo_p:"选择一个示例提示词，观察模型自主调用工具并生成结果。",
+    demo_idle:"// 等待你选择一个示例提示词…", demo_p1:"白兔在花海", demo_p2:"花瓣飘落视频", demo_p3:"星云中的宇航员",
+    start_h:"一步开始创作", copy:"复制", faq_h:"常见问题",
+    q1:"API Key 安全吗？会上传我的数据吗", a1:"API Key 仅在本地使用，不上传任何远程服务，本插件不附属于任何云厂商。生成由你配置的服务商模型完成，调用前请确认各服务商的服务条款。",
+    q2:"生成质量由谁决定？", a2:"模型输出质量由服务商模型决定。插件负责正确传参、可靠轮询和统一异常分类，不改变模型本身的能力。",
+    q3:"需要先安装 Deepseek Harness for Threerouter 吗？", a3:"dsh-image-video 是 Deepseek Harness for Threerouter 的插件，运行在 DSH 运行时中。使用桌面端可从 GUI 直接安装，也可通过 CLI 插件命令添加到任意 profile。",
+    q4:"图片为什么不用 image 内容块给模型？", a4:"纯文本模型或网关不支持图片输入时，把图片作为 image 内容块注入工具结果会让下一轮请求直接 400。插件只向模型返回文本摘要，图片经 presentationMeta 持久化交给 UI 内嵌渲染。",
+    footer_p:"基于 Deepseek Harness 构建，面向 Threerouter 的桌面客户端。dsh-image-video 插件让模型在对话中自主生成图片与视频。",
+    f_docs:"文档", f_guide:"项目说明", f_faq:"帮助文档", f_contact:"联系我们",
+    f_dl:"下载", f_win:"Windows x64", f_mac:"macOS Universal", f_rel:"GitHub Releases",
+    tbl_dflt:"默认", tbl_adapter_ready:"适配器已实现", tbl_verified:"已验证",
+    tbl_bailian:"阿里云百炼", tbl_ark:"火山引擎 Ark",
+    tbl_bxinle_notes:"统一 /v1/videos 端点；provider=bxinle 时图片回退到 wanx",
+    tbl_wanx_notes:"wanx2.1-t2i-turbo / wan2.2-t2v-plus；视频始终异步",
+    tbl_seedance_notes:"即梦 3.0；图片同步返回 URL，视频走异步任务",
+    demo_cmd:'dsh --profile headless "为你创作一张图…"',
+    gs_cm:'<span class="cm"># 下载并安装 Deepseek Harness for Threerouter</span><br><span class="cm"># Windows: 运行 DSH-Desktop-2.0.3-x64-Setup.exe</span><br><span class="cm"># macOS:   运行 DSH.Desktop-2.0.3-universal.dmg</span>',
+    legal:"Deepseek Harness for Threerouter 是独立的社区开源项目，与深度求索不存在隶属、合作、授权或背书关系。dsh-image-video 为 MIT 协议开源，不附属于阿里云或火山引擎。使用各服务商 API 前请确认其服务条款。"
+  },
+  en: {
+    nav_feat:"Features", nav_demo:"Demo", nav_start:"Get Started", nav_download:"Download",
+    hero_tag:"Deepseek Harness for Threerouter · AI Text-to-Image / Text-to-Video",
+    hero_title1:"Create in conversation",
+    hero_title2:"Images & videos, right in chat",
+    hero_sub:'<b>Deepseek Harness for Threerouter</b> registers two tools — <b>generate_image</b> / <b>generate_video</b> — for the model. The model calls them on its own mid-conversation; results land in local <b>outputs/</b> and images render inline — <b>no leaving the terminal, no switching windows</b>.',
+    hero_cta_mac:"Download for macOS", hero_cta2:"Get Started",
+    stat1:"creating tools", stat2:"hot-swappable providers", stat3:"external runtime deps",
+    app_cap:"Type anytime in the main window — the model calls dsh-image-video on its own",
+    feat_h:"Why dsh-image-video", feat_p:"A lightweight, plug-and-play entry for text-to-image and text-to-video. Two tools, three providers, zero extra dependencies.",
+    v1_h:"Natural-language trigger", v1_p:"The model decides when to call the tool mid-conversation — no manual command. Just say “draw me…”.",
+    v2_h:"Hot-swap providers", v2_p:"Switch provider between Wanx, Seedance2.5 and bxinle with one field. HMR takes effect instantly, no restart.",
+    v3_h:"Async, non-blocking", v3_p:"TaskManager manages the polling lifecycle; unloading the plugin cancels queued tasks and timers to avoid leaks.",
+    v4_h:"Local files + inline render", v4_p:"Image bytes persist to attachments; the model only sees a text summary, so text-only models keep working while UI renders inline.",
+    tools_h:"Two tools for images and video",
+    badge_img:"Sync / async adaptive", badge_vid:"Always async polling",
+    row_cap:"Capability", row_prov:"Provider", row_exec:"Execution", row_render:"Render",
+    tool_img_cap:"Generate images from text", tool_img_ex:"Sync or async (auto-adapts; text-only models keep working)", tool_img_render:"Rendered inline via presentationMeta; model sees only a text summary",
+    tool_vid_cap:"Generate short videos (up to 10s)", tool_vid_ex:"Always async polling, never blocks the conversation", tool_vid_render:"Local file path + source URL; polls task status in background",
+    show_h:"Work grown inside a conversation", show_p:"Sample images and videos generated by the model calling dsh-image-video, saved automatically to local outputsand rendered inline.",
+    show_img_h:"Text-to-image · generate_image", show_img_cap:"Example:", show_img_prompt:'"A white rabbit sitting in a sunlit field of flowers"',
+    show_vid_h:"Text-to-video · generate_video", show_vid_cap:"Example:", show_vid_prompt:'"Petals drift on the wind as the camera pushes in"',
+    prov_h:"Provider matrix", prov_p:"Three neutral providers, one provider field to switch.",
+    th_prov:"Provider", th_channel:"Channel", th_img:"Image", th_vid:"Video", th_note:"Notes",
+    demo_h:"Click to see it create", demo_p:"Pick a sample prompt and watch the model call the tool and produce a result.",
+    demo_idle:"// Waiting for you to pick a sample prompt…", demo_p1:"Rabbit in flowers", demo_p2:"Falling petals video", demo_p3:"Astronaut in a nebula",
+    start_h:"Start creating in one steps", copy:"Copy", faq_h:"FAQ",
+    q1:"Is my API key safe? Do you upload my data?", a1:"The API key is used only locally and never uploaded anywhere. This plugin is not affiliated with any cloud vendor. Generation runs on the provider you configure — review each provider's terms first.",
+    q2:"Who decides generation quality?", a2:"Quality depends on the provider's model. The plugin handles correct params, reliable polling and unified error classification — it doesn't change the model itself.",
+    q3:"Do I need Deepseek Harness for Threerouter first?", a3:"dsh-image-video is a plugin of Deepseek Harness for Threerouter, running inside the DSH runtime. Install it from the desktop GUI, or add it to any profile via the CLI plugin command.",
+    q4:"Why not send the image as an image block?", a4:"If the text-only model or gateway can't take image input, injecting an image content block makes the next request return 400. The plugin returns only a text summary and persists the image via presentationMeta for the UI to render.",
+    footer_p:"A desktop client for Threerouter built on Deepseek Harness. The dsh-image-video plugin lets the model generate images and videos on its own in conversation.",
+    f_docs:"Docs", f_guide:"Project readme", f_faq:"Help", f_contact:"Contact",
+    f_dl:"Download", f_win:"Windows x64", f_mac:"macOS Universal", f_rel:"GitHub Releases",
+    tbl_dflt:"default", tbl_adapter_ready:"Adapter ready", tbl_verified:"Verified",
+    prov_wanx:"wanx",
+    tbl_bailian:"Alibaba Cloud Bailian", tbl_ark:"Volcano Engine Ark",
+    tbl_bxinle_notes:"Unified /v1/videos endpoint; falls back to wanx for images when provider=bxinle",
+    tbl_wanx_notes:"wanx2.1-t2i-turbo / wan2.2-t2v-plus; video is always async",
+    tbl_seedance_notes:"Jimeng 3.0; images return URL synchronously, videos run as async tasks",
+    demo_cmd:'dsh --profile headless "create an image for you…"',
+    gs_cm:'<span class="cm"># Download and install Deepseek Harness for Threerouter</span><br><span class="cm"># Windows: run DSH-Desktop-2.0.3-x64-Setup.exe</span><br><span class="cm"># macOS:   run DSH.Desktop-2.0.3-universal.dmg</span>',
+    legal:"Deepseek Harness for Threerouter is an independent community open-source project with no affiliation, partnership, endorsement or authorization from DeepSeek. dsh-image-video is MIT-licensed and not affiliated with Alibaba Cloud or Volcano Engine. Review each provider's terms before use."
+  }
+};
+let lang = localStorage.getItem('dsh-lang') || 'zh';
+
+function applyLang() {
+  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    if (I18N[lang][k] != null) el.innerHTML = I18N[lang][k];
+  });
+  document.querySelectorAll('.demo-trigger').forEach(el => {
+    const k = el.getAttribute('data-key');
+    if (I18N[lang][k]) el.textContent = I18N[lang][k];
+  });
+  document.getElementById('lang-zh').classList.toggle('active', lang === 'zh');
+  document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+  localStorage.setItem('dsh-lang', lang);
+}
+document.getElementById('lang-zh').addEventListener('click', () => { lang = 'zh'; applyLang(); });
+document.getElementById('lang-en').addEventListener('click', () => { lang = 'en'; applyLang(); });
+
+const io = new IntersectionObserver(entries => entries.forEach(e => {
+  if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+}), { threshold: .12 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+document.querySelectorAll('.copy').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = document.getElementById(btn.getAttribute('data-copy-target'));
+    navigator.clipboard.writeText(t.innerText).then(() => {
+      btn.textContent = lang === 'zh' ? '已复制' : 'Copied';
+      setTimeout(() => { btn.textContent = I18N[lang].copy; }, 1400);
+    });
+  });
+});
+
+const demoOut = document.getElementById('demo-out');
+const imgSrcMap = { demo_p1: 'media/DSH2.png', demo_p3: 'media/DSH4.png' };
+const frameStyle = 'margin-top:12px;border-radius:10px;max-width:340px;display:block;box-shadow:0 12px 30px rgba(0,0,0,.5)';
+const vidFrame = '<video src="media/dsh.mp4" controls playsinline preload="metadata" poster="media/DSH3.png" style="' + frameStyle + '"></video>';
+document.querySelectorAll('.demo-trigger').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const sample = btn.getAttribute('data-sample');
+    const pLabel = btn.textContent.trim();
+    const tool = sample === 'vid' ? 'generate_video' : 'generate_image';
+    const during = lang === 'zh' ? '// 正在生成…' : '// generating…';
+    const done = lang === 'zh' ? '✓ 已保存到 outputs/' : '✓ saved to outputs/';
+    demoOut.innerHTML = '<span class="tok">> ' + tool + '</span> { prompt:"' + pLabel + '" }\n'
+      + '<span class="cm">' + during + '</span>';
+    setTimeout(() => {
+      const imgFrame = '<img src="' + (imgSrcMap[btn.getAttribute('data-key')] || 'media/DSH2.png') + '" alt="example" style="' + frameStyle + '">';
+      demoOut.innerHTML += '\n<span class="tok">' + done + '</span>outputs/sample.' + (sample === 'vid' ? 'mp4' : 'png') + '\n'
+        + (sample === 'vid' ? vidFrame : imgFrame);
+      demoOut.scrollTop = demoOut.scrollHeight;
+    }, 1100);
+  });
+});
+
+applyLang();
+</script>
+</body>
+</html>
