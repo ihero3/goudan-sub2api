@@ -61,11 +61,8 @@ func AnthropicToChatCompletionsRequest(req *AnthropicRequest) (*ChatCompletionsR
 		out.TopP = req.TopP
 	}
 
-	if req.MaxTokens > 0 {
+	if req.MaxTokens >= minMaxOutputTokens {
 		v := req.MaxTokens
-		if v < minMaxOutputTokens {
-			v = minMaxOutputTokens
-		}
 		out.MaxCompletionTokens = &v
 	}
 
