@@ -21,6 +21,17 @@
     @apply min-h-screen;
   }
 
+  /* Safari / WebKit：防止按钮、提交控件退回原生外观（如蓝色 switch） */
+  button,
+  [type='button'],
+  [type='reset'],
+  [type='submit'] {
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: transparent;
+    background-image: none;
+  }
+
   /* 自定义滚动条 - 仅针对 Firefox，避免 Chrome 取消 webkit 的全局定制 */
   @supports (-moz-appearance:none) {
     * {
@@ -225,6 +236,11 @@
   /* ============ 玻璃效果 ============ */
   .glass {
     @apply bg-white/80 backdrop-blur-xl dark:bg-dark-800/80;
+    /* Safari / WebKit 兼容：显式前缀 + 隔离层，避免子元素被模糊裁剪 */
+    -webkit-backdrop-filter: blur(24px);
+    isolation: isolate;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
 
   .glass-card {
@@ -234,6 +250,11 @@
     @apply border border-white/20 dark:border-dark-700/50;
     @apply shadow-glass;
     @apply transition-all duration-300;
+    /* Safari / WebKit 兼容 */
+    -webkit-backdrop-filter: blur(24px);
+    isolation: isolate;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
 
   /* ============ 卡片样式 ============ */
@@ -255,6 +276,11 @@
     @apply backdrop-blur-xl;
     @apply border border-white/20 dark:border-dark-700/50;
     @apply shadow-glass;
+    /* Safari / WebKit 兼容 */
+    -webkit-backdrop-filter: blur(24px);
+    isolation: isolate;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
 
   .card-header {
@@ -768,6 +794,11 @@
   /* 玻璃效果 */
   .glass {
     @apply bg-white/80 backdrop-blur-xl dark:bg-dark-800/80;
+    /* Safari / WebKit 兼容 */
+    -webkit-backdrop-filter: blur(24px);
+    isolation: isolate;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
   }
 
   /* 隐藏滚动条 */

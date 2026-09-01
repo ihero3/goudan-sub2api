@@ -105,7 +105,17 @@ function upsertJsonLd(data: object | object[]): void {
     element.setAttribute('type', 'application/ld+json')
     document.head.appendChild(element)
   }
-  element.textContent = JSON.stringify(data)
+
+  // 过滤掉数组中可能为 null/undefined 的元素（Safari 对此零容错）
+  const sanitized = Array.isArray(data)
+    ? data.filter((item): item is object => item != null)
+    : data
+
+  try {
+    element.textContent = JSON.stringify(sanitized)
+  } catch (e) {
+    console.warn('[SEO] Failed to serialize JSON-LD:', e)
+  }
 }
 
 /**
@@ -168,77 +178,82 @@ export function useSEO(options: SEOOptions) {
     // 依赖路由路径，路由变化时重新应用 SEO
     void route.fullPath
 
-    const title = unref(options.title)
-    const description = unref(options.description)
-    const keywords = unref(options.keywords)
-    const ogType = options.ogType
-    const ogTitle = unref(options.ogTitle) ?? title
-    const ogDescription = unref(options.ogDescription) ?? description
-    const ogImage = unref(options.ogImage)
-    const ogUrl = unref(options.ogUrl)
-    const ogSiteName = unref(options.ogSiteName)
-    const canonicalUrl = unref(options.canonicalUrl)
-    const jsonLd = unref(options.jsonLd)
-    const noindex = options.noindex
+    // Safari 对 watchEffect 内的未捕获异常零容错，整体 try-catch 防止渲染管线中断
+    try {
+      const title = unref(options.title)
+      const description = unref(options.description)
+      const keywords = unref(options.keywords)
+      const ogType = options.ogType
+      const ogTitle = unref(options.ogTitle) ?? title
+      const ogDescription = unref(options.ogDescription) ?? description
+      const ogImage = unref(options.ogImage)
+      const ogUrl = unref(options.ogUrl)
+      const ogSiteName = unref(options.ogSiteName)
+      const canonicalUrl = unref(options.canonicalUrl)
+      const jsonLd = unref(options.jsonLd)
+      const noindex = options.noindex
 
-    // 页面标题
-    if (title) {
-      document.title = title
-    }
+      // 页面标题
+      if (title) {
+        document.title = title
+      }
 
-    // 基础 meta 标签
-    if (description) {
-      upsertMeta('name', 'description', description)
-    }
-    if (keywords) {
-      upsertMeta('name', 'keywords', keywords)
-    }
+      // 基础 meta 标签
+      if (description) {
+        upsertMeta('name', 'description', description)
+      }
+      if (keywords) {
+        upsertMeta('name', 'keywords', keywords)
+      }
 
-    // Open Graph 标签
-    if (ogType) {
-      upsertMeta('property', 'og:type', ogType)
-    }
-    if (ogTitle) {
-      upsertMeta('property', 'og:title', ogTitle)
-    }
-    if (ogDescription) {
-      upsertMeta('property', 'og:description', ogDescription)
-    }
-    if (ogImage) {
-      upsertMeta('property', 'og:image', ogImage)
-    }
-    if (ogUrl) {
-      upsertMeta('property', 'og:url', ogUrl)
-    }
-    if (ogSiteName) {
-      upsertMeta('property', 'og:site_name', ogSiteName)
-    }
+      // Open Graph 标签
+      if (ogType) {
+        upsertMeta('property', 'og:type', ogType)
+      }
+      if (ogTitle) {
+        upsertMeta('property', 'og:title', ogTitle)
+      }
+      if (ogDescription) {
+        upsertMeta('property', 'og:description', ogDescription)
+      }
+      if (ogImage) {
+        upsertMeta('property', 'og:image', ogImage)
+      }
+      if (ogUrl) {
+        upsertMeta('property', 'og:url', ogUrl)
+      }
+      if (ogSiteName) {
+        upsertMeta('property', 'og:site_name', ogSiteName)
+      }
 
-    // Twitter Card 标签
-    upsertMeta('name', 'twitter:card', 'summary_large_image')
-    if (ogTitle) {
-      upsertMeta('name', 'twitter:title', ogTitle)
-    }
-    if (ogDescription) {
-      upsertMeta('name', 'twitter:description', ogDescription)
-    }
-    if (ogImage) {
-      upsertMeta('name', 'twitter:image', ogImage)
-    }
+      // Twitter Card 标签
+      upsertMeta('name', 'twitter:card', 'summary_large_image')
+      if (ogTitle) {
+        upsertMeta('name', 'twitter:title', ogTitle)
+      }
+      if (ogDescription) {
+        upsertMeta('name', 'twitter:description', ogDescription)
+      }
+      if (ogImage) {
+        upsertMeta('name', 'twitter:image', ogImage)
+      }
 
-    // canonical 链接
-    if (canonicalUrl) {
-      upsertCanonical(canonicalUrl)
-    }
+      // canonical 链接
+      if (canonicalUrl) {
+        upsertCanonical(canonicalUrl)
+      }
 
-    // JSON-LD 结构化数据
-    if (jsonLd) {
-      upsertJsonLd(jsonLd)
-    }
+      // JSON-LD 结构化数据
+      if (jsonLd) {
+        upsertJsonLd(jsonLd)
+      }
 
-    // robots 指令
-    if (noindex !== undefined) {
-      upsertRobots(noindex)
+      // robots 指令
+      if (noindex !== undefined) {
+        upsertRobots(noindex)
+      }
+    } catch (e) {
+      console.warn('[SEO] Failed to apply SEO settings:', e)
     }
   })
 
