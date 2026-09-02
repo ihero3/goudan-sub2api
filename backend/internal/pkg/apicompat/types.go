@@ -831,5 +831,7 @@ func (d ChatDelta) reasoningText() *string {
 // ---------------------------------------------------------------------------
 
 // minMaxOutputTokens is the floor for max_output_tokens in a Responses request.
-// Very small values may cause upstream API errors, so we enforce a minimum.
-const minMaxOutputTokens = 128
+// Values below this threshold are considered too small (usually set by agents
+// for step-wise continuation) and will be dropped, letting the upstream use
+// its default maximum to avoid fragmented outputs.
+const minMaxOutputTokens = 512

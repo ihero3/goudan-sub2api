@@ -86,11 +86,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       vue(),
-      checker({
-        vueTsc: true
-      }),
+      ...(mode === 'development' ? [checker({ vueTsc: true })] : []),
       injectPublicSettings(backendUrl)
-    ],
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -106,6 +104,9 @@ export default defineConfig(({ mode }) => {
   build: {
     outDir: '../backend/internal/web/dist',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1000,
+    minify: 'esbuild',
+    sourcemap: false,
     rollupOptions: {
       output: {
         /**

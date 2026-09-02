@@ -58,8 +58,8 @@ export async function loadLocaleMessages(locale: LocaleCode): Promise<void> {
 if (typeof window !== 'undefined') {
   ;(window as any).__reloadLocales = async () => {
     loadedLocales.clear()
-    const enMod = await import(`./locales/en?t=${Date.now()}`)
-    const zhMod = await import(`./locales/zh?t=${Date.now()}`)
+    const enMod = await import(`./locales/en.ts?t=${Date.now()}`)
+    const zhMod = await import(`./locales/zh.ts?t=${Date.now()}`)
     i18n.global.setLocaleMessage('en', enMod.default)
     i18n.global.setLocaleMessage('zh', zhMod.default)
     loadedLocales.add('en')
