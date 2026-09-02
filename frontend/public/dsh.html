@@ -85,6 +85,8 @@ body {
 .nav-links a { color: var(--text-1); text-decoration: none; font-size: 14px; padding: 8px 12px; border-radius: 10px; transition: .2s; }
 .nav-links a:hover { color: var(--text-0); background: rgba(30,90,180,.08); }
 .nav-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.nav-link-btn { color: var(--text-1); text-decoration: none; font-size: 14px; font-weight: 600; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: rgba(30,90,180,.04); transition: .2s; }
+.nav-link-btn:hover { color: var(--text-0); background: rgba(30,90,180,.12); border-color: var(--line-strong); }
 .lang-switch { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: rgba(30,90,180,.06); }
 .lang-switch button { border: 0; background: transparent; color: var(--text-1); font-family: inherit; font-weight: 600; font-size: 13px; padding: 5px 11px; border-radius: 7px; cursor: pointer; transition: .2s; }
 .lang-switch button.active { background: var(--blue); color: #fff; box-shadow: 0 0 16px rgba(77,107,254,.5); }
@@ -275,6 +277,8 @@ tr:last-child td { border-bottom: 0; }
       <a href="#start" data-i18n="nav_start">快速开始</a>
     </div>
     <div class="nav-actions">
+      <a href="/home" class="nav-link-btn" data-i18n="nav_home">首页</a>
+      <a href="/admin/models" class="nav-link-btn" data-i18n="nav_models">模型</a>
       <a class="btn" href="https://github.com/976905690/deepseek-harness-desktop/releases/download/v2.0.3/DSH-Desktop-2.0.3-x64-Setup.exe" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg><span data-i18n="nav_download">免费下载</span></a>
     </div>
   </div>
@@ -524,7 +528,7 @@ tr:last-child td { border-bottom: 0; }
 <script>
 const I18N = {
   zh: {
-    nav_feat:"功能", nav_demo:"演示", nav_start:"快速开始", nav_download:"免费下载",
+    nav_home:"首页", nav_models:"模型", nav_feat:"功能", nav_demo:"演示", nav_start:"快速开始", nav_download:"免费下载",
     hero_tag:"Deepseek Harness for Threerouter · AI 文生图 / 文生视频",
     hero_title1:"对话即创作",
     hero_title2:"在对话中生成图片与视频",
@@ -568,7 +572,7 @@ const I18N = {
     legal:"Deepseek Harness for Threerouter 是独立的社区开源项目，与深度求索不存在隶属、合作、授权或背书关系。dsh-image-video 为 MIT 协议开源，不附属于阿里云或火山引擎。使用各服务商 API 前请确认其服务条款。"
   },
   en: {
-    nav_feat:"Features", nav_demo:"Demo", nav_start:"Get Started", nav_download:"Download",
+    nav_home:"Home", nav_models:"Models", nav_feat:"Features", nav_demo:"Demo", nav_start:"Get Started", nav_download:"Download",
     hero_tag:"Deepseek Harness for Threerouter · AI Text-to-Image / Text-to-Video",
     hero_title1:"Create in conversation",
     hero_title2:"Images & videos, right in chat",

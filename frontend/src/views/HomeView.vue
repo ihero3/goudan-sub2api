@@ -76,7 +76,7 @@
 
   <!-- Default Home Page -->
   <div
-    class="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-slate-50ia-bbblu5-50/300/30cyan-505050"
+    class="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-white via-blue-50/30 to-cyan-50/30"
   >
     <!-- Background Decorations -->
     <div class="pointer-events-none absolute inset-0 overflow-hidden">
@@ -106,7 +106,7 @@
  
 
         <!-- Nav Actions -->
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3">
           <!-- Limited Time Banner -->
           <div class="hidden items-center gap-2 rounded-full bg-orange-100 px-4 py-2 sm:flex">
             <svg class="h-4 w-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -119,8 +119,6 @@
           <!-- Deepseek Harness for Threerouter 详情页 -->
           <a
             href="/dsh.html"
-            target="_blank"
-            rel="noopener noreferrer"
             title="Deepseek Harness for Threerouter"
             class="group flex items-center gap-[8px] rounded-lg px-3 py-2 text-sm font-medium text-[var(--ds-harness-fg)] transition-colors hover:bg-gray-100"
           >
@@ -132,7 +130,7 @@
             <span class="inline-flex items-start gap-[5px] min-w-0">
               <span class="shrink-0 inline-flex">
                 <span class="inline-flex items-center rounded-[8px] p-[1px] min-w-0 max-w-full" style="background:linear-gradient(135deg, rgba(0,90,190,0.35) 0%, rgba(0,90,190,0.06) 35%, rgba(0,90,190,0.03) 65%, rgba(0,90,190,0.22) 100%);box-shadow:0 0 14px rgba(7,87,184,0.08)">
-                  <span class="min-w-0 truncate pt-[4px] pb-[3px] rounded-[7px] font-mono text-[11px] font-medium leading-none px-[9px] text-[#0757b8]">Harness</span>
+                  <span class="min-w-0 truncate pt-[4px] pb-[3px] rounded-[7px] font-mono text-[11px] font-medium leading-none px-[9px] text-[#0757b8]">Media</span>
                 </span>
               </span>
             </span>
@@ -150,9 +148,9 @@
           <!-- Login / User Button -->
           <button
             @click="router.push(isAuthenticated ? dashboardPath : '/login')"
-            class="rounded-lg bg-[#0757b8] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-900/10 transition-colors hover:bg-[#064ea8] cursor-pointer"
+            class="shrink-0 rounded-lg bg-[#0757b8] px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-900/10 transition-colors hover:bg-[#064ea8] cursor-pointer"
           >
-            {{ isAuthenticated ? authStore.user?.username : (currentLang === 'zh' ? '登录' : 'Login') }}
+            {{ isAuthenticated ? (authStore.user?.username || (currentLang === 'zh' ? '控制台' : 'Dashboard')) : (currentLang === 'zh' ? '登录' : 'Login') }}
           </button>
         </div>
       </nav>
@@ -1049,8 +1047,9 @@ const homeJsonLd = computed(() => [
       'description': '新用户获赠 $10 免费 Tokens'
     }
   },
+  // 防御：faqPageJsonLd 理论上始终返回对象，但过滤防空值以防 Safari 崩溃
   faqPageJsonLd.value
-])
+].filter(Boolean))
 
 useSEO({
   title: 'ThreeRouter - AI API 统一网关 | DeepSeek/Claude/GPT 多模型管理平台',
