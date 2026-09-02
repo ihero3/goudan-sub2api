@@ -701,3 +701,14 @@ const AdminAPIKeyPrefix = "admin-"
 // SettingKeyAllowUserViewErrorRequests controls whether end users can view
 // their own failed requests on the usage page. Default false (opt-in).
 const SettingKeyAllowUserViewErrorRequests = "allow_user_view_error_requests"
+
+// 邀请注册奖励（美元）。默认 1.0，最大 100.0。
+const (
+	SettingKeyAffiliateRegisterReward = "affiliate_register_reward"
+	AffiliateRegisterRewardDefault    = 1.0
+	AffiliateRegisterRewardMax        = 100.0
+)
+
+// SettingKeyDisableFailedAccountOnFailover 出错后是否在 failover 时禁用失败账号（默认 false）。
+// 置 true 后，账号触发可重试错误时会在 failover 阶段被自动禁用，避免反复失败。
+const SettingKeyDisableFailedAccountOnFailover = "disable_failed_account_on_failover"

@@ -358,7 +358,7 @@ tr:last-child td { border-bottom: 0; }
         </div>
         <div class="tool-body">
           <div class="trow"><dt data-i18n="row_cap">能力</dt><dd data-i18n="tool_img_cap">文本生成图片（文生图）</dd></div>
-          <div class="trow"><dt data-i18n="row_prov">服务商</dt><dd><span class="chip">万象 wanx</span><span class="chip">Seedance2.5</span></dd></div>
+          <div class="trow"><dt data-i18n="row_prov">服务商</dt><dd><span class="chip" data-i18n="prov_wanx">万象 wanx</span><span class="chip">Seedance2.5</span></dd></div>
           <div class="trow"><dt data-i18n="row_exec">执行</dt><dd data-i18n="tool_img_ex">同步或异步（自动适配，纯文本模型照常工作）</dd></div>
           <div class="trow"><dt data-i18n="row_render">渲染</dt><dd data-i18n="tool_img_render">图片经 presentationMeta 内嵌渲染；模型只见文本摘要</dd></div>
         </div>
@@ -370,7 +370,7 @@ tr:last-child td { border-bottom: 0; }
         </div>
         <div class="tool-body">
           <div class="trow"><dt data-i18n="row_cap">能力</dt><dd data-i18n="tool_vid_cap">文本生成短视频（上限 10s）</dd></div>
-          <div class="trow"><dt data-i18n="row_prov">服务商</dt><dd><span class="chip">bxinle（默认）</span><span class="chip">万象 wanx</span><span class="chip">Seedance2.5</span></dd></div>
+          <div class="trow"><dt data-i18n="row_prov">服务商</dt><dd><span class="chip">bxinle（默认）</span><span class="chip" data-i18n="prov_wanx">万象 wanx</span><span class="chip">Seedance2.5</span></dd></div>
           <div class="trow"><dt data-i18n="row_exec">执行</dt><dd data-i18n="tool_vid_ex">始终异步轮询，不阻塞对话</dd></div>
           <div class="trow"><dt data-i18n="row_render">渲染</dt><dd data-i18n="tool_vid_render">本地文件路径 + 源地址；后台轮询任务状态</dd></div>
         </div>
@@ -558,6 +558,7 @@ const I18N = {
     f_docs:"文档", f_guide:"项目说明", f_faq:"帮助文档", f_contact:"联系我们",
     f_dl:"下载", f_win:"Windows x64", f_mac:"macOS Universal", f_rel:"GitHub Releases",
     tbl_dflt:"默认", tbl_adapter_ready:"适配器已实现", tbl_verified:"已验证",
+    prov_wanx:"万象 wanx",
     tbl_bailian:"阿里云百炼", tbl_ark:"火山引擎 Ark",
     tbl_bxinle_notes:"统一 /v1/videos 端点；provider=bxinle 时图片回退到 wanx",
     tbl_wanx_notes:"wanx2.1-t2i-turbo / wan2.2-t2v-plus；视频始终异步",
