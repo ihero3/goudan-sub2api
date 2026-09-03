@@ -400,8 +400,31 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 			if !errors.Is(err, context.Canceled) {
 				scheduleOllamaCloudUsageActivity(s.deferredService, account)
 			}
-			// Ensure the client receives an error response (handlers assume Forward writes on non-failover errors).
 			safeErr := sanitizeUpstreamErrorMessage(err.Error())
+
+			// 网络错误（超时/连接拒绝/连接重置等）：禁用账号并触发故障转移，
+			// 让用户无感知地切换到可用源。客户端取消(context.Canceled)不触发禁用。
+			if !errors.Is(err, context.Canceled) && isNetworkError(err) {
+				disableMsg := "Network error: auto-disabled, requires manual recovery: " + safeErr
+				s.rateLimitService.handleAuthError(ctx, account, disableMsg)
+				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+					Platform:           account.Platform,
+					AccountID:          account.ID,
+					AccountName:        account.Name,
+					UpstreamStatusCode: 0,
+					UpstreamURL:        safeUpstreamURL(upstreamReq.URL.String()),
+					Kind:               "network_error_disable",
+					Message:            safeErr,
+				})
+				logger.LegacyPrintf("service.gateway", "[Forward] Network error, account auto-disabled: Account=%d(%s) err=%s",
+					account.ID, account.Name, safeErr)
+				return nil, &UpstreamFailoverError{
+					StatusCode:   0,
+					ResponseBody: []byte(safeErr),
+				}
+			}
+
+			// 非网络错误或客户端取消：保持原有逻辑
 			setOpsUpstreamError(c, 0, safeErr, "")
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
 				Platform:           account.Platform,

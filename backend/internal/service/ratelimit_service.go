@@ -478,8 +478,20 @@ func (s *RateLimitService) HandleUpstreamError(ctx context.Context, account *Acc
 		)
 		shouldDisable = s.handle403(ctx, account, upstreamMsg, responseBody)
 	case 429:
-		s.handle429(ctx, account, headers, responseBody)
-		shouldDisable = false
+		// Spark 影子：限流状态 100% 由 QueryUsage 驱动，保持原有冷却逻辑，不在此处永久禁用。
+		if account.IsShadow() {
+			s.handle429(ctx, account, headers, responseBody)
+			shouldDisable = false
+			break
+		}
+		// 429 限流：直接禁用 channel，触发故障转移切换到可用源，让用户无感知。
+		// 需管理员在后台核实限流已解除后手动恢复。
+		msg := "Rate limit exceeded (429): auto-disabled, requires manual recovery"
+		if upstreamMsg != "" {
+			msg = "Rate limit exceeded (429): " + upstreamMsg
+		}
+		s.handleAuthError(ctx, account, msg)
+		shouldDisable = true
 	case 529:
 		s.handle529(ctx, account)
 		shouldDisable = false

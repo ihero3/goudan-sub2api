@@ -27,7 +27,10 @@ func getBoundErrorPassthroughService(c *gin.Context) *ErrorPassthroughService {
 	return svc
 }
 
-// applyErrorPassthroughRule 按规则改写错误响应；未命中时返回默认响应参数。
+// applyErrorPassthroughRule 按规则决定是否对客户端响应使用透传状态码。
+// 仅保留状态码映射能力(部分客户端 SDK 需要特定 HTTP 状态码);
+// message 一律由调用方使用平台统一文案(MapUpstreamErrorToClient),不透传上游原始错误。
+// 上游完整错误通过 OpsUpstreamErrorEvent 记录给管理员。
 func applyErrorPassthroughRule(
 	c *gin.Context,
 	platform string,
@@ -56,17 +59,12 @@ func applyErrorPassthroughRule(
 		status = *rule.ResponseCode
 	}
 
-	errMsg = ExtractUpstreamErrorMessage(responseBody)
-	if !rule.PassthroughBody && rule.CustomMessage != nil {
-		errMsg = *rule.CustomMessage
-	}
-
 	// 命中 skip_monitoring 时在 context 中标记，供 ops_error_logger 跳过记录。
 	if rule.SkipMonitoring {
 		c.Set(OpsSkipPassthroughKey, true)
 	}
 
-	// 与现有 failover 场景保持一致：命中规则时统一返回 upstream_error。
+	// 命中规则:状态码映射保留,但 message 不再从上游提取,统一由调用方使用平台文案。
 	errType = "upstream_error"
 	return status, errType, errMsg, true
 }

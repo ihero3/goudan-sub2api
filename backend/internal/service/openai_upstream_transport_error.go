@@ -129,8 +129,16 @@ func (s *OpenAIGatewayService) handleOpenAIUpstreamTransportError(ctx context.Co
 		scheduleOllamaCloudUsageActivity(s.deferredService, account)
 	}
 
-	if classifyOpenAITransportError(err).Persistent {
-		s.tempUnscheduleOpenAITransportError(ctx, account, safeErr)
+	// 网络错误（超时/连接拒绝/连接重置等）或持久性传输故障（DNS失败/代理认证失败）：
+	// 永久禁用账号，需管理员核实后手动恢复。原逻辑为10分钟临时不可调度，按用户要求改为直接禁用。
+	if isNetworkError(err) || classifyOpenAITransportError(err).Persistent {
+		disableMsg := "Network error: auto-disabled, requires manual recovery: " + safeErr
+		if s.rateLimitService != nil {
+			s.rateLimitService.handleAuthError(ctx, account, disableMsg)
+		} else {
+			// fallback: 临时不可调度
+			s.tempUnscheduleOpenAITransportError(ctx, account, safeErr)
+		}
 	}
 
 	return &UpstreamFailoverError{

@@ -1879,26 +1879,24 @@ func (h *GatewayHandler) handleFailoverExhausted(c *gin.Context, failoverErr *se
 		return
 	}
 
-	// 先检查透传规则
+	// 故障转移耗尽后命中透传规则:保留状态码映射(部分客户端 SDK 需要),
+	// 但 message 一律使用平台统一文案,不透传上游原始错误给用户。
+	// 上游完整错误仍通过 SetOpsUpstreamError 记录给管理员。
 	if h.errorPassthroughService != nil && len(responseBody) > 0 {
 		if rule := h.errorPassthroughService.MatchRule(platform, statusCode, responseBody); rule != nil {
-			// 确定响应状态码
 			respCode := statusCode
 			if !rule.PassthroughCode && rule.ResponseCode != nil {
 				respCode = *rule.ResponseCode
-			}
-
-			// 确定响应消息
-			msg := service.ExtractUpstreamErrorMessage(responseBody)
-			if !rule.PassthroughBody && rule.CustomMessage != nil {
-				msg = *rule.CustomMessage
 			}
 
 			if rule.SkipMonitoring {
 				c.Set(service.OpsSkipPassthroughKey, true)
 			}
 
-			h.handleStreamingAwareError(c, respCode, "upstream_error", msg, streamStarted)
+			upstreamMsg := service.ExtractUpstreamErrorMessage(responseBody)
+			service.SetOpsUpstreamError(c, statusCode, upstreamMsg, "")
+			_, platformErrType, platformErrMsg := service.MapUpstreamErrorToClient(statusCode)
+			h.handleStreamingAwareError(c, respCode, platformErrType, platformErrMsg, streamStarted)
 			return
 		}
 	}
@@ -1920,20 +1918,7 @@ func (h *GatewayHandler) handleFailoverExhaustedSimple(c *gin.Context, statusCod
 }
 
 func (h *GatewayHandler) mapUpstreamError(statusCode int) (int, string, string) {
-	switch statusCode {
-	case 401:
-		return http.StatusBadGateway, "upstream_error", "Upstream authentication failed, please contact administrator"
-	case 403:
-		return http.StatusBadGateway, "upstream_error", "Upstream access forbidden, please contact administrator"
-	case 429:
-		return http.StatusTooManyRequests, "rate_limit_error", "Upstream rate limit exceeded, please retry later"
-	case 529:
-		return http.StatusServiceUnavailable, "overloaded_error", "Upstream service overloaded, please retry later"
-	case 500, 502, 503, 504:
-		return http.StatusBadGateway, "upstream_error", "Upstream service temporarily unavailable"
-	default:
-		return http.StatusBadGateway, "upstream_error", "Upstream request failed"
-	}
+	return service.MapUpstreamErrorToClient(statusCode)
 }
 
 // handleStreamingAwareError handles errors that may occur after streaming has started

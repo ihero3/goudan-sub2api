@@ -381,5 +381,8 @@ func (h *GatewayHandler) handleResponsesFailoverExhausted(c *gin.Context, lastEr
 		h.responsesErrorResponse(c, http.StatusBadGateway, "upstream_error", service.OpenAISilentRefusalClientMessage())
 		return
 	}
-	h.responsesErrorResponse(c, statusCode, "server_error", "All available accounts exhausted")
+	// 故障转移耗尽:用平台统一状态码映射+文案,不透传上游原始状态码细节给用户。
+	// 上游完整错误通过 OpsUpstreamErrorEvent 记录给管理员。
+	mappedStatus, mappedErrType, mappedErrMsg := service.MapUpstreamErrorToClient(statusCode)
+	h.responsesErrorResponse(c, mappedStatus, mappedErrType, mappedErrMsg)
 }

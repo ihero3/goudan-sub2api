@@ -279,6 +279,30 @@ func sanitizeStreamError(err error) string {
 	return "upstream connection error"
 }
 
+// isNetworkError 判断是否为应触发自动禁用的网络错误。
+// 包括：超时(context.DeadlineExceeded)、连接拒绝(ECONNREFUSED)、
+// 连接重置(ECONNRESET)、连接超时(ETIMEDOUT)、以及通用 *net.OpError。
+// 注意：context.Canceled（客户端主动取消）应在调用前排除，不在此函数判断。
+func isNetworkError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	if errors.Is(err, syscall.ECONNREFUSED) ||
+		errors.Is(err, syscall.ECONNRESET) ||
+		errors.Is(err, syscall.ETIMEDOUT) ||
+		errors.Is(err, syscall.ECONNABORTED) {
+		return true
+	}
+	var netErr *net.OpError
+	if errors.As(err, &netErr) {
+		return true
+	}
+	return false
+}
+
 // ExtractUpstreamErrorMessage 从上游响应体中提取错误消息
 // 支持 Claude 风格的错误格式：{"type":"error","error":{"type":"...","message":"..."}}
 func ExtractUpstreamErrorMessage(body []byte) string {
@@ -434,8 +458,10 @@ func (s *GatewayService) handleErrorResponse(ctx context.Context, resp *http.Res
 		)
 	}
 
-	// 非 failover 错误也支持错误透传规则匹配。
-	if status, errType, errMsg, matched := applyErrorPassthroughRule(
+	// 错误透传规则：保留状态码映射(部分客户端 SDK 需要特定 HTTP 状态码),
+	// 但 message 一律使用平台统一文案,不透传上游原始错误信息给用户。
+	// 上游完整错误仍通过 OpsUpstreamErrorEvent 记录给管理员。
+	if status, _, _, matched := applyErrorPassthroughRule(
 		c,
 		account.Platform,
 		resp.StatusCode,
@@ -444,64 +470,19 @@ func (s *GatewayService) handleErrorResponse(ctx context.Context, resp *http.Res
 		"upstream_error",
 		"Upstream request failed",
 	); matched {
+		_, platformErrType, platformErrMsg := MapUpstreamErrorToClient(resp.StatusCode)
 		c.JSON(status, gin.H{
 			"type": "error",
 			"error": gin.H{
-				"type":    errType,
-				"message": errMsg,
+				"type":    platformErrType,
+				"message": platformErrMsg,
 			},
 		})
-
-		summary := upstreamMsg
-		if summary == "" {
-			summary = errMsg
-		}
-		if summary == "" {
-			return nil, fmt.Errorf("upstream error: %d (passthrough rule matched)", resp.StatusCode)
-		}
-		return nil, fmt.Errorf("upstream error: %d (passthrough rule matched) message=%s", resp.StatusCode, summary)
+		return nil, fmt.Errorf("upstream error: %d (passthrough rule matched, client message masked)", resp.StatusCode)
 	}
 
-	// 根据状态码返回适当的自定义错误响应（不透传上游详细信息）
-	var errType, errMsg string
-	var statusCode int
-
-	switch resp.StatusCode {
-	case 400:
-		c.Data(http.StatusBadRequest, "application/json", body)
-		summary := upstreamMsg
-		if summary == "" {
-			summary = truncateForLog(body, 512)
-		}
-		if summary == "" {
-			return nil, fmt.Errorf("upstream error: %d", resp.StatusCode)
-		}
-		return nil, fmt.Errorf("upstream error: %d message=%s", resp.StatusCode, summary)
-	case 401:
-		statusCode = http.StatusBadGateway
-		errType = "upstream_error"
-		errMsg = "Upstream authentication failed, please contact administrator"
-	case 403:
-		statusCode = http.StatusBadGateway
-		errType = "upstream_error"
-		errMsg = "Upstream access forbidden, please contact administrator"
-	case 429:
-		statusCode = http.StatusTooManyRequests
-		errType = "rate_limit_error"
-		errMsg = "Upstream rate limit exceeded, please retry later"
-	case 529:
-		statusCode = http.StatusServiceUnavailable
-		errType = "overloaded_error"
-		errMsg = "Upstream service overloaded, please retry later"
-	case 500, 502, 503, 504:
-		statusCode = http.StatusBadGateway
-		errType = "upstream_error"
-		errMsg = "Upstream service temporarily unavailable"
-	default:
-		statusCode = http.StatusBadGateway
-		errType = "upstream_error"
-		errMsg = "Upstream request failed"
-	}
+	// 根据状态码返回平台统一错误响应（不透传上游详细信息）
+	statusCode, errType, errMsg := MapUpstreamErrorToClient(resp.StatusCode)
 
 	// 返回自定义错误响应
 	c.JSON(statusCode, gin.H{
@@ -516,6 +497,28 @@ func (s *GatewayService) handleErrorResponse(ctx context.Context, resp *http.Res
 		return nil, fmt.Errorf("upstream error: %d", resp.StatusCode)
 	}
 	return nil, fmt.Errorf("upstream error: %d message=%s", resp.StatusCode, upstreamMsg)
+}
+
+// MapUpstreamErrorToClient 将上游 HTTP 状态码映射为平台返回给用户的统一错误文案。
+// 统一入口:不透传上游原始错误信息给用户,仅返回平台侧通用提示。
+// 上游完整错误通过 OpsUpstreamErrorEvent 记录给管理员。
+func MapUpstreamErrorToClient(statusCode int) (int, string, string) {
+	switch statusCode {
+	case 400:
+		return http.StatusBadRequest, "invalid_request_error", "Request format invalid, please check your request parameters"
+	case 401:
+		return http.StatusBadGateway, "upstream_error", "Upstream authentication failed, please contact administrator"
+	case 403:
+		return http.StatusBadGateway, "upstream_error", "Upstream access forbidden, please contact administrator"
+	case 429:
+		return http.StatusTooManyRequests, "rate_limit_error", "Upstream rate limit exceeded, please retry later"
+	case 529:
+		return http.StatusServiceUnavailable, "overloaded_error", "Upstream service overloaded, please retry later"
+	case 500, 502, 503, 504:
+		return http.StatusBadGateway, "upstream_error", "Upstream service temporarily unavailable"
+	default:
+		return http.StatusBadGateway, "upstream_error", "Upstream request failed"
+	}
 }
 
 func (s *GatewayService) handleRetryExhaustedSideEffects(ctx context.Context, resp *http.Response, account *Account) {
@@ -598,7 +601,9 @@ func (s *GatewayService) handleRetryExhaustedError(ctx context.Context, resp *ht
 		)
 	}
 
-	if status, errType, errMsg, matched := applyErrorPassthroughRule(
+	// 故障转移耗尽后仍命中透传规则:保留状态码映射,但 message 用平台统一文案,
+	// 不透传上游原始错误给用户。上游完整错误已通过 OpsUpstreamErrorEvent 记录给管理员。
+	if status, _, _, matched := applyErrorPassthroughRule(
 		c,
 		account.Platform,
 		resp.StatusCode,
@@ -607,22 +612,15 @@ func (s *GatewayService) handleRetryExhaustedError(ctx context.Context, resp *ht
 		"upstream_error",
 		"Upstream request failed after retries",
 	); matched {
+		_, platformErrType, platformErrMsg := MapUpstreamErrorToClient(resp.StatusCode)
 		c.JSON(status, gin.H{
 			"type": "error",
 			"error": gin.H{
-				"type":    errType,
-				"message": errMsg,
+				"type":    platformErrType,
+				"message": platformErrMsg,
 			},
 		})
-
-		summary := upstreamMsg
-		if summary == "" {
-			summary = errMsg
-		}
-		if summary == "" {
-			return nil, fmt.Errorf("upstream error: %d (retries exhausted, passthrough rule matched)", resp.StatusCode)
-		}
-		return nil, fmt.Errorf("upstream error: %d (retries exhausted, passthrough rule matched) message=%s", resp.StatusCode, summary)
+		return nil, fmt.Errorf("upstream error: %d (retries exhausted, passthrough rule matched, client message masked)", resp.StatusCode)
 	}
 
 	// 返回统一的重试耗尽错误响应
