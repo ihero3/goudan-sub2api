@@ -1166,6 +1166,9 @@ var (
 		{Name: "profit_safety_buffer", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(10,4)"}},
 		{Name: "long_context_pricing_enabled", Type: field.TypeBool, Default: true},
 		{Name: "model_pricing", Type: field.TypeBytes, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
+		{Name: "force_openai_fast", Type: field.TypeBool, Default: false},
+		{Name: "free_openai_fast", Type: field.TypeBool, Default: false},
+		{Name: "max_reasoning_effort_over_limit", Type: field.TypeString, Size: 20, Default: ""},
 	}
 	// GroupsTable holds the schema information for the "groups" table.
 	GroupsTable = &schema.Table{
@@ -2478,6 +2481,7 @@ var (
 		{Name: "total_recharged", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
 		{Name: "frozen_balance", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
 		{Name: "rpm_limit", Type: field.TypeInt, Default: 0},
+		{Name: "restrict_public_groups", Type: field.TypeBool, Default: false},
 	}
 	// UsersTable holds the schema information for the "users" table.
 	UsersTable = &schema.Table{

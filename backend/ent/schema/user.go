@@ -115,6 +115,10 @@ func (User) Fields() []ent.Field {
 		// 用户级每分钟请求数上限（0 = 不限制）。仅当所在分组未设置 rpm_limit 时作为兜底生效。
 		field.Int("rpm_limit").
 			Default(0),
+
+		// restrict_public_groups: 限制用户访问公共分组（仅允许分配的分组）
+		field.Bool("restrict_public_groups").
+			Default(false),
 	}
 }
 

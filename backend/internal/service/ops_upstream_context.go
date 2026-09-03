@@ -355,6 +355,26 @@ func setOpsUpstreamError(c *gin.Context, upstreamStatusCode int, upstreamMessage
 	}
 }
 
+// SetOpsFailoverNextAccount backfills the next account (chosen after a failover)
+// onto the last upstream error event in the context, forming an A→B pairing.
+// If there are no events (first selection), this is a no-op.
+func SetOpsFailoverNextAccount(c *gin.Context, accountID int64, accountName string) {
+	if c == nil {
+		return
+	}
+	value, ok := c.Get(OpsUpstreamErrorsKey)
+	if !ok {
+		return
+	}
+	events, ok := value.([]*OpsUpstreamErrorEvent)
+	if !ok || len(events) == 0 {
+		return
+	}
+	last := events[len(events)-1]
+	last.NextAccountID = accountID
+	last.NextAccountName = strings.TrimSpace(accountName)
+}
+
 // OpsUpstreamErrorEvent describes one upstream error attempt during a single gateway request.
 // It is stored in ops_error_logs.upstream_errors as a JSON array.
 type OpsUpstreamErrorEvent struct {
@@ -368,6 +388,11 @@ type OpsUpstreamErrorEvent struct {
 	Platform    string `json:"platform,omitempty"`
 	AccountID   int64  `json:"account_id,omitempty"`
 	AccountName string `json:"account_name,omitempty"`
+
+	// NextAccountID/NextAccountName record the account chosen after a failover,
+	// forming an A→B pairing for the previous error event.
+	NextAccountID   int64  `json:"next_account_id,omitempty"`
+	NextAccountName string `json:"next_account_name,omitempty"`
 
 	// Proxy attribution is an immutable, credential-free snapshot of the route
 	// used by this attempt. ProxyID is null for direct and unknown routes;

@@ -140,6 +140,12 @@ const (
 	FieldLongContextPricingEnabled = "long_context_pricing_enabled"
 	// FieldModelPricing holds the string denoting the model_pricing field in the database.
 	FieldModelPricing = "model_pricing"
+	// FieldForceOpenaiFast holds the string denoting the force_openai_fast field in the database.
+	FieldForceOpenaiFast = "force_openai_fast"
+	// FieldFreeOpenaiFast holds the string denoting the free_openai_fast field in the database.
+	FieldFreeOpenaiFast = "free_openai_fast"
+	// FieldMaxReasoningEffortOverLimit holds the string denoting the max_reasoning_effort_over_limit field in the database.
+	FieldMaxReasoningEffortOverLimit = "max_reasoning_effort_over_limit"
 	// EdgeAPIKeys holds the string denoting the api_keys edge name in mutations.
 	EdgeAPIKeys = "api_keys"
 	// EdgeRedeemCodes holds the string denoting the redeem_codes edge name in mutations.
@@ -277,6 +283,9 @@ var Columns = []string{
 	FieldProfitSafetyBuffer,
 	FieldLongContextPricingEnabled,
 	FieldModelPricing,
+	FieldForceOpenaiFast,
+	FieldFreeOpenaiFast,
+	FieldMaxReasoningEffortOverLimit,
 }
 
 var (
@@ -404,6 +413,14 @@ var (
 	DefaultProfitSafetyBuffer float64
 	// DefaultLongContextPricingEnabled holds the default value on creation for the "long_context_pricing_enabled" field.
 	DefaultLongContextPricingEnabled bool
+	// DefaultForceOpenaiFast holds the default value on creation for the "force_openai_fast" field.
+	DefaultForceOpenaiFast bool
+	// DefaultFreeOpenaiFast holds the default value on creation for the "free_openai_fast" field.
+	DefaultFreeOpenaiFast bool
+	// DefaultMaxReasoningEffortOverLimit holds the default value on creation for the "max_reasoning_effort_over_limit" field.
+	DefaultMaxReasoningEffortOverLimit string
+	// MaxReasoningEffortOverLimitValidator is a validator for the "max_reasoning_effort_over_limit" field. It is called by the builders before save.
+	MaxReasoningEffortOverLimitValidator func(string) error
 )
 
 // OrderOption defines the ordering options for the Group queries.
@@ -687,6 +704,21 @@ func ByProfitSafetyBuffer(opts ...sql.OrderTermOption) OrderOption {
 // ByLongContextPricingEnabled orders the results by the long_context_pricing_enabled field.
 func ByLongContextPricingEnabled(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLongContextPricingEnabled, opts...).ToFunc()
+}
+
+// ByForceOpenaiFast orders the results by the force_openai_fast field.
+func ByForceOpenaiFast(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldForceOpenaiFast, opts...).ToFunc()
+}
+
+// ByFreeOpenaiFast orders the results by the free_openai_fast field.
+func ByFreeOpenaiFast(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFreeOpenaiFast, opts...).ToFunc()
+}
+
+// ByMaxReasoningEffortOverLimit orders the results by the max_reasoning_effort_over_limit field.
+func ByMaxReasoningEffortOverLimit(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMaxReasoningEffortOverLimit, opts...).ToFunc()
 }
 
 // ByAPIKeysCount orders the results by api_keys count.

@@ -104,6 +104,23 @@ type Config struct {
 	BatchImage              BatchImageConfig              `mapstructure:"batch_image"`
 	ImageStorage            ImageStorageConfig            `mapstructure:"image_storage"`
 	Plugins                 PluginConfig                  `mapstructure:"plugins"`
+	Compliance              ComplianceConfig              `mapstructure:"compliance"`
+}
+
+// ComplianceConfig 合规相关配置：部署区域、组织信息、GeoIP 设置。
+type ComplianceConfig struct {
+	DeploymentRegion string         `mapstructure:"deployment_region"`
+	OrganizationName string         `mapstructure:"organization_name"`
+	LegalEntity      string         `mapstructure:"legal_entity"`
+	DPOContact       string         `mapstructure:"dpo_contact"`
+	GeoIP            GeoIPConfig    `mapstructure:"geoip"`
+}
+
+// GeoIPConfig GeoIP 数据库与降级策略配置。
+type GeoIPConfig struct {
+	Enabled         bool   `mapstructure:"enabled"`
+	DatabasePath    string `mapstructure:"database_path"`
+	FallbackEnabled bool   `mapstructure:"fallback_enabled"`
 }
 
 // PluginConfig 控制管理员手动上传的本地进程插件。

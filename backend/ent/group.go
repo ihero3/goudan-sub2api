@@ -143,6 +143,12 @@ type Group struct {
 	LongContextPricingEnabled bool `json:"long_context_pricing_enabled,omitempty"`
 	// 分组级模型定价覆盖 JSON，优先级高于渠道/内置定价
 	ModelPricing []byte `json:"model_pricing,omitempty"`
+	// 是否强制使用 OpenAI Fast 通道
+	ForceOpenaiFast bool `json:"force_openai_fast,omitempty"`
+	// OpenAI Fast 通道是否免费
+	FreeOpenaiFast bool `json:"free_openai_fast,omitempty"`
+	// 推理努力超过上限时的处理策略：downgrade/deny/空=block
+	MaxReasoningEffortOverLimit string `json:"max_reasoning_effort_over_limit,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the GroupQuery when eager-loading is set.
 	Edges        GroupEdges `json:"edges"`
@@ -251,13 +257,13 @@ func (*Group) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case group.FieldVideoModelPrices, group.FieldModelRouting, group.FieldSupportedModelScopes, group.FieldMessagesDispatchModelConfig, group.FieldModelsListConfig, group.FieldReasoningEffortMappings, group.FieldModelPricing:
 			values[i] = new([]byte)
-		case group.FieldIsExclusive, group.FieldAllowImageGeneration, group.FieldImageRateIndependent, group.FieldAllowBatchImageGeneration, group.FieldVideoRateIndependent, group.FieldClaudeCodeOnly, group.FieldModelRoutingEnabled, group.FieldMcpXMLInject, group.FieldAllowMessagesDispatch, group.FieldRequireOauthOnly, group.FieldRequirePrivacySet, group.FieldAllowLive, group.FieldPeakRateEnabled, group.FieldProfitControlEnabled, group.FieldLongContextPricingEnabled:
+		case group.FieldIsExclusive, group.FieldAllowImageGeneration, group.FieldImageRateIndependent, group.FieldAllowBatchImageGeneration, group.FieldVideoRateIndependent, group.FieldClaudeCodeOnly, group.FieldModelRoutingEnabled, group.FieldMcpXMLInject, group.FieldAllowMessagesDispatch, group.FieldRequireOauthOnly, group.FieldRequirePrivacySet, group.FieldAllowLive, group.FieldPeakRateEnabled, group.FieldProfitControlEnabled, group.FieldLongContextPricingEnabled, group.FieldForceOpenaiFast, group.FieldFreeOpenaiFast:
 			values[i] = new(sql.NullBool)
 		case group.FieldRateMultiplier, group.FieldDailyLimitUsd, group.FieldWeeklyLimitUsd, group.FieldMonthlyLimitUsd, group.FieldImageRateMultiplier, group.FieldImagePrice1k, group.FieldImagePrice2k, group.FieldImagePrice4k, group.FieldBatchImageDiscountMultiplier, group.FieldBatchImageHoldMultiplier, group.FieldVideoRateMultiplier, group.FieldVideoPrice480p, group.FieldVideoPrice720p, group.FieldVideoPrice1080p, group.FieldWebSearchPricePerCall, group.FieldSearchPricePer1k, group.FieldAudioRealtimePricePerMin, group.FieldAudioTtsPricePerMillionChars, group.FieldAudioSttPricePerHour, group.FieldPeakRateMultiplier, group.FieldProfitMinMargin, group.FieldProfitSafetyBuffer:
 			values[i] = new(sql.NullFloat64)
 		case group.FieldID, group.FieldDefaultValidityDays, group.FieldFallbackGroupID, group.FieldFallbackGroupIDOnInvalidRequest, group.FieldSortOrder, group.FieldRpmLimit:
 			values[i] = new(sql.NullInt64)
-		case group.FieldName, group.FieldDescription, group.FieldStatus, group.FieldPlatform, group.FieldSubscriptionType, group.FieldDuplicateOperationID, group.FieldDefaultMappedModel, group.FieldPeakStart, group.FieldPeakEnd, group.FieldMaxReasoningEffort:
+		case group.FieldName, group.FieldDescription, group.FieldStatus, group.FieldPlatform, group.FieldSubscriptionType, group.FieldDuplicateOperationID, group.FieldDefaultMappedModel, group.FieldPeakStart, group.FieldPeakEnd, group.FieldMaxReasoningEffort, group.FieldMaxReasoningEffortOverLimit:
 			values[i] = new(sql.NullString)
 		case group.FieldCreatedAt, group.FieldUpdatedAt, group.FieldDeletedAt:
 			values[i] = new(sql.NullTime)
@@ -685,6 +691,24 @@ func (_m *Group) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				_m.ModelPricing = *value
 			}
+		case group.FieldForceOpenaiFast:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field force_openai_fast", values[i])
+			} else if value.Valid {
+				_m.ForceOpenaiFast = value.Bool
+			}
+		case group.FieldFreeOpenaiFast:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field free_openai_fast", values[i])
+			} else if value.Valid {
+				_m.FreeOpenaiFast = value.Bool
+			}
+		case group.FieldMaxReasoningEffortOverLimit:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field max_reasoning_effort_over_limit", values[i])
+			} else if value.Valid {
+				_m.MaxReasoningEffortOverLimit = value.String
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -984,6 +1008,15 @@ func (_m *Group) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("model_pricing=")
 	builder.WriteString(fmt.Sprintf("%v", _m.ModelPricing))
+	builder.WriteString(", ")
+	builder.WriteString("force_openai_fast=")
+	builder.WriteString(fmt.Sprintf("%v", _m.ForceOpenaiFast))
+	builder.WriteString(", ")
+	builder.WriteString("free_openai_fast=")
+	builder.WriteString(fmt.Sprintf("%v", _m.FreeOpenaiFast))
+	builder.WriteString(", ")
+	builder.WriteString("max_reasoning_effort_over_limit=")
+	builder.WriteString(_m.MaxReasoningEffortOverLimit)
 	builder.WriteByte(')')
 	return builder.String()
 }

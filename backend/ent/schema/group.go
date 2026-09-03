@@ -287,6 +287,18 @@ func (Group) Fields() []ent.Field {
 			Optional().
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
 			Comment("分组级模型定价覆盖 JSON，优先级高于渠道/内置定价"),
+
+		// OpenAI Fast 通道策略
+		field.Bool("force_openai_fast").
+			Default(false).
+			Comment("是否强制使用 OpenAI Fast 通道"),
+		field.Bool("free_openai_fast").
+			Default(false).
+			Comment("OpenAI Fast 通道是否免费"),
+		field.String("max_reasoning_effort_over_limit").
+			MaxLen(20).
+			Default("").
+			Comment("推理努力超过上限时的处理策略：downgrade/deny/空=block"),
 	}
 }
 
