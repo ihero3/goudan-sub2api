@@ -39,7 +39,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 			if block.Thinking != "" {
 				outputs = append(outputs, ResponsesOutput{
 					Type: "reasoning",
-					ID:   generateItemID(),
+					ID:   generateAnthropicItemID(),
 					Summary: []ResponsesSummary{{
 						Type: "summary_text",
 						Text: block.Thinking,
@@ -60,7 +60,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 			}
 			outputs = append(outputs, ResponsesOutput{
 				Type:      "function_call",
-				ID:        generateItemID(),
+					ID:        generateAnthropicItemID(),
 				CallID:    toResponsesCallID(block.ID),
 				Name:      block.Name,
 				Arguments: args,
@@ -73,7 +73,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 	if len(msgParts) > 0 {
 		outputs = append(outputs, ResponsesOutput{
 			Type:    "message",
-			ID:      generateItemID(),
+				ID:      generateAnthropicItemID(),
 			Role:    "assistant",
 			Content: msgParts,
 			Status:  "completed",
@@ -83,7 +83,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 	if len(outputs) == 0 {
 		outputs = append(outputs, ResponsesOutput{
 			Type:    "message",
-			ID:      generateItemID(),
+			ID:      generateAnthropicItemID(),
 			Role:    "assistant",
 			Content: []ResponsesContentPart{{Type: "output_text", Text: ""}},
 			Status:  "completed",
@@ -290,7 +290,7 @@ func anthToResHandleContentBlockStart(evt *AnthropicStreamEvent, state *Anthropi
 		// 会稳定产生 text → thinking 这个顺序。
 		events = append(events, closeCurrentResponsesItem(state)...)
 
-		state.CurrentItemID = generateItemID()
+				state.CurrentItemID = generateAnthropicItemID()
 		state.CurrentItemType = "reasoning"
 		state.ContentIndex = 0
 
@@ -310,7 +310,7 @@ func anthToResHandleContentBlockStart(evt *AnthropicStreamEvent, state *Anthropi
 			// 的「开新 item 前先关旧的」保持同一条不变式，而不是留一个仅 text 例外。
 			events = append(events, closeCurrentResponsesItem(state)...)
 
-			state.CurrentItemID = generateItemID()
+				state.CurrentItemID = generateAnthropicItemID()
 			state.CurrentItemType = "message"
 			state.ContentIndex = 0
 
@@ -345,7 +345,7 @@ func anthToResHandleContentBlockStart(evt *AnthropicStreamEvent, state *Anthropi
 		// Close previous item if any
 		events = append(events, closeCurrentResponsesItem(state)...)
 
-		state.CurrentItemID = generateItemID()
+				state.CurrentItemID = generateAnthropicItemID()
 		state.CurrentItemType = "function_call"
 		state.CurrentCallID = toResponsesCallID(evt.ContentBlock.ID)
 		state.CurrentName = evt.ContentBlock.Name
@@ -655,7 +655,7 @@ func generateResponsesID() string {
 	return "resp_" + hex.EncodeToString(b)
 }
 
-func generateItemID() string {
+func generateAnthropicItemID() string {
 	b := make([]byte, 12)
 	_, _ = rand.Read(b)
 	return "item_" + hex.EncodeToString(b)
