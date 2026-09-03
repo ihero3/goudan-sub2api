@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, RouterLink } from 'vue-router'
 import DOMPurify from 'dompurify'
@@ -94,9 +94,24 @@ import { formatDateTime } from '@/utils/format'
 import type { UserBlog } from '@/types'
 import PublicSiteHeader from '@/components/layout/PublicSiteHeader.vue'
 import PublicSiteFooter from '@/components/layout/PublicSiteFooter.vue'
+import { setLocale, getLocale } from '@/i18n'
 
 const { t } = useI18n()
 const route = useRoute()
+
+// 博客页面强制英文界面
+let savedLocale: string | null = null
+onMounted(() => {
+  savedLocale = getLocale()
+  if (savedLocale !== 'en') {
+    setLocale('en')
+  }
+})
+onBeforeUnmount(() => {
+  if (savedLocale && savedLocale !== 'en') {
+    setLocale(savedLocale)
+  }
+})
 
 const blog = ref<UserBlog | null>(null)
 const loading = ref(false)
