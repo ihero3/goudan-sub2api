@@ -68,8 +68,6 @@
 
       <div class="card p-6">
         <div class="flex flex-wrap items-end justify-between gap-4">
-          <!-- Row 1: Core filters -->
-          <div class="flex flex-wrap items-end gap-4">
           <div v-if="activeTab === 'errors'" class="flex flex-1 flex-wrap items-end gap-4">
             <div class="w-full sm:w-auto sm:min-w-[220px]">
               <label class="input-label">{{ t('usage.errors.keyName') }}</label>
@@ -113,10 +111,10 @@
               <label class="input-label">{{ t('usage.type') }}</label>
               <Select v-model="filters.request_type" :options="requestTypeOptions" @change="applyFilters" />
             </div>
-          </div>
-
-          <!-- Row 2: Billing & Department filters -->
-          <div class="flex flex-wrap items-end gap-4">
+            <div class="w-full sm:w-auto sm:min-w-[180px]">
+              <label class="input-label">{{ t('usage.compactionFilter') }}</label>
+              <Select v-model="filters.native_compaction_v2" :options="compactionOptions" @change="applyFilters" />
+            </div>
             <div class="w-full sm:w-auto sm:min-w-[200px]">
               <label class="input-label">{{ t('admin.usage.billingType') }}</label>
               <Select v-model="filters.billing_type" :options="billingTypeOptions" @change="applyFilters" />
@@ -124,28 +122,6 @@
             <div class="w-full sm:w-auto sm:min-w-[200px]">
               <label class="input-label">{{ t('admin.usage.billingMode') }}</label>
               <Select v-model="filters.billing_mode" :options="billingModeOptions" @change="applyFilters" />
-            </div>
-            <div class="w-full sm:w-auto sm:min-w-[180px]">
-              <label class="input-label">{{ t('admin.usage.department') }}</label>
-              <DepartmentTreeSelect
-                :model-value="filters.department_id ?? null"
-                :departments="departmentTree"
-                :placeholder="t('keys.selectDepartment')"
-                :empty-text="t('keys.noDepartments')"
-                :allow-clear="true"
-                :clear-label="t('keys.noDepartment')"
-                @update:model-value="onDepartmentChange"
-              />
-            </div>
-            <div class="w-full sm:w-auto sm:min-w-[180px]">
-              <label class="input-label">{{ t('admin.usage.consumer') }}</label>
-              <Select
-                v-model="filters.consumer_id"
-                :options="consumerOptions"
-                :placeholder="t('keys.selectConsumer')"
-                :disabled="filters.department_id === null || consumers.length === 0"
-                @change="applyFilters"
-              />
             </div>
           </div>
 
@@ -159,6 +135,7 @@
             <div class="relative" ref="columnDropdownRef">
               <button
                 type="button"
+                data-testid="usage-column-settings"
                 @click="showColumnDropdown = !showColumnDropdown"
                 class="btn btn-secondary px-2 md:px-3"
                 :title="t('admin.users.columnSettings')"
@@ -174,6 +151,7 @@
                   v-for="col in currentToggleableColumns"
                   :key="col.key"
                   type="button"
+                  :data-testid="`usage-column-toggle-${col.key}`"
                   @click="toggleCurrentColumn(col.key)"
                   class="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-700"
                 >
@@ -187,7 +165,6 @@
             </button>
           </div>
         </div>
-      </div>
       </div>
 
       <div v-if="errorViewEnabled" class="flex gap-2 border-b border-gray-200 dark:border-dark-700">
@@ -245,8 +222,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
-import { keysAPI, usageAPI, userGroupsAPI, teamAPI } from '@/api'
-import { useTeamContext } from '@/composables/useTeamContext'
+import { keysAPI, usageAPI, userGroupsAPI } from '@/api'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Pagination from '@/components/common/Pagination.vue'
 import Select, { type SelectOption } from '@/components/common/Select.vue'
@@ -259,7 +235,6 @@ import EndpointDistributionChart from '@/components/charts/EndpointDistributionC
 import TokenUsageTrend from '@/components/charts/TokenUsageTrend.vue'
 import Icon from '@/components/icons/Icon.vue'
 import UserErrorRequestsTable from '@/components/user/UserErrorRequestsTable.vue'
-import DepartmentTreeSelect from '@/components/team/DepartmentTreeSelect.vue'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
 import { formatReasoningEffort } from '@/utils/format'
 import { getBillingModeLabel, getDisplayBillingMode as resolveDisplayBillingMode } from '@/utils/billingMode'
@@ -277,19 +252,13 @@ import type {
   UserErrorRequest,
 } from '@/types'
 import type { Column } from '@/components/common/types'
-import type { DepartmentTreeNode, Consumer } from '@/api/team'
 import { COMMON_ERROR_STATUS_CODES } from '@/utils/errorBadges'
 
 const { t } = useI18n()
 const appStore = useAppStore()
-const { teamId, fetchCurrentTeam } = useTeamContext()
 
 type DistributionMetric = 'tokens' | 'actual_cost'
 type EndpointSource = 'inbound' | 'upstream' | 'path'
-
-// Team-related state
-const departmentTree = ref<DepartmentTreeNode[]>([])
-const consumers = ref<Consumer[]>([])
 
 const usageStats = ref<UsageStatsResponse | null>(null)
 const usageLogs = ref<UsageLog[]>([])
@@ -392,10 +361,9 @@ const filters = ref<UsageQueryParams>({
   start_date: startDate.value,
   end_date: endDate.value,
   request_type: undefined,
+  native_compaction_v2: null,
   billing_type: null,
   billing_mode: null,
-  department_id: null,
-  consumer_id: null,
 })
 
 const pagination = reactive({
@@ -418,6 +386,10 @@ const requestTypeOptions = computed<SelectOption[]>(() => [
   { value: 'live', label: t('usage.live') },
   { value: 'stream', label: t('usage.stream') },
   { value: 'sync', label: t('usage.sync') },
+])
+const compactionOptions = computed<SelectOption[]>(() => [
+  { value: null, label: t('usage.allCompactionTypes') },
+  { value: true, label: t('usage.compactionOnly') },
 ])
 const billingTypeOptions = computed<SelectOption[]>(() => [
   { value: null, label: t('admin.usage.allBillingTypes') },
@@ -447,11 +419,6 @@ const groupOptions = computed<SelectOption[]>(() => [
 const modelOptions = computed<SelectOption[]>(() => [
   { value: null, label: t('admin.usage.allModels') },
   ...modelOptionValues.value.map((model) => ({ value: model, label: model })),
-])
-
-const consumerOptions = computed(() => [
-  { value: null as number | null, label: t('keys.noConsumer') },
-  ...consumers.value.map((c) => ({ value: c.id, label: c.name })),
 ])
 
 const normalizedFilters = computed<UsageQueryParams>(() => {
@@ -595,10 +562,9 @@ const resetFilters = () => {
     start_date: range.start,
     end_date: range.end,
     request_type: undefined,
+    native_compaction_v2: null,
     billing_type: null,
     billing_mode: null,
-    department_id: null,
-    consumer_id: null,
   }
   granularity.value = getGranularityForRange(range.start, range.end)
   applyFilters()
@@ -750,8 +716,6 @@ const allColumns = computed<Column[]>(() => [
   { key: 'endpoint', label: t('usage.endpoint'), sortable: false },
   { key: 'ip_address', label: 'IP', sortable: false },
   { key: 'group', label: t('admin.usage.group'), sortable: false },
-  { key: 'department', label: t('admin.usage.department'), sortable: false },
-  { key: 'consumer', label: t('admin.usage.consumer'), sortable: false },
   { key: 'stream', label: t('usage.type'), sortable: false },
   { key: 'billing_mode', label: t('admin.usage.billingMode'), sortable: false },
   { key: 'tokens', label: t('usage.tokens'), sortable: false },
@@ -847,55 +811,6 @@ const handleColumnClickOutside = (event: MouseEvent) => {
   }
 }
 
-const loadDepartments = async () => {
-  let tid = teamId.value
-  if (!tid) {
-    await fetchCurrentTeam()
-    tid = teamId.value
-  }
-  if (!tid) return
-  try {
-    const tree = await teamAPI.getDepartmentTree(tid).catch(() => [] as DepartmentTreeNode[])
-    departmentTree.value = tree || []
-  } catch (error) {
-    console.error('Failed to load departments:', error)
-    departmentTree.value = []
-  }
-}
-
-const loadConsumers = async (tid: number, deptId?: number) => {
-  try {
-    const params = deptId ? { dept_id: deptId } : undefined
-    const response = await teamAPI.listConsumers(tid, undefined, params)
-    consumers.value = response.items || []
-  } catch (error) {
-    console.error('Failed to load consumers:', error)
-    consumers.value = []
-  }
-}
-
-const onDepartmentChange = async (value: number | null) => {
-  filters.value.department_id = value
-  // Reset consumer when department changes
-  filters.value.consumer_id = null
-  // Load consumers for the selected department
-  if (value !== null) {
-    let tid = teamId.value
-    if (!tid) {
-      await fetchCurrentTeam()
-      tid = teamId.value
-    }
-    if (tid) {
-      await loadConsumers(tid, value)
-    } else {
-      consumers.value = []
-    }
-  } else {
-    consumers.value = []
-  }
-  applyFilters()
-}
-
 const loadFilterOptions = async () => {
   try {
     const [keys, availableGroups] = await Promise.all([
@@ -972,7 +887,6 @@ onMounted(() => {
   loadSavedErrColumns()
   document.addEventListener('click', handleColumnClickOutside)
   void loadFilterOptions()
-  void loadDepartments()
   refreshData()
 })
 

@@ -1,4 +1,5 @@
-docs/claude-relay-service/
+# 本地杂项文档、测试数据和外部项目副本
+/docs-local/
 .codex
 
 # ===================
@@ -33,11 +34,7 @@ backend/.gocache/
 # ===================
 node_modules/
 frontend/node_modules/
-frontend/.pnpm-store/
-frontend/.pnpm-store-local/
 frontend/dist/
-，package-lock.json
-frontend/package-lock.json
 *.local
 *.tsbuildinfo
 vite.config.d.ts
@@ -117,29 +114,6 @@ deploy/config.yaml
 backend/.installed
 
 # ===================
-# 本地开发环境依赖（不应上传到仓库）
-# ===================
-# Go SDK（完整安装包）
-go/
-go*.zip
-go*.msi
-
-# Redis 服务
-redis/
-redis.zip
-redis.msi
-dump.rdb
-
-
-
-# PostgreSQL 数据目录
-postgres_data/
-*.log
-
-# 临时文件
-pw.txt
-
-# ===================
 # 其他
 # ===================
 tests
@@ -158,20 +132,28 @@ backend/cmd/server/server
 deploy/docker-compose.override.yml
 .gocache/
 vite.config.js
-
+docs/*
 !docs/PAYMENT.md
 !docs/PAYMENT_CN.md
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
 !docs/ASYNC_IMAGE_TASKS.md
+!docs/BATCH_IMAGE_MVP.md
+!docs/COMPOSITE_GROUPS.md
+!docs/PLUGIN_DEVELOPMENT.md
+!docs/channel-monitor-v2-safe-defaults.md
 !docs/legal/
 !docs/legal/*.md
+!docs/screenshots/
+docs/screenshots/*
+!docs/screenshots/mobile-account-actions-menu.png
 .serena/
 .codex/
 frontend/coverage/
-frontend/.npmrc/
 aicodex
 output/
+.codegraph/
 
 # Vitest / Vite cache at repo root
 .vite/
-.workbuddy/
+# 本地闭源插件开发目录及构建产物不进入 Sub2API 仓库
+/plugins/

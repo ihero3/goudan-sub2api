@@ -128,6 +128,10 @@ export default {
         accessTokenHint: '⚠ Experimental: Zhipu provides no official OAuth endpoint. Using refresh_token directly as Bearer against chatglm.cn currently returns 401. Continued maintenance of the reverse-engineered scheme (cookie auth, signing, etc.) is required. Prefer the API Key mode for stability. Kimi/DeepSeek web session OAuth is not supported.',
         apiProtocol: {
           title: 'API Protocol',
+          adaptive: 'Adaptive',
+          adaptiveDesc: 'Uses the matching native provider endpoint for each inbound protocol, converting only when unavailable.',
+          endpoints: 'Protocol endpoints',
+          responsesFallbackDesc: 'Responses requests are converted to Chat Completions because this provider has no native Responses endpoint.',
           chatCompletions: 'Chat Completions',
           chatCompletionsDesc: 'Standard OpenAI-compatible endpoint; requests in other formats are converted.',
           anthropic: 'Anthropic',
@@ -135,13 +139,30 @@ export default {
           responses: 'Responses',
           responsesDesc: 'Provider’s native Responses endpoint — ideal for Codex.',
         },
+        zhipuTeam: {
+          title: 'Team Plan Organization / Project ID',
+          organization: 'Organization ID (team plan, optional)',
+          organizationPlaceholder: 'Organization ID of the team Coding Plan',
+          project: 'Project ID (team plan, optional)',
+          projectPlaceholder: 'Project ID of the team Coding Plan',
+          hint: 'Only required for the team GLM Coding Plan; when set, usage queries go through the team endpoint. Leave empty for personal plans. Click the question mark for how to obtain the IDs.',
+          help: {
+            title: 'How to get the Organization / Project ID',
+            step1: 'Sign in to the Zhipu open platform (bigmodel.cn) with your team account and open "Coding Plan → Team → My Plan".',
+            step2: 'Press F12 to open browser DevTools, switch to the Network tab, then reload the page.',
+            step3: 'Type /api/biz/v1/organization into the Network filter box and click the matched request (e.g. api_keys).',
+            step4: 'In the request URL, the org-… segment is the Organization ID and the proj_… segment is the Project ID (also visible as the bigmodel-organization / bigmodel-project request headers). Fill them into the fields above.',
+            example: 'Example: …/organization/org-0610bE2D…/projects/proj_0798F20…/api_keys → org-0610bE2D… goes into "Organization ID", proj_0798F20… into "Project ID"',
+          },
+        },
         balance: 'Balance --',
-        window5h: '5-hour window',
-        windowWeekly: 'Weekly window',
+        window5h: '5h',
+        windowWeekly: '7d',
+        probe: 'Query',
         probeTooltip: 'Query the provider quota endpoint for 5-hour / weekly rolling window usage',
+        balanceProbeTooltip: 'Query the provider balance endpoint for the account balance',
         balanceLow: 'Insufficient balance',
         noBalanceEndpoint: 'This platform has no balance query endpoint',
-        resetSoon: 'reset soon',
       },
       types: {
         oauth: 'OAuth',
@@ -747,6 +768,8 @@ export default {
       syncUpstreamModelsEmpty: 'Upstream returned no models to sync',
       syncUpstreamModelsFailed: 'Failed to sync upstream models',
       syncUpstreamModelsError: 'Failed to sync upstream models: {message}',
+      syncUpstreamModelsMetadataIncomplete:
+        'Model IDs were synced, but capability metadata is incomplete and was not updated.',
       clearAllModels: 'Clear all models',
       customModelName: 'Custom model name',
       enterCustomModelName: 'Enter custom model name',
@@ -825,6 +848,14 @@ export default {
 	  autoPause5hDisabled: 'Disable 5h auto-pause',
 	  autoPause7dDisabled: 'Disable 7d auto-pause',
 	  autoPauseDisabledHint: 'When enabled, this account is never auto-paused (even if a global default threshold is configured).',
+	  autoResetCredit: {
+	    title: 'Automatically use reset credits',
+	    hint: 'Uses the earliest-expiring available credit only when actual usage reaches a threshold. Off by default; the account remains paused if no credit is available or reset fails.',
+	    threshold5h: '5h auto-reset threshold (%)',
+	    threshold7d: '7d auto-reset threshold (%)',
+	    thresholdHint: 'Each window is evaluated independently. Enter 0.1–100; both default to 100.',
+	    thresholdInvalid: 'Automatic reset-credit thresholds must be between 0.1% and 100%.'
+	  },
       // Quota control (Anthropic OAuth/SetupToken only)
       quotaControl: {
         title: 'Quota Control',
@@ -922,6 +953,7 @@ export default {
       billingRateMultiplierHint: '0 = free, affects account billing only',
       expiresAt: 'Expires At',
       expiresAtHint: 'Leave empty for no expiration',
+      expiresAtTimezoneHint: 'Input is interpreted in your browser time zone ({timezone}).',
       higherPriorityFirst: 'Lower value means higher priority',
       mixedScheduling: 'Use in /v1/messages',
       mixedSchedulingHint: 'Enable to participate in Anthropic/Gemini group scheduling',
@@ -1520,6 +1552,14 @@ export default {
         resetAccountRecoveryFailed: 'The window was reset, but account state recovery failed. Recover the account state manually.',
         resetAccountRefreshFailed: 'The window, account state, and reset-credit cache were updated, but the latest account display could not be loaded.',
         refreshCachePersistFailed: 'Showing the live count, but its expiration details were unavailable, so the cached details were kept.',
+        autoStatus: {
+          checking: 'Checking',
+          available: 'Credit available',
+          resetting: 'Auto-resetting',
+          success: 'Auto-reset succeeded',
+          noCredit: 'No credit',
+          failed: 'Auto-reset failed'
+        },
         confirmTitle: 'Confirm Weekly Limit Reset',
         confirmMessage: 'This will consume 1 reset credit to immediately restore the current window ({count} remaining). This action cannot be undone. Continue?'
       },

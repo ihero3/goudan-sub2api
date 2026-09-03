@@ -33,12 +33,7 @@ const (
 	maxRetryElapsed = 10 * time.Second
 )
 
-func (s *GatewayService) shouldRetryUpstreamError(ctx context.Context, account *Account, statusCode int) bool {
-	// 全局设置：出错后禁止同账号重试，直接进入 failover 切换
-	if s.settingService != nil && s.settingService.IsDisableSameAccountRetryEnabled(ctx) {
-		return false
-	}
-
+func (s *GatewayService) shouldRetryUpstreamError(account *Account, statusCode int) bool {
 	// OAuth/Setup Token 账号：仅 403 重试
 	if account.IsOAuth() {
 		return statusCode == 403
@@ -48,19 +43,10 @@ func (s *GatewayService) shouldRetryUpstreamError(ctx context.Context, account *
 	return !account.ShouldHandleErrorCode(statusCode)
 }
 
-// shouldPoolModeRetryOnSameAccount 判断池模式账号是否应在同一账号上重试。
-// 全局设置 DisableSameAccountRetry 开启时，池模式也不再同账号重试（直接切换）。
-func (s *GatewayService) shouldPoolModeRetryOnSameAccount(ctx context.Context, account *Account, statusCode int) bool {
-	if s.settingService != nil && s.settingService.IsDisableSameAccountRetryEnabled(ctx) {
-		return false
-	}
-	return account.IsPoolMode() && account.IsPoolModeRetryableStatus(statusCode)
-}
-
 // shouldFailoverUpstreamError determines whether an upstream error should trigger account failover.
 func (s *GatewayService) shouldFailoverUpstreamError(statusCode int) bool {
 	switch statusCode {
-	case 401, 403, 404, 429, 529:
+	case 401, 403, 429, 529:
 		return true
 	default:
 		return statusCode >= 500
@@ -102,11 +88,21 @@ func sleepWithContext(ctx context.Context, d time.Duration) error {
 }
 
 // Forward 转发请求到Claude API
-func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *Account, parsed *ParsedRequest) (*ForwardResult, error) {
+func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *Account, parsed *ParsedRequest) (result *ForwardResult, err error) {
 	startTime := time.Now()
 	if parsed == nil {
 		return nil, fmt.Errorf("parse request: empty request")
 	}
+	// Anthropic Fast is requested with speed=fast rather than OpenAI's
+	// service_tier. Attach it at this shared boundary so passthrough, OAuth and
+	// partial-stream results all use the same billing and usage-log path.
+	defer func() {
+		if result != nil {
+			if tier := anthropicSpeedServiceTier(account, parsed.Speed, anthropicSpeedModel(parsed, result)); tier != nil {
+				result.ServiceTier = tier
+			}
+		}
+	}()
 	beginUpstreamResponseModelObservation(c)
 
 	// Web Search 模拟：纯 web_search 请求时，直接调用搜索 API 构造响应
@@ -396,53 +392,9 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 			if resp != nil && resp.Body != nil {
 				_ = resp.Body.Close()
 			}
-			// Transport attempt left local validation; count Ollama Cloud activity.
-			if !errors.Is(err, context.Canceled) {
-				scheduleOllamaCloudUsageActivity(s.deferredService, account)
-			}
-			safeErr := sanitizeUpstreamErrorMessage(err.Error())
-
-			// 网络错误（超时/连接拒绝/连接重置等）：禁用账号并触发故障转移，
-			// 让用户无感知地切换到可用源。客户端取消(context.Canceled)不触发禁用。
-			if !errors.Is(err, context.Canceled) && isNetworkError(err) {
-				disableMsg := "Network error: auto-disabled, requires manual recovery: " + safeErr
-				s.rateLimitService.handleAuthError(ctx, account, disableMsg)
-				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-					Platform:           account.Platform,
-					AccountID:          account.ID,
-					AccountName:        account.Name,
-					UpstreamStatusCode: 0,
-					UpstreamURL:        safeUpstreamURL(upstreamReq.URL.String()),
-					Kind:               "network_error_disable",
-					Message:            safeErr,
-				})
-				logger.LegacyPrintf("service.gateway", "[Forward] Network error, account auto-disabled: Account=%d(%s) err=%s",
-					account.ID, account.Name, safeErr)
-				return nil, &UpstreamFailoverError{
-					StatusCode:   0,
-					ResponseBody: []byte(safeErr),
-				}
-			}
-
-			// 非网络错误或客户端取消：保持原有逻辑
-			setOpsUpstreamError(c, 0, safeErr, "")
-			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
-				Platform:           account.Platform,
-				AccountID:          account.ID,
-				AccountName:        account.Name,
-				UpstreamStatusCode: 0,
-				UpstreamURL:        safeUpstreamURL(upstreamReq.URL.String()),
-				Kind:               "request_error",
-				Message:            safeErr,
+			return nil, s.handleUpstreamTransportError(ctx, c, account, err, OpsUpstreamErrorEvent{
+				UpstreamURL: safeUpstreamURL(upstreamReq.URL.String()),
 			})
-			c.JSON(http.StatusBadGateway, gin.H{
-				"type": "error",
-				"error": gin.H{
-					"type":    "upstream_error",
-					"message": "Upstream request failed",
-				},
-			})
-			return nil, fmt.Errorf("upstream request failed: %s", safeErr)
 		}
 
 		// 优先检测thinking block签名错误（400）并重试一次
@@ -453,6 +405,8 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 
 				if s.shouldRectifySignatureError(ctx, account, respBody, reqModel) {
 					appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+						ProxyID:            opsUpstreamProxyID(account),
+						ProxyName:          opsUpstreamProxyName(account),
 						Platform:           account.Platform,
 						AccountID:          account.ID,
 						AccountName:        account.Name,
@@ -514,6 +468,8 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 							_ = retryResp.Body.Close()
 							if retryReadErr == nil && retryResp.StatusCode == 400 && s.isSignatureErrorPattern(ctx, account, retryRespBody) {
 								appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+									ProxyID:            opsUpstreamProxyID(account),
+									ProxyName:          opsUpstreamProxyName(account),
 									Platform:           account.Platform,
 									AccountID:          account.ID,
 									AccountName:        account.Name,
@@ -554,6 +510,8 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 											_ = retryResp2.Body.Close()
 										}
 										appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+											ProxyID:            opsUpstreamProxyID(account),
+											ProxyName:          opsUpstreamProxyName(account),
 											Platform:           account.Platform,
 											AccountID:          account.ID,
 											AccountName:        account.Name,
@@ -593,6 +551,8 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 				errMsg := extractUpstreamErrorMessage(respBody)
 				if isThinkingBudgetConstraintError(errMsg) && s.settingService.IsBudgetRectifierEnabled(ctx) {
 					appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+						ProxyID:            opsUpstreamProxyID(account),
+						ProxyName:          opsUpstreamProxyName(account),
 						Platform:           account.Platform,
 						AccountID:          account.ID,
 						AccountName:        account.Name,
@@ -644,7 +604,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 		}
 
 		// 检查是否需要通用重试（排除400，因为400已经在上面特殊处理过了）
-		if resp.StatusCode >= 400 && resp.StatusCode != 400 && s.shouldRetryUpstreamError(ctx, account, resp.StatusCode) {
+		if resp.StatusCode >= 400 && resp.StatusCode != 400 && s.shouldRetryUpstreamError(account, resp.StatusCode) {
 			if attempt < maxRetryAttempts {
 				elapsed := time.Since(retryStart)
 				if elapsed >= maxRetryElapsed {
@@ -663,6 +623,8 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 				respBody, _ := s.readUpstreamErrorBody(resp)
 				_ = resp.Body.Close()
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+					ProxyID:            opsUpstreamProxyID(account),
+					ProxyName:          opsUpstreamProxyName(account),
 					Platform:           account.Platform,
 					AccountID:          account.ID,
 					AccountName:        account.Name,
@@ -705,7 +667,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 	defer func() { _ = resp.Body.Close() }()
 
 	// 处理重试耗尽的情况
-	if resp.StatusCode >= 400 && s.shouldRetryUpstreamError(ctx, account, resp.StatusCode) {
+	if resp.StatusCode >= 400 && s.shouldRetryUpstreamError(account, resp.StatusCode) {
 		if s.shouldFailoverUpstreamError(resp.StatusCode) {
 			respBody, _ := s.readUpstreamErrorBody(resp)
 			_ = resp.Body.Close()
@@ -717,6 +679,8 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 
 			s.handleRetryExhaustedSideEffects(ctx, resp, account)
 			appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+				ProxyID:            opsUpstreamProxyID(account),
+				ProxyName:          opsUpstreamProxyName(account),
 				Platform:           account.Platform,
 				AccountID:          account.ID,
 				AccountName:        account.Name,
@@ -734,7 +698,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 			return nil, &UpstreamFailoverError{
 				StatusCode:             resp.StatusCode,
 				ResponseBody:           respBody,
-				RetryableOnSameAccount: s.shouldPoolModeRetryOnSameAccount(ctx, account, resp.StatusCode),
+				RetryableOnSameAccount: account.IsPoolMode() && account.IsPoolModeRetryableStatus(resp.StatusCode),
 			}
 		}
 		return s.handleRetryExhaustedError(ctx, resp, c, account)
@@ -752,6 +716,8 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 
 		s.handleFailoverSideEffects(ctx, resp, account, reqModel)
 		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+			ProxyID:            opsUpstreamProxyID(account),
+			ProxyName:          opsUpstreamProxyName(account),
 			Platform:           account.Platform,
 			AccountID:          account.ID,
 			UpstreamStatusCode: resp.StatusCode,
@@ -768,7 +734,7 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 		return nil, &UpstreamFailoverError{
 			StatusCode:             resp.StatusCode,
 			ResponseBody:           respBody,
-			RetryableOnSameAccount: s.shouldPoolModeRetryOnSameAccount(ctx, account, resp.StatusCode),
+			RetryableOnSameAccount: account.IsPoolMode() && account.IsPoolModeRetryableStatus(resp.StatusCode),
 		}
 	}
 	if resp.StatusCode >= 400 {
@@ -794,6 +760,8 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 					upstreamDetail = truncateString(string(respBody), maxBytes)
 				}
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+					ProxyID:            opsUpstreamProxyID(account),
+					ProxyName:          opsUpstreamProxyName(account),
 					Platform:           account.Platform,
 					AccountID:          account.ID,
 					AccountName:        account.Name,
@@ -870,6 +838,8 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 				}
 
 				appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+					ProxyID:            opsUpstreamProxyID(account),
+					ProxyName:          opsUpstreamProxyName(account),
 					Platform:           account.Platform,
 					AccountID:          account.ID,
 					AccountName:        account.Name,
@@ -915,11 +885,57 @@ func (s *GatewayService) Forward(ctx context.Context, c *gin.Context, account *A
 		UpstreamModel:                 mappedModel,
 		UpstreamResponseModel:         observedUpstreamResponseModel(c),
 		UpstreamResponseModelConflict: observedUpstreamResponseModelConflict(c),
+		UpstreamResponseServiceTier:   observedUpstreamResponseServiceTier(c),
 		Stream:                        reqStream,
 		Duration:                      time.Since(startTime),
 		FirstTokenMs:                  firstTokenMs,
 		ClientDisconnect:              clientDisconnect,
 	}, nil
+}
+
+func anthropicSpeedModel(parsed *ParsedRequest, result *ForwardResult) string {
+	if result != nil {
+		if upstreamModel := strings.TrimSpace(result.UpstreamModel); upstreamModel != "" {
+			return upstreamModel
+		}
+	}
+	if parsed == nil {
+		return ""
+	}
+	return parsed.Model
+}
+
+// anthropicSpeedServiceTier 把 Anthropic 的 speed=fast 归一成可计费的 "fast" tier。
+//
+// Fast mode 目前只在 Claude Opus 5 / Opus 4.8 上存在，且不支持 Bedrock 等第三方
+// 承载（Opus 4.7 的 fast mode 已被移除，传 speed=fast 会直接报错）。这里按模型和
+// 平台收紧，避免上游根本没跑 fast 时仍然按 2x 计费——宁可漏收也不能多收。
+//
+// 这里只决定请求侧的档位；上游响应里的 usage.speed 由 UpstreamResponseServiceTier
+// 带回，用量记录时经 ResolveBillingServiceTier 只降不升（usage.speed=standard 则按
+// 标准价计费）。
+func anthropicSpeedServiceTier(account *Account, speed, model string) *string {
+	if account == nil || account.Platform != PlatformAnthropic || speed != "fast" {
+		return nil
+	}
+	if account.IsBedrock() || !modelSupportsAnthropicFastMode(model) {
+		return nil
+	}
+	tier := "fast"
+	return &tier
+}
+
+// modelSupportsAnthropicFastMode 判断模型是否属于支持 fast mode 的 Opus 5 / Opus 4.8。
+func modelSupportsAnthropicFastMode(model string) bool {
+	modelLower := strings.ToLower(strings.TrimSpace(model))
+	if !strings.Contains(modelLower, "opus") {
+		return false
+	}
+	// "opus-5" 必须先判：不能用裸 "5" 匹配，否则 claude-opus-4-5 会被误判。
+	if strings.Contains(modelLower, "opus-5") || strings.Contains(modelLower, "opus5") {
+		return true
+	}
+	return strings.Contains(modelLower, "4.8") || strings.Contains(modelLower, "4-8")
 }
 
 // ResolveChannelMapping 委托渠道服务解析模型映射

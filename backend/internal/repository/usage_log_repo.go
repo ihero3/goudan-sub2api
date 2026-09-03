@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -9,10 +8,6 @@ import (
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
-	dbapikey "github.com/Wei-Shaw/sub2api/ent/apikey"
-	dbconsumer "github.com/Wei-Shaw/sub2api/ent/consumer"
-	dbdept "github.com/Wei-Shaw/sub2api/ent/department"
-	"github.com/Wei-Shaw/sub2api/ent/predicate"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	gocache "github.com/patrickmn/go-cache"
 )
@@ -169,156 +164,82 @@ func newUsageLogRepositoryWithSQL(client *dbent.Client, sqlq sqlExecutor) *usage
 	return repo
 }
 
-// findAPIKeyIDsByDeptOrConsumer returns api_key IDs filtered by department_id and/or consumer_id.
-func (r *usageLogRepository) findAPIKeyIDsByDeptOrConsumer(ctx context.Context, deptID, consumerID int64) ([]int64, error) {
-	q := r.client.APIKey.Query()
-	var predicates []predicate.APIKey
-	if deptID > 0 {
-		predicates = append(predicates, dbapikey.DepartmentID(deptID))
+func buildWhere(conditions []string) string {
+	if len(conditions) == 0 {
+		return ""
 	}
-	if consumerID > 0 {
-		predicates = append(predicates, dbapikey.ConsumerID(consumerID))
-	}
-	if len(predicates) > 0 {
-		q = q.Where(predicates...)
-	}
-	// Select only IDs
-	intIDs, err := q.Select(dbapikey.FieldID).Ints(ctx)
-	if err != nil {
-		return nil, err
-	}
-	ids := make([]int64, 0, len(intIDs))
-	for _, id := range intIDs {
-		ids = append(ids, int64(id))
-	}
-	return ids, nil
+	return "WHERE " + strings.Join(conditions, " AND ")
 }
 
-func (r *usageLogRepository) findAPIKeyIDsByDeptOrConsumerName(ctx context.Context, deptName, consumerName string) ([]int64, error) {
-	// Build subquery to find api_key_ids matching department/consumer names
-	var apiKeyIDs []int64
-	seen := make(map[int64]struct{})
-
-	if deptName != "" {
-		// Find departments matching name (case-insensitive LIKE)
-		depts, err := r.client.Department.Query().
-			Where(dbdept.NameContains(deptName)).
-			All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if len(depts) > 0 {
-			deptIDs := make([]int64, len(depts))
-			for i, d := range depts {
-				deptIDs[i] = d.ID
-			}
-			keys, err := r.client.APIKey.Query().
-				Where(dbapikey.DepartmentIDIn(deptIDs...)).
-				Select(dbapikey.FieldID).
-				Ints(ctx)
-			if err != nil {
-				return nil, err
-			}
-			for _, id := range keys {
-				id64 := int64(id)
-				if _, ok := seen[id64]; !ok {
-					seen[id64] = struct{}{}
-					apiKeyIDs = append(apiKeyIDs, id64)
-				}
-			}
-		}
+func appendRequestTypeOrStreamWhereCondition(conditions []string, args []any, requestType *int16, stream *bool) ([]string, []any) {
+	if requestType != nil {
+		condition, conditionArgs := buildRequestTypeFilterCondition(len(args)+1, *requestType)
+		conditions = append(conditions, condition)
+		args = append(args, conditionArgs...)
+		return conditions, args
 	}
-
-	if consumerName != "" {
-		// Find consumers matching name (case-insensitive LIKE)
-		consumers, err := r.client.Consumer.Query().
-			Where(dbconsumer.NameContains(consumerName)).
-			All(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if len(consumers) > 0 {
-			consumerIDs := make([]int64, len(consumers))
-			for i, c := range consumers {
-				consumerIDs[i] = c.ID
-			}
-			keys, err := r.client.APIKey.Query().
-				Where(dbapikey.ConsumerIDIn(consumerIDs...)).
-				Select(dbapikey.FieldID).
-				Ints(ctx)
-			if err != nil {
-				return nil, err
-			}
-			for _, id := range keys {
-				id64 := int64(id)
-				if _, ok := seen[id64]; !ok {
-					seen[id64] = struct{}{}
-					apiKeyIDs = append(apiKeyIDs, id64)
-				}
-			}
-		}
+	if stream != nil {
+		conditions = append(conditions, fmt.Sprintf("stream = $%d", len(args)+1))
+		args = append(args, *stream)
 	}
-
-	return apiKeyIDs, nil
+	return conditions, args
 }
 
-// hydrateDeptConsumerNames loads department and consumer names for usage logs.
-func (r *usageLogRepository) hydrateDeptConsumerNames(ctx context.Context, logs []service.UsageLog) error {
-	deptIDs := make(map[int64]struct{})
-	consumerIDs := make(map[int64]struct{})
-	for i := range logs {
-		if logs[i].DepartmentID != nil {
-			deptIDs[*logs[i].DepartmentID] = struct{}{}
-		}
-		if logs[i].ConsumerID != nil {
-			consumerIDs[*logs[i].ConsumerID] = struct{}{}
-		}
+func appendRequestTypeOrStreamQueryFilter(query string, args []any, requestType *int16, stream *bool) (string, []any) {
+	if requestType != nil {
+		condition, conditionArgs := buildRequestTypeFilterCondition(len(args)+1, *requestType)
+		query += " AND " + condition
+		args = append(args, conditionArgs...)
+		return query, args
 	}
+	if stream != nil {
+		query += fmt.Sprintf(" AND stream = $%d", len(args)+1)
+		args = append(args, *stream)
+	}
+	return query, args
+}
 
-	// Load department names
-	deptNames := make(map[int64]string)
-	if len(deptIDs) > 0 {
-		ids := make([]int64, 0, len(deptIDs))
-		for id := range deptIDs {
-			ids = append(ids, id)
-		}
-		models, err := r.client.Department.Query().Where(dbdept.IDIn(ids...)).All(ctx)
-		if err != nil {
-			return err
-		}
-		for _, m := range models {
-			deptNames[m.ID] = m.Name
-		}
+func appendNativeCompactionV2WhereCondition(conditions []string, args []any, nativeCompactionV2 *bool, alias string) ([]string, []any) {
+	if nativeCompactionV2 == nil {
+		return conditions, args
 	}
+	column := "native_compaction_v2"
+	if alias != "" {
+		column = alias + "." + column
+	}
+	conditions = append(conditions, fmt.Sprintf("%s = $%d", column, len(args)+1))
+	args = append(args, *nativeCompactionV2)
+	return conditions, args
+}
 
-	// Load consumer names
-	consumerNames := make(map[int64]string)
-	if len(consumerIDs) > 0 {
-		ids := make([]int64, 0, len(consumerIDs))
-		for id := range consumerIDs {
-			ids = append(ids, id)
-		}
-		models, err := r.client.Consumer.Query().Where(dbconsumer.IDIn(ids...)).All(ctx)
-		if err != nil {
-			return err
-		}
-		for _, m := range models {
-			consumerNames[m.ID] = m.Name
-		}
+func appendNativeCompactionV2QueryFilter(query string, args []any, nativeCompactionV2 *bool, alias string) (string, []any) {
+	conditions, args := appendNativeCompactionV2WhereCondition(nil, args, nativeCompactionV2, alias)
+	if len(conditions) == 0 {
+		return query, args
 	}
+	return query + " AND " + conditions[0], args
+}
 
-	// Assign names to logs
-	for i := range logs {
-		if logs[i].DepartmentID != nil {
-			if name, ok := deptNames[*logs[i].DepartmentID]; ok {
-				logs[i].DepartmentName = &name
-			}
-		}
-		if logs[i].ConsumerID != nil {
-			if name, ok := consumerNames[*logs[i].ConsumerID]; ok {
-				logs[i].ConsumerName = &name
-			}
-		}
+// buildRequestTypeFilterCondition 在 request_type 过滤时兼容 legacy 字段，避免历史数据漏查。
+func buildRequestTypeFilterCondition(startArgIndex int, requestType int16) (string, []any) {
+	return buildRequestTypeFilterConditionWithAlias(startArgIndex, requestType, "")
+}
+
+func buildRequestTypeFilterConditionWithAlias(startArgIndex int, requestType int16, alias string) (string, []any) {
+	normalized := service.RequestTypeFromInt16(requestType)
+	requestTypeArg := int16(normalized)
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
 	}
-	return nil
+	switch normalized {
+	case service.RequestTypeSync:
+		return fmt.Sprintf("(%srequest_type = $%d OR (%srequest_type = %d AND %sstream = FALSE AND %sopenai_ws_mode = FALSE))", prefix, startArgIndex, prefix, int16(service.RequestTypeUnknown), prefix, prefix), []any{requestTypeArg}
+	case service.RequestTypeStream:
+		return fmt.Sprintf("(%srequest_type = $%d OR (%srequest_type = %d AND %sstream = TRUE AND %sopenai_ws_mode = FALSE))", prefix, startArgIndex, prefix, int16(service.RequestTypeUnknown), prefix, prefix), []any{requestTypeArg}
+	case service.RequestTypeWSV2:
+		return fmt.Sprintf("(%srequest_type = $%d OR (%srequest_type = %d AND %sopenai_ws_mode = TRUE))", prefix, startArgIndex, prefix, int16(service.RequestTypeUnknown), prefix), []any{requestTypeArg}
+	default:
+		return fmt.Sprintf("%srequest_type = $%d", prefix, startArgIndex), []any{requestTypeArg}
+	}
 }

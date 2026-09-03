@@ -87,6 +87,7 @@
           <template #after-reset>
             <div v-if="activeTab !== 'ranking'" class="relative" ref="columnDropdownRef">
               <button
+                data-testid="usage-column-settings"
                 @click="showColumnDropdown = !showColumnDropdown"
                 class="btn btn-secondary px-2 md:px-3"
                 :title="t('admin.users.columnSettings')"
@@ -103,6 +104,7 @@
                 <button
                   v-for="col in currentToggleableColumns"
                   :key="col.key"
+                  :data-testid="`usage-column-toggle-${col.key}`"
                   @click="toggleCurrentColumn(col.key)"
                   class="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-dark-700"
                 >
@@ -244,6 +246,7 @@ const breakdownFilters = computed(() => {
   if (filters.value.account_id) f.account_id = filters.value.account_id
   if (filters.value.group_id) f.group_id = filters.value.group_id
   if (filters.value.request_type != null) f.request_type = filters.value.request_type
+  if (filters.value.native_compaction_v2 != null) f.native_compaction_v2 = filters.value.native_compaction_v2
   if (filters.value.billing_type != null) f.billing_type = filters.value.billing_type
   return f
 })
@@ -260,6 +263,15 @@ const handleUserClick = async (userId: number) => {
   } catch {
     appStore.showError(t('admin.usage.failedToLoadUser'))
   }
+}
+
+// Drill down from the per-user token ranking: scope the whole usage view to
+// that user and jump to the usage-detail tab so the drill-down is visible.
+const handleRankingSelectUser = (userId: number, email: string) => {
+  filters.value = { ...filters.value, user_id: userId }
+  usageFiltersRef.value?.setUserKeyword?.(email || '')
+  activeTab.value = 'usage'
+  applyFilters()
 }
 
 const granularityOptions = computed(() => [{ value: 'day', label: t('admin.dashboard.day') }, { value: 'hour', label: t('admin.dashboard.hour') }])
@@ -286,17 +298,7 @@ const getGranularityForRange = (start: string, end: string): 'day' | 'hour' => {
 }
 const defaultRange = getLast24HoursRangeDates()
 const startDate = ref(defaultRange.start); const endDate = ref(defaultRange.end)
-const filters = ref<AdminUsageQueryParams>({ user_id: undefined, model: undefined, group_id: undefined, request_type: undefined, billing_type: null, start_date: startDate.value, end_date: endDate.value })
-
-// Drill down from the per-user token ranking: scope the whole usage view to
-// that user and jump to the usage-detail tab so the drill-down is visible.
-const handleRankingSelectUser = (userId: number, email: string) => {
-  filters.value = { ...filters.value, user_id: userId }
-  ;(usageFiltersRef.value as any)?.setUserKeyword?.(email || '')
-  activeTab.value = 'usage'
-  applyFilters()
-}
-
+const filters = ref<AdminUsageQueryParams>({ user_id: undefined, model: undefined, group_id: undefined, request_type: undefined, native_compaction_v2: null, billing_type: null, start_date: startDate.value, end_date: endDate.value })
 const pagination = reactive({ page: 1, page_size: getPersistedPageSize(), total: 0 })
 const sortState = reactive({
   sort_by: 'created_at',
@@ -339,20 +341,20 @@ const applyRouteQueryFilters = () => {
 const loadRouteUserFilterLabel = async () => {
   const requestedUserId = filters.value.user_id
   if (!requestedUserId) return
-  const userSearchRevision = (usageFiltersRef.value as any)?.getUserSearchRevision?.()
+  const userSearchRevision = usageFiltersRef.value?.getUserSearchRevision?.()
 
   const routeUserFilterIsCurrent = () => (
     filters.value.user_id === requestedUserId
-    && (usageFiltersRef.value as any)?.getUserSearchRevision?.() === userSearchRevision
+    && usageFiltersRef.value?.getUserSearchRevision?.() === userSearchRevision
   )
 
   try {
     const user = await adminAPI.users.getById(requestedUserId, true)
     if (!routeUserFilterIsCurrent()) return
-    usageFiltersRef.value && ((usageFiltersRef.value as any).setUserKeyword?.((user.email || String(requestedUserId))))
+    usageFiltersRef.value?.setUserKeyword?.(user.email || String(requestedUserId))
   } catch {
     if (!routeUserFilterIsCurrent()) return
-    usageFiltersRef.value && ((usageFiltersRef.value as any).setUserKeyword?.(String(requestedUserId)))
+    usageFiltersRef.value?.setUserKeyword?.(String(requestedUserId))
   }
 }
 
@@ -450,6 +452,7 @@ const loadModelStats = async (source: ModelDistributionSource, force = false) =>
       group_id: filters.value.group_id,
       request_type: requestType,
       stream: legacyStream === null ? undefined : legacyStream,
+      native_compaction_v2: filters.value.native_compaction_v2,
       billing_type: filters.value.billing_type,
 	  upstream_model_mismatch: filters.value.upstream_model_mismatch,
     }
@@ -500,6 +503,7 @@ const loadChartData = async () => {
       group_id: filters.value.group_id,
       request_type: requestType,
       stream: legacyStream === null ? undefined : legacyStream,
+      native_compaction_v2: filters.value.native_compaction_v2,
       billing_type: filters.value.billing_type,
 	  upstream_model_mismatch: filters.value.upstream_model_mismatch,
       include_stats: false,
@@ -540,7 +544,7 @@ const resetFilters = () => {
   const range = getLast24HoursRangeDates()
   startDate.value = range.start
   endDate.value = range.end
-  filters.value = { start_date: startDate.value, end_date: endDate.value, request_type: undefined, billing_type: null, billing_mode: undefined, department_id: undefined, consumer_id: undefined, department_name: undefined, consumer_name: undefined }
+  filters.value = { start_date: startDate.value, end_date: endDate.value, request_type: undefined, native_compaction_v2: null, billing_type: null, billing_mode: undefined }
   granularity.value = getGranularityForRange(startDate.value, endDate.value)
   applyFilters()
 }
@@ -576,7 +580,7 @@ const exportToExcel = async () => {
     const XLSX = await import('xlsx')
     const headers = [
       t('usage.time'), t('admin.usage.user'), t('usage.apiKeyFilter'),
-      t('admin.usage.account'), t('usage.requestedModel'), t('usage.sentUpstreamModel'), t('usage.upstreamResponseModel'), t('usage.upstreamModelMismatch'), t('usage.reasoningEffort'), t('admin.usage.group'),
+      t('admin.usage.account'), t('usage.requestedModel'), t('usage.sentUpstreamModel'), t('usage.upstreamResponseModel'), t('usage.upstreamModelMismatch'), t('usage.requestedReasoningEffort'), t('usage.reasoningEffort'), t('admin.usage.group'),
       t('usage.inboundEndpoint'), t('usage.upstreamEndpoint'),
       t('usage.type'),
       t('admin.usage.inputTokens'), t('admin.usage.outputTokens'),
@@ -596,7 +600,7 @@ const exportToExcel = async () => {
       if (c.signal.aborted) break; if (p === 1) { total = res.total; exportProgress.total = total }
       const rows = (res.items || []).map((log: AdminUsageLog) => [
         log.created_at, log.user?.email || '', log.api_key?.name || '', log.account?.name || '', log.model,
-        log.upstream_model || log.model, log.upstream_response_model || '', log.upstream_model_mismatch == null ? '' : t(log.upstream_model_mismatch ? 'common.yes' : 'common.no'), formatReasoningEffort(log.reasoning_effort), log.group?.name || '',
+        log.upstream_model || log.model, log.upstream_response_model || '', log.upstream_model_mismatch == null ? '' : t(log.upstream_model_mismatch ? 'common.yes' : 'common.no'), formatReasoningEffort(log.reasoning_effort), formatReasoningEffort(log.upstream_reasoning_effort || log.reasoning_effort), log.group?.name || '',
         log.inbound_endpoint || '', log.upstream_endpoint || '', getRequestTypeLabel(log),
         log.input_tokens, log.output_tokens, log.cache_read_tokens, log.cache_creation_tokens,
         log.input_cost?.toFixed(6) || '0.000000', log.output_cost?.toFixed(6) || '0.000000',
@@ -639,8 +643,6 @@ const allColumns = computed(() => [
   { key: 'reasoning_effort', label: t('usage.reasoningEffort'), sortable: false },
   { key: 'endpoint', label: t('usage.endpoint'), sortable: false },
   { key: 'group', label: t('admin.usage.group'), sortable: false },
-  { key: 'department', label: t('admin.usage.department'), sortable: false },
-  { key: 'consumer', label: t('admin.usage.consumer'), sortable: false },
   { key: 'stream', label: t('usage.type'), sortable: false },
   { key: 'billing_mode', label: t('admin.usage.billingMode'), sortable: false },
   { key: 'tokens', label: t('usage.tokens'), sortable: false },

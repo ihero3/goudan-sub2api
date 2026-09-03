@@ -21,10 +21,13 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 		id = generateResponsesID()
 	}
 
+	// Anthropic responses carry no creation timestamp, so stamp now — the same
+	// synthesize-what-the-client-requires rule the generated id above follows.
 	out := &ResponsesResponse{
-		ID:     id,
-		Object: "response",
-		Model:  resp.Model,
+		ID:        id,
+		Object:    "response",
+		CreatedAt: time.Now().Unix(),
+		Model:     resp.Model,
 	}
 
 	var outputs []ResponsesOutput
@@ -36,7 +39,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 			if block.Thinking != "" {
 				outputs = append(outputs, ResponsesOutput{
 					Type: "reasoning",
-					ID:   generateReasoningID(),
+					ID:   generateItemID(),
 					Summary: []ResponsesSummary{{
 						Type: "summary_text",
 						Text: block.Thinking,
@@ -57,7 +60,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 			}
 			outputs = append(outputs, ResponsesOutput{
 				Type:      "function_call",
-				ID:        generateFunctionCallID(),
+				ID:        generateItemID(),
 				CallID:    toResponsesCallID(block.ID),
 				Name:      block.Name,
 				Arguments: args,
@@ -70,7 +73,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 	if len(msgParts) > 0 {
 		outputs = append(outputs, ResponsesOutput{
 			Type:    "message",
-			ID:      generateMessageID(),
+			ID:      generateItemID(),
 			Role:    "assistant",
 			Content: msgParts,
 			Status:  "completed",
@@ -80,7 +83,7 @@ func AnthropicToResponsesResponse(resp *AnthropicResponse) *ResponsesResponse {
 	if len(outputs) == 0 {
 		outputs = append(outputs, ResponsesOutput{
 			Type:    "message",
-			ID:      generateMessageID(),
+			ID:      generateItemID(),
 			Role:    "assistant",
 			Content: []ResponsesContentPart{{Type: "output_text", Text: ""}},
 			Status:  "completed",
@@ -277,7 +280,17 @@ func anthToResHandleContentBlockStart(evt *AnthropicStreamEvent, state *Anthropi
 
 	switch evt.ContentBlock.Type {
 	case "thinking":
-		state.CurrentItemID = generateReasoningID()
+		// 开新 item 前必须先关掉在开的那个，与下面的 tool_use 分支一致。
+		// 一个 message item 在它的 text 块 content_block_stop 时是刻意保持打开的
+		// （同一 item 里可能还有后续 text 块），所以 thinking 块到来时它仍然开着：
+		// 不关就直接被 CurrentItemType/CurrentItemID 覆盖，累积在 CurrentContent
+		// 里的助手文本既不会进 state.Outputs，也拿不到 output_item.done，
+		// response.completed 于是只带 reasoning——客户端看到的是「成功但无输出」。
+		// 交错思考（interleaved-thinking，本仓库在 anthropic-beta 透传里明确支持）
+		// 会稳定产生 text → thinking 这个顺序。
+		events = append(events, closeCurrentResponsesItem(state)...)
+
+		state.CurrentItemID = generateItemID()
 		state.CurrentItemType = "reasoning"
 		state.ContentIndex = 0
 
@@ -292,7 +305,12 @@ func anthToResHandleContentBlockStart(evt *AnthropicStreamEvent, state *Anthropi
 	case "text":
 		// If we don't have an open message item, open one
 		if state.CurrentItemType != "message" {
-			state.CurrentItemID = generateMessageID()
+			// 走到这里时 CurrentItemType 只可能是 ""（前一个 reasoning/function_call
+			// 已在自己的 content_block_stop 里关闭）；保留这次关闭是为了让三个分支
+			// 的「开新 item 前先关旧的」保持同一条不变式，而不是留一个仅 text 例外。
+			events = append(events, closeCurrentResponsesItem(state)...)
+
+			state.CurrentItemID = generateItemID()
 			state.CurrentItemType = "message"
 			state.ContentIndex = 0
 
@@ -327,7 +345,7 @@ func anthToResHandleContentBlockStart(evt *AnthropicStreamEvent, state *Anthropi
 		// Close previous item if any
 		events = append(events, closeCurrentResponsesItem(state)...)
 
-		state.CurrentItemID = generateFunctionCallID()
+		state.CurrentItemID = generateItemID()
 		state.CurrentItemType = "function_call"
 		state.CurrentCallID = toResponsesCallID(evt.ContentBlock.ID)
 		state.CurrentName = evt.ContentBlock.Name
@@ -431,17 +449,25 @@ func anthToResHandleContentBlockStop(evt *AnthropicStreamEvent, state *Anthropic
 		// item itself stays open since more blocks may follow.
 		text := state.TextAccum
 		state.TextAccum = ""
+		contentIndex := state.ContentIndex
 		state.CurrentContent = append(state.CurrentContent, ResponsesContentPart{Type: "output_text", Text: text})
+		// 关掉一个 part 就推进 content_index：上面那句注释说的「item 保持打开，
+		// 因为后面可能还有块」正是这里的触发条件。不推进的话，同一 item 里第二个
+		// text 块会再发一次 content_part.added(content_index=0)，与第一个 part 撞在
+		// 同一下标上——SDK 的累积式 stream helper 按 content[content_index] 写入，
+		// 后一个 part 直接覆盖前一个，可见文本丢失。
+		// 只在这里推进：新 item 的 content_index 由 closeCurrentResponsesItem 归 0。
+		state.ContentIndex++
 		return []ResponsesStreamEvent{
 			makeResponsesEvent(state, "response.output_text.done", &ResponsesStreamEvent{
 				OutputIndex:  state.OutputIndex,
-				ContentIndex: state.ContentIndex,
+				ContentIndex: contentIndex,
 				ItemID:       state.CurrentItemID,
 				Text:         text,
 			}),
 			makeResponsesEvent(state, "response.content_part.done", &ResponsesStreamEvent{
 				OutputIndex:  state.OutputIndex,
-				ContentIndex: state.ContentIndex,
+				ContentIndex: contentIndex,
 				ItemID:       state.CurrentItemID,
 				Part:         &ResponsesContentPart{Type: "output_text", Text: text},
 			}),
@@ -551,11 +577,12 @@ func makeResponsesCreatedEvent(state *AnthropicEventToResponsesState) ResponsesS
 		Type:           "response.created",
 		SequenceNumber: seq,
 		Response: &ResponsesResponse{
-			ID:     state.ResponseID,
-			Object: "response",
-			Model:  state.Model,
-			Status: "in_progress",
-			Output: []ResponsesOutput{},
+			ID:        state.ResponseID,
+			Object:    "response",
+			CreatedAt: state.Created,
+			Model:     state.Model,
+			Status:    "in_progress",
+			Output:    []ResponsesOutput{},
 		},
 	}
 }
@@ -602,6 +629,7 @@ func makeResponsesCompletedEvent(
 		Response: &ResponsesResponse{
 			ID:                state.ResponseID,
 			Object:            "response",
+			CreatedAt:         state.Created,
 			Model:             state.Model,
 			Status:            status,
 			Output:            outputs,
@@ -622,27 +650,13 @@ func makeResponsesEvent(state *AnthropicEventToResponsesState, eventType string,
 }
 
 func generateResponsesID() string {
-	return "resp_" + generateRandomHex()
-}
-
-func generateMessageID() string {
-	return "msg_" + generateRandomHex()
-}
-
-func generateReasoningID() string {
-	return "rs_" + generateRandomHex()
-}
-
-func generateFunctionCallID() string {
-	return "fc_" + generateRandomHex()
-}
-
-func generateCallID() string {
-	return "call_" + generateRandomHex()
-}
-
-func generateRandomHex() string {
 	b := make([]byte, 12)
 	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
+	return "resp_" + hex.EncodeToString(b)
+}
+
+func generateItemID() string {
+	b := make([]byte, 12)
+	_, _ = rand.Read(b)
+	return "item_" + hex.EncodeToString(b)
 }
