@@ -692,7 +692,7 @@
                         <div style="font-size: 20px; font-weight: 700;">🎯 Fixed Model Mode</div>
                         <div style="font-size: 13px; color: #475569; margin: 8px 0;">Always uses your preselected model</div>
                         <div class="badge-fixed">Deterministic Priority</div>
-                        <div style="font-size: 12px; color: #64748b; margin-top: 12px;">All requests use a specific model (e.g., GPT-5, GLM-5.1). Ideal for scenarios requiring consistent output characteristics.</div>
+                        <div style="font-size: 12px; color: #64748b; margin-top: 12px;">All requests use a specific model (e.g., GPT-5, GLM-5.3). Ideal for scenarios requiring consistent output characteristics.</div>
                     </div>
                 </div>
                 
@@ -704,7 +704,7 @@
                     <br>
                     <span style="color:#94a3b8"># One-click strategy switch (no code changes required)</span><br>
                     [ ] Fixed Model: <select style="background:#1e293b; color:#fff; border:1px solid #475569; border-radius:6px; padding:2px 8px;">
-                        <option>GPT-5</option><option>Claude Opus 4.6</option><option selected>GLM-5.1</option>
+                        <option>GPT-5</option><option>Claude Opus 4.6</option><option selected>GLM-5.3</option>
                     </select><br>
                     [✅] <span style="color:#86efac;">Smart Routing (Recommended)</span> - Auto-optimizes cost, stable quality<br>
                     <br>
@@ -742,7 +742,7 @@ response = client.chat.completions.create(
                     <tbody>
                         <tr><td class="highlight">L1</td><td>7B-14B</td><td>Text classification, summary extraction, keyword recognition</td><td>Qwen3-8B</td><td class="price-save">$0.01</td></tr>
                         <tr><td class="highlight">L2</td><td>14B-32B</td><td>Content generation, translation, customer service replies</td><td>Qwen3-32B</td><td class="price-save">$0.05</td></tr>
-                        <tr><td class="highlight">L3</td><td>32B-70B</td><td>Complex reasoning, code generation</td><td>GLM-5.1</td><td class="price-save">$0.15</td></tr>
+                        <tr><td class="highlight">L3</td><td>32B-70B</td><td>Complex reasoning, code generation</td><td>GLM-5.3</td><td class="price-save">$0.15</td></tr>
                         <tr><td class="highlight">L4</td><td>70B-235B</td><td>Advanced analysis, long-document understanding</td><td>Kimi K2.6</td><td class="price-save">$0.30</td></tr>
                         <tr><td class="highlight">L5</td><td>235B+</td><td>Most complex tasks, deep reasoning</td><td>DeepSeek V4-Pro / GPT-5.5</td><td>$1.10</td></tr>
                     </tbody>
@@ -762,7 +762,7 @@ response = client.chat.completions.create(
                     <tbody>
                         <tr><td>GPT-5.5</td><td>OpenAI latest flagship</td><td>$5.00</td><td>Baseline</td></tr>
                         <tr><td>Claude Opus 4.8</td><td>Anthropic latest flagship, SWE-bench Pro 69.2%</td><td>$5.00</td><td>Baseline</td></tr>
-                        <tr><td>GLM-5.1</td><td>Zhipu flagship, SWE-bench first tier</td><td class="price-save">$1.40</td><td class="price-save">72% lower</td></tr>
+                        <tr><td>GLM-5.3</td><td>Zhipu flagship, SWE-bench first tier</td><td class="price-save">$1.40</td><td class="price-save">72% lower</td></tr>
                         <tr><td>Kimi K2.6</td><td>Open-source SOTA, SWE-Bench Pro 58.6</td><td class="price-save">$0.95</td><td class="price-save">81% lower</td></tr>
                         <tr><td>DeepSeek V4-Flash</td><td>Best value, 284B MoE</td><td class="price-save">$0.14</td><td class="price-save">97% lower</td></tr>
                         <tr><td>DeepSeek V4-Pro</td><td>Flagship reasoning, Codeforces #1</td><td class="price-save">$0.42</td><td class="price-save">92% lower</td></tr>
@@ -797,8 +797,8 @@ response = client.chat.completions.create(
                 <table>
                     <thead><tr><th>Plan</th><th>Models</th><th>Price (Input per M tokens)</th><th>Description</th></tr></thead>
                     <tbody>
-                        <tr><td class="highlight">Standard</td><td>DeepSeek V4 / GLM-5.1 / Kimi K2.6</td><td class="price-save">$0.22 – 0.87</td><td>30%+ below official pricing. For general scenarios without cross-border compliance needs.</td></tr>
-                        <tr><td class="highlight">Compliance</td><td>DeepSeek V4 / GLM-5.1 / Kimi K2.6</td><td>$0.38 – 1.50</td><td>Includes audit logs, EU AI Act compliance tags. ~20% premium over official pricing.</td></tr>
+                        <tr><td class="highlight">Standard</td><td>DeepSeek V4 / GLM-5.3 / Kimi K2.6</td><td class="price-save">$0.22 – 0.87</td><td>30%+ below official pricing. For general scenarios without cross-border compliance needs.</td></tr>
+                        <tr><td class="highlight">Compliance</td><td>DeepSeek V4 / GLM-5.3 / Kimi K2.6</td><td>$0.38 – 1.50</td><td>Includes audit logs, EU AI Act compliance tags. ~20% premium over official pricing.</td></tr>
                         <tr><td class="highlight">Premium</td><td>GPT-5 / Claude Opus 4.6</td><td>$5.00 – 5.80</td><td>Supports smart routing and compliance auditing.</td></tr>
                     </tbody>
                 </table>

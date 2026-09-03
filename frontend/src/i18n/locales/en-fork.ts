@@ -80,8 +80,8 @@ export default {
             capability: '1M context, frontier coding, native multimodality'
           },
           qwen37Max: {
-            name: 'Qwen3.7-Max',
-            capability: 'Alibaba agent flagship, 1M context'
+            name: 'Qwen3.8-Max',
+            capability: 'Alibaba agent flagship, 1M context, top coding, complex workflows & multi-framework generalization'
           },
           seedance20: {
             name: 'Seedance-2.0',

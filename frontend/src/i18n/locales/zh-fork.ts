@@ -80,8 +80,8 @@ export default {
             capability: '1M上下文，前沿编码与原生多模态'
           },
           qwen37Max: {
-            name: 'Qwen3.7-Max',
-            capability: '阿里智能体旗舰，1M上下文'
+            name: 'Qwen3.8-Max',
+            capability: '阿里智能体旗舰，1M上下文，顶级编码，复杂工作流与多框架泛化'
           },
           seedance20: {
             name: 'Seedance-2.0',
