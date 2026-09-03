@@ -914,10 +914,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { setLocale } from '@/i18n'
+import { setLocale, getLocale } from '@/i18n'
 import { useAppStore } from '@/stores'
 import { useAuthStore } from '@/stores/auth'
 import type { CustomMenuItem } from '@/types'
@@ -1085,7 +1085,12 @@ const customMenuItems = computed<CustomMenuItem[]>(() => {
 })
 
 
+// 首页默认英文界面，除非用户手动切换语言
+let homeSavedLocale: string | null = null
+let userSwitchedLang = false
+
 function toggleLanguage() {
+  userSwitchedLang = true
   const newLang = currentLang.value === 'zh' ? 'en' : 'zh'
   setLocale(newLang)
 }
@@ -1100,8 +1105,20 @@ function initTheme() {
 
 onMounted(async () => {
   initTheme()
+  // 首页强制英文（用户可手动切换）
+  homeSavedLocale = getLocale()
+  if (homeSavedLocale !== 'en') {
+    setLocale('en')
+  }
   // Fetch public settings to get contact info and custom menu items
   await appStore.fetchPublicSettings()
+})
+
+onBeforeUnmount(() => {
+  // 离开首页时恢复用户原语言（如果用户没手动切换的话）
+  if (homeSavedLocale && homeSavedLocale !== 'en' && !userSwitchedLang) {
+    setLocale(homeSavedLocale)
+  }
 })
 </script>
 
