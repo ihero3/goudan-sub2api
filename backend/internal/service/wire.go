@@ -974,7 +974,17 @@ var ProviderSet = wire.NewSet(
 	NewComplianceUserDataExporter,
 	NewUserComplianceProfileService,
 	ProvideUserComplianceProfileHook,
+
+	// 视频生成模块
+	ProvideVideoAdapter,
+	NewVideoTaskService,
+	NewVideoWorker,
 )
+
+// ProvideVideoAdapter 创建视频上游适配器实例。
+func ProvideVideoAdapter() VideoAdapter {
+	return NewOpenAIVideoAdapter()
+}
 
 // ProvideComplianceService 创建 AI 治理与合规服务。
 func ProvideComplianceService(

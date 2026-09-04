@@ -28,6 +28,7 @@ type Application struct {
 	Server        *http.Server
 	PromptAudit   *securityaudit.PromptService
 	PluginManager *service.PluginManager
+	VideoWorker   *service.VideoWorker
 	Cleanup       func()
 }
 
@@ -58,7 +59,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 		provideCleanup,
 
 		// Application struct
-		wire.Struct(new(Application), "Server", "PromptAudit", "PluginManager", "Cleanup"),
+		wire.Struct(new(Application), "Server", "PromptAudit", "PluginManager", "VideoWorker", "Cleanup"),
 	)
 	return nil, nil
 }
@@ -128,6 +129,7 @@ func provideCleanup(
 	openAIAutoReset *service.OpenAIQuotaAutoResetService,
 	promptAudit *securityaudit.PromptService,
 	pluginManager *service.PluginManager,
+	videoWorker *service.VideoWorker,
 ) func() {
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -143,6 +145,12 @@ func provideCleanup(
 			{"PluginManager", func() error {
 				if pluginManager != nil {
 					pluginManager.Stop()
+				}
+				return nil
+			}},
+			{"VideoWorker", func() error {
+				if videoWorker != nil {
+					videoWorker.Stop()
 				}
 				return nil
 			}},

@@ -427,6 +427,26 @@ const BatchImageIcon = {
     )
 }
 
+const VideoIcon = {
+  render: () =>
+    h(
+      'svg',
+      { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' },
+      [
+        h('path', {
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          d: 'M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+        }),
+        h('path', {
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          d: 'M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z'
+        })
+      ]
+    )
+}
+
 const ChartIcon = {
   render: () =>
     h(
@@ -969,6 +989,7 @@ const adminNavItems = computed((): NavItem[] => {
     },
     { path: '/admin/tickets', label: t('nav.ticketManagement'), icon: TicketIcon, hideInSimpleMode: true },
     { path: '/admin/usage', label: t('nav.usage'), icon: ChartIcon },
+    { path: '/admin/video-tasks', label: t('admin.videoTasks.title'), icon: VideoIcon, hideInSimpleMode: true },
     { path: '/admin/audit-logs', label: t('nav.auditLogs'), icon: ShieldIcon, hideInSimpleMode: true }
   ]
 

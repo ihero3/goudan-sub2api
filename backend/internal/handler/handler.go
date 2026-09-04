@@ -47,6 +47,7 @@ type AdminHandlers struct {
 	ModerationRule         *admin.ModerationRuleHandler
 	Ticket                 *admin.TicketHandler
 	AuditLog               *admin.AuditLogHandler
+	VideoTask              *admin.VideoTaskAdminHandler
 }
 
 // Handlers contains all HTTP handlers
@@ -79,6 +80,7 @@ type Handlers struct {
 	ModelPlaza       *ModelPlazaHandler
 	AsyncImage       *AsyncImageHandler
 	BatchImage       *BatchImageHandler
+	VideoGateway     *VideoGatewayHandler
 }
 
 // BuildInfo contains build-time information

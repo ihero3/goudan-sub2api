@@ -167,6 +167,9 @@ func runMainServer() {
 			log.Printf("Prompt Audit started in degraded state: %v", err)
 		}
 	}
+	if app.VideoWorker != nil {
+		app.VideoWorker.Start(context.Background())
+	}
 
 	// 启动服务器
 	go func() {

@@ -280,6 +280,12 @@ func RegisterGatewayRoutes(
 		gateway.GET("/videos/:request_id", videoStatusHandler)
 		gateway.GET("/videos/:request_id/content", videoContentHandler)
 
+		// 多模型视频生成（MiniMax-H3 / Seedance / Wan3.0-Video 等）
+		// 走统一 VideoTaskService 异步任务流程，与上方 Grok 媒体转发隔离。
+		gateway.POST("/video-tasks", h.VideoGateway.CreateTask)
+		gateway.GET("/video-tasks/:task_id", h.VideoGateway.GetTask)
+		gateway.GET("/video-tasks/:task_id/content", h.VideoGateway.GetTaskContent)
+
 		// xAI Voice APIs (Grok platform only): HTTP TTS/STT + Realtime WS.
 		// Not part of the creation-center product surface — gateway relay only.
 		voiceHandler := func(endpoint string) gin.HandlerFunc {

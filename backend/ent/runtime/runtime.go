@@ -57,6 +57,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/userplatformquota"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/ent/videotask"
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
@@ -3148,6 +3149,109 @@ func init() {
 	usersubscriptionDescAssignedAt := usersubscriptionFields[12].Descriptor()
 	// usersubscription.DefaultAssignedAt holds the default value on creation for the assigned_at field.
 	usersubscription.DefaultAssignedAt = usersubscriptionDescAssignedAt.Default.(func() time.Time)
+	videotaskMixin := schema.VideoTask{}.Mixin()
+	videotaskMixinFields0 := videotaskMixin[0].Fields()
+	_ = videotaskMixinFields0
+	videotaskFields := schema.VideoTask{}.Fields()
+	_ = videotaskFields
+	// videotaskDescCreatedAt is the schema descriptor for created_at field.
+	videotaskDescCreatedAt := videotaskMixinFields0[0].Descriptor()
+	// videotask.DefaultCreatedAt holds the default value on creation for the created_at field.
+	videotask.DefaultCreatedAt = videotaskDescCreatedAt.Default.(func() time.Time)
+	// videotaskDescUpdatedAt is the schema descriptor for updated_at field.
+	videotaskDescUpdatedAt := videotaskMixinFields0[1].Descriptor()
+	// videotask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	videotask.DefaultUpdatedAt = videotaskDescUpdatedAt.Default.(func() time.Time)
+	// videotask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	videotask.UpdateDefaultUpdatedAt = videotaskDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// videotaskDescLocalID is the schema descriptor for local_id field.
+	videotaskDescLocalID := videotaskFields[0].Descriptor()
+	// videotask.LocalIDValidator is a validator for the "local_id" field. It is called by the builders before save.
+	videotask.LocalIDValidator = func() func(string) error {
+		validators := videotaskDescLocalID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(local_id string) error {
+			for _, fn := range fns {
+				if err := fn(local_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// videotaskDescUserID is the schema descriptor for user_id field.
+	videotaskDescUserID := videotaskFields[1].Descriptor()
+	// videotask.UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
+	videotask.UserIDValidator = videotaskDescUserID.Validators[0].(func(int64) error)
+	// videotaskDescAPIKeyID is the schema descriptor for api_key_id field.
+	videotaskDescAPIKeyID := videotaskFields[2].Descriptor()
+	// videotask.APIKeyIDValidator is a validator for the "api_key_id" field. It is called by the builders before save.
+	videotask.APIKeyIDValidator = videotaskDescAPIKeyID.Validators[0].(func(int64) error)
+	// videotaskDescPublicModel is the schema descriptor for public_model field.
+	videotaskDescPublicModel := videotaskFields[3].Descriptor()
+	// videotask.PublicModelValidator is a validator for the "public_model" field. It is called by the builders before save.
+	videotask.PublicModelValidator = func() func(string) error {
+		validators := videotaskDescPublicModel.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(public_model string) error {
+			for _, fn := range fns {
+				if err := fn(public_model); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// videotaskDescUpstreamModel is the schema descriptor for upstream_model field.
+	videotaskDescUpstreamModel := videotaskFields[4].Descriptor()
+	// videotask.UpstreamModelValidator is a validator for the "upstream_model" field. It is called by the builders before save.
+	videotask.UpstreamModelValidator = func() func(string) error {
+		validators := videotaskDescUpstreamModel.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(upstream_model string) error {
+			for _, fn := range fns {
+				if err := fn(upstream_model); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// videotaskDescAccountID is the schema descriptor for account_id field.
+	videotaskDescAccountID := videotaskFields[5].Descriptor()
+	// videotask.AccountIDValidator is a validator for the "account_id" field. It is called by the builders before save.
+	videotask.AccountIDValidator = videotaskDescAccountID.Validators[0].(func(int64) error)
+	// videotaskDescUpstreamTaskID is the schema descriptor for upstream_task_id field.
+	videotaskDescUpstreamTaskID := videotaskFields[6].Descriptor()
+	// videotask.UpstreamTaskIDValidator is a validator for the "upstream_task_id" field. It is called by the builders before save.
+	videotask.UpstreamTaskIDValidator = videotaskDescUpstreamTaskID.Validators[0].(func(string) error)
+	// videotaskDescStatus is the schema descriptor for status field.
+	videotaskDescStatus := videotaskFields[7].Descriptor()
+	// videotask.DefaultStatus holds the default value on creation for the status field.
+	videotask.DefaultStatus = videotaskDescStatus.Default.(string)
+	// videotask.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	videotask.StatusValidator = videotaskDescStatus.Validators[0].(func(string) error)
+	// videotaskDescResolution is the schema descriptor for resolution field.
+	videotaskDescResolution := videotaskFields[8].Descriptor()
+	// videotask.ResolutionValidator is a validator for the "resolution" field. It is called by the builders before save.
+	videotask.ResolutionValidator = videotaskDescResolution.Validators[0].(func(string) error)
+	// videotaskDescDurationSec is the schema descriptor for duration_sec field.
+	videotaskDescDurationSec := videotaskFields[9].Descriptor()
+	// videotask.DurationSecValidator is a validator for the "duration_sec" field. It is called by the builders before save.
+	videotask.DurationSecValidator = videotaskDescDurationSec.Validators[0].(func(int) error)
+	// videotaskDescCostUsd is the schema descriptor for cost_usd field.
+	videotaskDescCostUsd := videotaskFields[14].Descriptor()
+	// videotask.DefaultCostUsd holds the default value on creation for the cost_usd field.
+	videotask.DefaultCostUsd = videotaskDescCostUsd.Default.(float64)
 }
 
 const (

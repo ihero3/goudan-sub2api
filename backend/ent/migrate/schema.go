@@ -2756,6 +2756,51 @@ var (
 			},
 		},
 	}
+	// VideoTasksColumns holds the columns for the "video_tasks" table.
+	VideoTasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "local_id", Type: field.TypeString, Unique: true, Size: 128},
+		{Name: "user_id", Type: field.TypeInt64},
+		{Name: "api_key_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "public_model", Type: field.TypeString, Size: 100},
+		{Name: "upstream_model", Type: field.TypeString, Size: 100},
+		{Name: "account_id", Type: field.TypeInt64},
+		{Name: "upstream_task_id", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "status", Type: field.TypeString, Size: 20, Default: "processing"},
+		{Name: "resolution", Type: field.TypeString, Nullable: true, Size: 20},
+		{Name: "duration_sec", Type: field.TypeInt, Nullable: true},
+		{Name: "video_url", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "thumbnail_url", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "request_body", Type: field.TypeJSON, Nullable: true},
+		{Name: "error_message", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "cost_usd", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "finished_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// VideoTasksTable holds the schema information for the "video_tasks" table.
+	VideoTasksTable = &schema.Table{
+		Name:       "video_tasks",
+		Columns:    VideoTasksColumns,
+		PrimaryKey: []*schema.Column{VideoTasksColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "videotask_status_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{VideoTasksColumns[10], VideoTasksColumns[1]},
+			},
+			{
+				Name:    "videotask_user_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{VideoTasksColumns[4], VideoTasksColumns[1]},
+			},
+			{
+				Name:    "videotask_account_id",
+				Unique:  false,
+				Columns: []*schema.Column{VideoTasksColumns[8]},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		APIKeysTable,
@@ -2809,6 +2854,7 @@ var (
 		UserAttributeValuesTable,
 		UserPlatformQuotasTable,
 		UserSubscriptionsTable,
+		VideoTasksTable,
 	}
 )
 
@@ -3023,5 +3069,8 @@ func init() {
 	UserSubscriptionsTable.ForeignKeys[2].RefTable = UsersTable
 	UserSubscriptionsTable.Annotation = &entsql.Annotation{
 		Table: "user_subscriptions",
+	}
+	VideoTasksTable.Annotation = &entsql.Annotation{
+		Table: "video_tasks",
 	}
 }
