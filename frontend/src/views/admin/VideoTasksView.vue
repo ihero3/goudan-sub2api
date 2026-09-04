@@ -89,7 +89,7 @@
               rel="noopener noreferrer"
               class="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400"
             >
-              <Icon name="external-link" size="sm" class="inline" />
+              <Icon name="externalLink" size="sm" class="inline" />
               {{ t('admin.videoTasks.openVideo') }}
             </a>
             <span v-else class="text-xs text-gray-400">-</span>
@@ -168,12 +168,12 @@
     </TablePageLayout>
 
     <ConfirmDialog
-      v-model:visible="confirmDialog.visible"
+      :show="confirmDialog.visible"
       :title="t('admin.videoTasks.cancelConfirmTitle')"
       :message="t('admin.videoTasks.cancelConfirmMessage', { id: confirmDialog.taskId })"
       :loading="confirmDialog.loading"
       @confirm="confirmCancel"
-      @cancel="confirmDialog.visible = false"
+      @close="confirmDialog.visible = false"
     />
   </AppLayout>
 </template>
