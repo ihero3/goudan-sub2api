@@ -131,7 +131,7 @@ func (h *VideoGatewayHandler) GetTask(c *gin.Context) {
 		return
 	}
 
-	taskID := strings.TrimSpace(c.Param("task_id"))
+	taskID := videoTaskIDParam(c)
 	if taskID == "" {
 		videoErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "task_id is required")
 		return
@@ -186,7 +186,7 @@ func (h *VideoGatewayHandler) GetTaskContent(c *gin.Context) {
 		return
 	}
 
-	taskID := strings.TrimSpace(c.Param("task_id"))
+	taskID := videoTaskIDParam(c)
 	if taskID == "" {
 		videoErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "task_id is required")
 		return
@@ -238,4 +238,13 @@ func readVideoRequestBody(c *gin.Context) ([]byte, error) {
 	const maxVideoBodySize = 10 * 1024 * 1024 // 10MB
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxVideoBodySize)
 	return io.ReadAll(c.Request.Body)
+}
+
+// videoTaskIDParam resolves a local task id from either the dedicated
+// /video-tasks/:task_id route or the unified /videos/:request_id route.
+func videoTaskIDParam(c *gin.Context) string {
+	if taskID := strings.TrimSpace(c.Param("task_id")); taskID != "" {
+		return taskID
+	}
+	return strings.TrimSpace(c.Param("request_id"))
 }

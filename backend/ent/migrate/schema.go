@@ -1138,6 +1138,7 @@ var (
 		{Name: "audio_realtime_price_per_min", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
 		{Name: "audio_tts_price_per_million_chars", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
 		{Name: "audio_stt_price_per_hour", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "audio_price_per_sec", Type: field.TypeFloat64, Nullable: true, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
 		{Name: "claude_code_only", Type: field.TypeBool, Default: false},
 		{Name: "fallback_group_id", Type: field.TypeInt64, Nullable: true},
 		{Name: "fallback_group_id_on_invalid_request", Type: field.TypeInt64, Nullable: true},
@@ -1204,7 +1205,7 @@ var (
 			{
 				Name:    "group_sort_order",
 				Unique:  false,
-				Columns: []*schema.Column{GroupsColumns[43]},
+				Columns: []*schema.Column{GroupsColumns[44]},
 			},
 		},
 	}
@@ -1286,6 +1287,52 @@ var (
 				Name:    "identityadoptiondecision_identity_id",
 				Unique:  false,
 				Columns: []*schema.Column{IdentityAdoptionDecisionsColumns[6]},
+			},
+		},
+	}
+	// MediaTasksColumns holds the columns for the "media_tasks" table.
+	MediaTasksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
+		{Name: "local_id", Type: field.TypeString, Unique: true, Size: 128},
+		{Name: "media_kind", Type: field.TypeString, Size: 20, Default: "video"},
+		{Name: "user_id", Type: field.TypeInt64},
+		{Name: "api_key_id", Type: field.TypeInt64, Nullable: true},
+		{Name: "public_model", Type: field.TypeString, Size: 100},
+		{Name: "upstream_model", Type: field.TypeString, Size: 100},
+		{Name: "account_id", Type: field.TypeInt64},
+		{Name: "upstream_task_id", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "status", Type: field.TypeString, Size: 20, Default: "processing"},
+		{Name: "resolution", Type: field.TypeString, Nullable: true, Size: 20},
+		{Name: "duration_sec", Type: field.TypeInt, Nullable: true},
+		{Name: "media_url", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "thumbnail_url", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "request_body", Type: field.TypeJSON, Nullable: true},
+		{Name: "error_message", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "cost_usd", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
+		{Name: "finished_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
+	}
+	// MediaTasksTable holds the schema information for the "media_tasks" table.
+	MediaTasksTable = &schema.Table{
+		Name:       "media_tasks",
+		Columns:    MediaTasksColumns,
+		PrimaryKey: []*schema.Column{MediaTasksColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "mediatask_media_kind_status_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{MediaTasksColumns[4], MediaTasksColumns[11], MediaTasksColumns[1]},
+			},
+			{
+				Name:    "mediatask_user_id_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{MediaTasksColumns[5], MediaTasksColumns[1]},
+			},
+			{
+				Name:    "mediatask_account_id",
+				Unique:  false,
+				Columns: []*schema.Column{MediaTasksColumns[9]},
 			},
 		},
 	}
@@ -2825,6 +2872,7 @@ var (
 		GroupsTable,
 		IdempotencyRecordsTable,
 		IdentityAdoptionDecisionsTable,
+		MediaTasksTable,
 		PaymentAuditLogsTable,
 		PaymentOrdersTable,
 		PaymentProviderInstancesTable,
@@ -2946,6 +2994,9 @@ func init() {
 	IdentityAdoptionDecisionsTable.ForeignKeys[1].RefTable = PendingAuthSessionsTable
 	IdentityAdoptionDecisionsTable.Annotation = &entsql.Annotation{
 		Table: "identity_adoption_decisions",
+	}
+	MediaTasksTable.Annotation = &entsql.Annotation{
+		Table: "media_tasks",
 	}
 	PaymentAuditLogsTable.Annotation = &entsql.Annotation{
 		Table: "payment_audit_logs",

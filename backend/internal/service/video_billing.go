@@ -12,7 +12,38 @@ import (
 const (
 	VideoPriceFamilyGrokImagineVideo   = "grok-imagine-video"
 	VideoPriceFamilyGrokImagineVideo15 = "grok-imagine-video-1.5"
+	VideoPriceFamilySeedance           = "seedance"
+	VideoPriceFamilyMiniMaxVideo       = "minimax-video"
+	VideoPriceFamilyWanVideo           = "wan-video"
 )
+
+// CanonicalVideoModelPriceFamily maps a client-facing video model ID to the
+// family key stored in groups.video_model_prices. Grok families retain their
+// existing normalization; Seedance / MiniMax / Wan models map to the stable
+// family keys configured in the admin UI.
+func CanonicalVideoModelPriceFamily(model string) string {
+	if family := CanonicalGrokImagineVideoPriceFamily(model); family != "" {
+		return family
+	}
+	m := strings.ToLower(strings.TrimSpace(model))
+	switch {
+	case strings.Contains(m, "seedance"),
+		strings.HasPrefix(m, "doubao-seedance"),
+		strings.Contains(m, "jimeng-video"):
+		return VideoPriceFamilySeedance
+	case strings.HasPrefix(m, "minimax-hailuo"),
+		strings.HasPrefix(m, "minimax-video"),
+		strings.HasPrefix(m, "minimax-h3"),
+		(strings.HasPrefix(m, "video-") && strings.Contains(m, "hailuo")):
+		return VideoPriceFamilyMiniMaxVideo
+	case strings.HasPrefix(m, "wan") &&
+		(strings.Contains(m, "video") || strings.Contains(m, "wanx") ||
+			strings.Contains(m, "t2v") || strings.HasPrefix(m, "wan2") || strings.HasPrefix(m, "wan3")):
+		return VideoPriceFamilyWanVideo
+	default:
+		return strings.ToLower(strings.TrimSpace(model))
+	}
+}
 
 // CanonicalGrokImagineVideoPriceFamily normalizes model aliases / preview / legacy
 // IDs onto the price-family keys stored in video_model_prices.
@@ -135,10 +166,7 @@ func LookupVideoModelPrice(prices map[string]map[string]float64, model, resoluti
 	if len(prices) == 0 {
 		return nil
 	}
-	family := CanonicalGrokImagineVideoPriceFamily(model)
-	if family == "" {
-		family = strings.ToLower(strings.TrimSpace(model))
-	}
+	family := CanonicalVideoModelPriceFamily(model)
 	if family == "" {
 		return nil
 	}

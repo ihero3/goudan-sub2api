@@ -148,6 +148,22 @@ func DetectModelPlatform(model string) (string, bool) {
 		return PlatformZhipu, true
 	case strings.HasPrefix(normalized, "deepseek-"):
 		return PlatformDeepseek, true
+	// Video vendor models ride the DeepSeek/OpenAI-compatible carrier platform:
+	// the concrete account is selected by its model_mapping and base_url, and the
+	// actual wire contract is chosen by the video adapter from the model name.
+	case strings.HasPrefix(normalized, "seedance-"),
+		strings.HasPrefix(normalized, "doubao-seedance-"),
+		strings.Contains(normalized, "jimeng-video"),
+		strings.HasPrefix(normalized, "minimax-hailuo"),
+		strings.HasPrefix(normalized, "minimax-video-"),
+		strings.HasPrefix(normalized, "minimax-h3"),
+		strings.HasPrefix(normalized, "wan2-"),
+		strings.HasPrefix(normalized, "wan2."),
+		strings.HasPrefix(normalized, "wan3-"),
+		strings.HasPrefix(normalized, "wan3."),
+		strings.HasPrefix(normalized, "wanx-"),
+		strings.HasPrefix(normalized, "wan-video-"):
+		return PlatformDeepseek, true
 	default:
 		return "", false
 	}

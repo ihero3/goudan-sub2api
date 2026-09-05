@@ -489,6 +489,20 @@ func (_c *GroupCreate) SetNillableAudioSttPricePerHour(v *float64) *GroupCreate 
 	return _c
 }
 
+// SetAudioPricePerSec sets the "audio_price_per_sec" field.
+func (_c *GroupCreate) SetAudioPricePerSec(v float64) *GroupCreate {
+	_c.mutation.SetAudioPricePerSec(v)
+	return _c
+}
+
+// SetNillableAudioPricePerSec sets the "audio_price_per_sec" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableAudioPricePerSec(v *float64) *GroupCreate {
+	if v != nil {
+		_c.SetAudioPricePerSec(*v)
+	}
+	return _c
+}
+
 // SetClaudeCodeOnly sets the "claude_code_only" field.
 func (_c *GroupCreate) SetClaudeCodeOnly(v bool) *GroupCreate {
 	_c.mutation.SetClaudeCodeOnly(v)
@@ -1539,6 +1553,10 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 		_spec.SetField(group.FieldAudioSttPricePerHour, field.TypeFloat64, value)
 		_node.AudioSttPricePerHour = &value
 	}
+	if value, ok := _c.mutation.AudioPricePerSec(); ok {
+		_spec.SetField(group.FieldAudioPricePerSec, field.TypeFloat64, value)
+		_node.AudioPricePerSec = &value
+	}
 	if value, ok := _c.mutation.ClaudeCodeOnly(); ok {
 		_spec.SetField(group.FieldClaudeCodeOnly, field.TypeBool, value)
 		_node.ClaudeCodeOnly = value
@@ -2434,6 +2452,30 @@ func (u *GroupUpsert) AddAudioSttPricePerHour(v float64) *GroupUpsert {
 // ClearAudioSttPricePerHour clears the value of the "audio_stt_price_per_hour" field.
 func (u *GroupUpsert) ClearAudioSttPricePerHour() *GroupUpsert {
 	u.SetNull(group.FieldAudioSttPricePerHour)
+	return u
+}
+
+// SetAudioPricePerSec sets the "audio_price_per_sec" field.
+func (u *GroupUpsert) SetAudioPricePerSec(v float64) *GroupUpsert {
+	u.Set(group.FieldAudioPricePerSec, v)
+	return u
+}
+
+// UpdateAudioPricePerSec sets the "audio_price_per_sec" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateAudioPricePerSec() *GroupUpsert {
+	u.SetExcluded(group.FieldAudioPricePerSec)
+	return u
+}
+
+// AddAudioPricePerSec adds v to the "audio_price_per_sec" field.
+func (u *GroupUpsert) AddAudioPricePerSec(v float64) *GroupUpsert {
+	u.Add(group.FieldAudioPricePerSec, v)
+	return u
+}
+
+// ClearAudioPricePerSec clears the value of the "audio_price_per_sec" field.
+func (u *GroupUpsert) ClearAudioPricePerSec() *GroupUpsert {
+	u.SetNull(group.FieldAudioPricePerSec)
 	return u
 }
 
@@ -3644,6 +3686,34 @@ func (u *GroupUpsertOne) UpdateAudioSttPricePerHour() *GroupUpsertOne {
 func (u *GroupUpsertOne) ClearAudioSttPricePerHour() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.ClearAudioSttPricePerHour()
+	})
+}
+
+// SetAudioPricePerSec sets the "audio_price_per_sec" field.
+func (u *GroupUpsertOne) SetAudioPricePerSec(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetAudioPricePerSec(v)
+	})
+}
+
+// AddAudioPricePerSec adds v to the "audio_price_per_sec" field.
+func (u *GroupUpsertOne) AddAudioPricePerSec(v float64) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddAudioPricePerSec(v)
+	})
+}
+
+// UpdateAudioPricePerSec sets the "audio_price_per_sec" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateAudioPricePerSec() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateAudioPricePerSec()
+	})
+}
+
+// ClearAudioPricePerSec clears the value of the "audio_price_per_sec" field.
+func (u *GroupUpsertOne) ClearAudioPricePerSec() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearAudioPricePerSec()
 	})
 }
 
@@ -5094,6 +5164,34 @@ func (u *GroupUpsertBulk) UpdateAudioSttPricePerHour() *GroupUpsertBulk {
 func (u *GroupUpsertBulk) ClearAudioSttPricePerHour() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.ClearAudioSttPricePerHour()
+	})
+}
+
+// SetAudioPricePerSec sets the "audio_price_per_sec" field.
+func (u *GroupUpsertBulk) SetAudioPricePerSec(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetAudioPricePerSec(v)
+	})
+}
+
+// AddAudioPricePerSec adds v to the "audio_price_per_sec" field.
+func (u *GroupUpsertBulk) AddAudioPricePerSec(v float64) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.AddAudioPricePerSec(v)
+	})
+}
+
+// UpdateAudioPricePerSec sets the "audio_price_per_sec" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateAudioPricePerSec() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateAudioPricePerSec()
+	})
+}
+
+// ClearAudioPricePerSec clears the value of the "audio_price_per_sec" field.
+func (u *GroupUpsertBulk) ClearAudioPricePerSec() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearAudioPricePerSec()
 	})
 }
 

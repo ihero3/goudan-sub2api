@@ -17,26 +17,84 @@ import (
 	"time"
 )
 
+// VideoCompletionMode describes how the upstream responded to a create call.
+type VideoCompletionMode string
+
+const (
+	// VideoCompletionSync means the create response already contains the final
+	// video URL and no background polling is needed.
+	VideoCompletionSync VideoCompletionMode = "sync"
+	// VideoCompletionAsync means the upstream accepted the request and will
+	// complete asynchronously. The local task must remain processing.
+	VideoCompletionAsync VideoCompletionMode = "async"
+	// VideoCompletionFailed means the upstream rejected the request. The local
+	// task should be marked failed without entering the polling worker.
+	VideoCompletionFailed VideoCompletionMode = "failed"
+)
+
 // VideoCreateRequest 是视频生成请求的统一内部表示。
 type VideoCreateRequest struct {
-	PublicModel    string         // 用户传的统一模型名，如 seedance-2.5
-	UpstreamModel  string         // model_mapping 翻译后上游实际模型名
-	Prompt         string         // 文本提示词
-	NegativePrompt string         // 负面提示词
-	ImageRefURLs   []string       // 参考图 URL 列表（图生视频）
-	VideoRefURLs   []string       // 参考视频 URL 列表（视频续生）
-	Resolution     string         // 分辨率：480p / 720p / 1080p
-	DurationSec    int            // 时长（秒）
-	Seed           *int64         // 随机种子
-	Extra          map[string]any // 其他上游专有参数透传
+	PublicModel    string            // 用户传的统一模型名，如 seedance-2.5
+	UpstreamModel  string            // model_mapping 翻译后上游实际模型名
+	Prompt         string            // 文本提示词
+	NegativePrompt string            // 负面提示词
+	ImageRefURLs   []string          // 参考图 URL 列表（图生视频）
+	VideoRefURLs   []string          // 参考视频 URL 列表（视频续生）
+	AudioRefURLs   []string          // 参考音频 URL 列表
+	Media          []VideoMediaInput // 官方多模态素材列表；存在时优先于上方的扁平字段
+	Resolution     string            // 分辨率：480p / 720p / 1080p
+	Ratio          string            // 宽高比：16:9 / 9:16 / adaptive 等
+	DurationSec    int               // 时长（秒）
+	Seed           *int64            // 随机种子
+	Extra          map[string]any    // 其他上游专有参数透传
+}
+
+// VideoMediaInput is a provider-neutral media reference for all-in-one video
+// models. The Type field uses the common contract values:
+// first_frame / last_frame / reference_image / reference_video /
+// reference_audio / file / link.
+type VideoMediaInput struct {
+	Type string `json:"type"`
+	URL  string `json:"url"`
+}
+
+// IsKnownVideoVendorModel reports whether the model should be handled by one
+// of the Seedance / MiniMax / Wan vendor adapters rather than the Grok media
+// forwarder or the generic OpenAI fallback.
+func IsKnownVideoVendorModel(model string) bool {
+	m := strings.ToLower(strings.TrimSpace(model))
+	if m == "" {
+		return false
+	}
+	switch {
+	case strings.Contains(m, "seedance"),
+		strings.HasPrefix(m, "doubao-seedance"),
+		strings.Contains(m, "jimeng-video"):
+		return true
+	case strings.HasPrefix(m, "minimax-hailuo"),
+		strings.HasPrefix(m, "minimax-video"),
+		strings.HasPrefix(m, "minimax-h3"),
+		m == "minimax-h3-max",
+		(strings.HasPrefix(m, "video-") && strings.Contains(m, "hailuo")):
+		return true
+	case strings.HasPrefix(m, "wan") &&
+		(strings.Contains(m, "video") || strings.Contains(m, "wanx") ||
+			strings.Contains(m, "t2v") || strings.HasPrefix(m, "wan2") || strings.HasPrefix(m, "wan3")):
+		return true
+	default:
+		return false
+	}
 }
 
 // VideoCreateResult 是创建任务后上游的即时响应。
 type VideoCreateResult struct {
-	TaskID         string // 上游返回的异步任务 ID
-	InlineVideoURL string // 如果同步直接出 URL（无异步）
-	Status         string // processing / succeeded / failed
-	ErrorMessage   string
+	TaskID             string              // 上游返回的异步任务 ID
+	InlineVideoURL     string              // 如果同步直接出 URL（无异步）
+	Status             string              // processing / succeeded / failed
+	Mode               VideoCompletionMode // 规范化后的完成模式，供 service 决定是否轮询
+	UpstreamStatusCode int                 // 上游创建接口 HTTP 状态码，用于 failover 判定
+	UpstreamRaw        []byte              // 上游原始响应，便于排障和后续字段演进
+	ErrorMessage       string
 }
 
 // VideoTaskResult 是查询任务状态/结果的响应。
@@ -46,7 +104,8 @@ type VideoTaskResult struct {
 	ThumbnailURL string
 	DurationSec  int
 	ErrorMessage string
-	StatusCode   int // 上游 HTTP 状态码（用于故障转移判定）
+	StatusCode   int    // 上游 HTTP 状态码（用于故障转移判定）
+	UpstreamRaw  []byte // 上游原始查询响应，便于排障
 }
 
 // VideoAdapter 视频生成上游适配器接口。
@@ -106,19 +165,22 @@ func (a *OpenAIVideoAdapter) Create(ctx context.Context, account *Account, req V
 
 	if resp.StatusCode >= 400 {
 		return &VideoCreateResult{
-			Status:       "failed",
-			ErrorMessage: fmt.Sprintf("upstream returned %d: %s", resp.StatusCode, string(respBody)),
+			Status:             "failed",
+			Mode:               VideoCompletionFailed,
+			UpstreamStatusCode: resp.StatusCode,
+			UpstreamRaw:        respBody,
+			ErrorMessage:       fmt.Sprintf("upstream returned %d: %s", resp.StatusCode, string(respBody)),
 		}, nil
 	}
 
 	// 解析上游响应
 	var upstreamResp struct {
-		ID      string `json:"id"`
-		TaskID  string `json:"task_id"`
-		Status  string `json:"status"`
-		Error   string `json:"error"`
-		Video   string `json:"video_url"`
-		URL     string `json:"url"`
+		ID     string `json:"id"`
+		TaskID string `json:"task_id"`
+		Status string `json:"status"`
+		Error  string `json:"error"`
+		Video  string `json:"video_url"`
+		URL    string `json:"url"`
 	}
 	if err := json.Unmarshal(respBody, &upstreamResp); err != nil {
 		return nil, fmt.Errorf("video_adapter: unmarshal create response: %w", err)
@@ -128,14 +190,13 @@ func (a *OpenAIVideoAdapter) Create(ctx context.Context, account *Account, req V
 	if taskID == "" {
 		taskID = upstreamResp.TaskID
 	}
-	status := upstreamResp.Status
-	if status == "" {
-		status = "processing"
-	}
+	status := normalizeVideoTaskStatus(upstreamResp.Status)
 
 	result := &VideoCreateResult{
-		TaskID:  taskID,
-		Status:  status,
+		TaskID:             taskID,
+		Status:             status,
+		UpstreamStatusCode: resp.StatusCode,
+		UpstreamRaw:        respBody,
 	}
 	// 同步返回结果的情况
 	if status == "succeeded" {
@@ -147,8 +208,56 @@ func (a *OpenAIVideoAdapter) Create(ctx context.Context, account *Account, req V
 	if upstreamResp.Error != "" {
 		result.ErrorMessage = upstreamResp.Error
 	}
+	result.Mode = videoCompletionModeForStatus(result.Status)
 
 	return result, nil
+}
+
+// normalizeVideoTaskStatus maps upstream status strings onto the canonical
+// local lifecycle values. Unknown transient statuses are treated as
+// processing so the polling worker keeps observing the task.
+func normalizeVideoTaskStatus(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "succeeded", "completed", "complete", "success", "done":
+		return "succeeded"
+	case "failed", "error":
+		return "failed"
+	case "cancelled", "canceled":
+		return "cancelled"
+	case "expired", "unknown":
+		return "failed"
+	case "queued", "pending", "running", "processing", "in_progress", "in-progress":
+		return "processing"
+	default:
+		return "processing"
+	}
+}
+
+// videoCompletionModeForStatus converts an upstream status string to the
+// internal completion mode. Unknown statuses are treated as async so a local
+// task remains observable through the polling worker.
+func videoCompletionModeForStatus(status string) VideoCompletionMode {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "succeeded", "completed", "complete", "success", "done":
+		return VideoCompletionSync
+	case "failed", "error", "cancelled", "canceled", "expired", "unknown":
+		return VideoCompletionFailed
+	default:
+		return VideoCompletionAsync
+	}
+}
+
+// videoCreateStatusShouldFailover reports whether a create response status code
+// should try another upstream account before returning to the client.
+func videoCreateStatusShouldFailover(statusCode int) bool {
+	switch statusCode {
+	case http.StatusUnauthorized, http.StatusForbidden, http.StatusTooManyRequests, http.StatusServiceUnavailable, http.StatusBadGateway, http.StatusGatewayTimeout:
+		return true
+	case 529:
+		return true
+	default:
+		return statusCode >= 500
+	}
 }
 
 // GetResult 查询上游任务状态和结果。
@@ -178,7 +287,8 @@ func (a *OpenAIVideoAdapter) GetResult(ctx context.Context, account *Account, up
 	respBody, _ := io.ReadAll(resp.Body)
 
 	result := &VideoTaskResult{
-		StatusCode: resp.StatusCode,
+		StatusCode:  resp.StatusCode,
+		UpstreamRaw: respBody,
 	}
 
 	if resp.StatusCode >= 400 {
@@ -232,8 +342,8 @@ func buildVideoCreateBody(req VideoCreateRequest) []byte {
 		body["negative_prompt"] = req.NegativePrompt
 	}
 	if len(req.ImageRefURLs) > 0 {
-		body["image_url"] = req.ImageRefURLs[0]   // 单图
-		body["image_urls"] = req.ImageRefURLs      // 多图
+		body["image_url"] = req.ImageRefURLs[0] // 单图
+		body["image_urls"] = req.ImageRefURLs   // 多图
 	}
 	if len(req.VideoRefURLs) > 0 {
 		body["video_url"] = req.VideoRefURLs[0]

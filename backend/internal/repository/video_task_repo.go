@@ -19,7 +19,7 @@ type VideoTaskRepository interface {
 	GetByLocalID(ctx context.Context, localID string) (*service.VideoTaskRecord, error)
 	GetByID(ctx context.Context, id int64) (*service.VideoTaskRecord, error)
 	UpdateStatus(ctx context.Context, id int64, status, errorMsg string) error
-	UpdateResult(ctx context.Context, id int64, status, videoURL, thumbnailURL string, durationSec int, costUSD float64) error
+	UpdateResult(ctx context.Context, id int64, status, videoURL, thumbnailURL string, durationSec int, costUSD float64) (bool, error)
 	UpdateUpstreamTaskID(ctx context.Context, id int64, upstreamTaskID string) error
 	ListByUserID(ctx context.Context, userID int64, limit, offset int) ([]*service.VideoTaskRecord, int, error)
 	ListProcessingTasks(ctx context.Context, before time.Time, limit int) ([]*service.VideoTaskRecord, error)
@@ -111,8 +111,9 @@ func (r *videoTaskRepository) UpdateStatus(ctx context.Context, id int64, status
 	return nil
 }
 
-func (r *videoTaskRepository) UpdateResult(ctx context.Context, id int64, status, videoURL, thumbnailURL string, durationSec int, costUSD float64) error {
-	b := r.client.VideoTask.UpdateOneID(id).
+func (r *videoTaskRepository) UpdateResult(ctx context.Context, id int64, status, videoURL, thumbnailURL string, durationSec int, costUSD float64) (bool, error) {
+	b := r.client.VideoTask.Update().
+		Where(dbvideotask.IDEQ(id), dbvideotask.StatusEQ("processing")).
 		SetStatus(status).
 		SetVideoURL(videoURL).
 		SetThumbnailURL(thumbnailURL).
@@ -121,10 +122,11 @@ func (r *videoTaskRepository) UpdateResult(ctx context.Context, id int64, status
 	if status == "succeeded" || status == "failed" || status == "cancelled" {
 		b.SetFinishedAt(time.Now())
 	}
-	if err := b.Exec(ctx); err != nil {
-		return fmt.Errorf("video_task_repo: update result: %w", err)
+	affected, err := b.Save(ctx)
+	if err != nil {
+		return false, fmt.Errorf("video_task_repo: update result: %w", err)
 	}
-	return nil
+	return affected > 0, nil
 }
 
 func (r *videoTaskRepository) UpdateUpstreamTaskID(ctx context.Context, id int64, upstreamTaskID string) error {

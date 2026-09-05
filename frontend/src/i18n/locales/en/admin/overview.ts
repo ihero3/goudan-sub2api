@@ -1041,6 +1041,7 @@ export default {
         audioRealtimePerMin: 'Realtime price per minute (USD)',
         audioTtsPerMillionChars: 'TTS price per million chars (USD)',
         audioSttPerHour: 'STT price per hour (USD)',
+        audioPricePerSec: 'Audio generation price per second (USD)',
         pricePlaceholder: 'optional'
       },
       webSearchPricing: {

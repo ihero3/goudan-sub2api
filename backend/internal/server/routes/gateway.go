@@ -85,6 +85,17 @@ func RegisterGatewayRoutes(
 		case service.PlatformGrok:
 			h.OpenAIGateway.GrokImages(c)
 		default:
+			// 非 Grok/OpenAI 平台：让已知图片模型走统一媒体链路
+			body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
+			if err == nil && len(body) > 0 {
+				model := compositeRequestModelFromBody(c.GetHeader("Content-Type"), body)
+				if service.IsKnownImageVendorModel(model) {
+					resetRequestBody(c, body)
+					h.MediaGateway.Create(c)
+					return
+				}
+				resetRequestBody(c, body)
+			}
 			service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": gin.H{
@@ -95,6 +106,16 @@ func RegisterGatewayRoutes(
 		}
 	}
 	videoGenerationHandler := func(c *gin.Context) {
+		body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
+		if err == nil && len(body) > 0 {
+			model := compositeRequestModelFromBody(c.GetHeader("Content-Type"), body)
+			if service.IsKnownVideoVendorModel(model) {
+				resetRequestBody(c, body)
+				h.VideoGateway.CreateTask(c)
+				return
+			}
+			resetRequestBody(c, body)
+		}
 		// Video status/content lookups below already allow Composite groups; keep
 		// task creation aligned so composite keys that route to Grok accounts can
 		// submit video generation jobs.
@@ -111,6 +132,10 @@ func RegisterGatewayRoutes(
 		})
 	}
 	videoStatusHandler := func(c *gin.Context) {
+		if strings.HasPrefix(c.Param("request_id"), "vid_") {
+			h.VideoGateway.GetTask(c)
+			return
+		}
 		// Video status requests do not carry a model, so composite groups cannot
 		// be resolved by compositeTargetPlatformMiddleware. Route them through
 		// the Grok handler and let scheduler/account selection enforce capacity.
@@ -127,6 +152,10 @@ func RegisterGatewayRoutes(
 		})
 	}
 	videoContentHandler := func(c *gin.Context) {
+		if strings.HasPrefix(c.Param("request_id"), "vid_") {
+			h.VideoGateway.GetTaskContent(c)
+			return
+		}
 		// Video content requests do not carry a model, so composite groups cannot
 		// be resolved by compositeTargetPlatformMiddleware. Route them through
 		// the Grok handler just like video status lookups.
@@ -286,11 +315,28 @@ func RegisterGatewayRoutes(
 		gateway.GET("/video-tasks/:task_id", h.VideoGateway.GetTask)
 		gateway.GET("/video-tasks/:task_id/content", h.VideoGateway.GetTaskContent)
 
+		// 统一媒体生成（图片 / 视频 / 音频）总入口
+		gateway.POST("/media", h.MediaGateway.Create)
+		gateway.POST("/media/generations", h.MediaGateway.Create)
+		gateway.GET("/media/:id", h.MediaGateway.Get)
+		gateway.GET("/media/:id/content", h.MediaGateway.GetContent)
+
 		// xAI Voice APIs (Grok platform only): HTTP TTS/STT + Realtime WS.
 		// Not part of the creation-center product surface — gateway relay only.
 		voiceHandler := func(endpoint string) gin.HandlerFunc {
 			return func(c *gin.Context) {
 				if getGroupPlatform(c) != service.PlatformGrok {
+					// 非 Grok 平台：让已知音频模型走统一媒体链路
+					body, err := pkghttputil.ReadRequestBodyWithPrealloc(c.Request)
+					if err == nil && len(body) > 0 {
+						model := compositeRequestModelFromBody(c.GetHeader("Content-Type"), body)
+						if service.IsKnownAudioVendorModel(model) {
+							resetRequestBody(c, body)
+							h.MediaGateway.Create(c)
+							return
+						}
+						resetRequestBody(c, body)
+					}
 					service.MarkOpsClientBusinessLimited(c, service.OpsClientBusinessLimitedReasonLocalFeatureGate)
 					c.JSON(http.StatusNotFound, gin.H{"error": gin.H{"type": "not_found_error", "message": "Voice API is not supported for this platform"}})
 					return

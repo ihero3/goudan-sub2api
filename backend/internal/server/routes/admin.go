@@ -141,6 +141,9 @@ func RegisterAdminRoutes(
 
 		// 视频任务管理
 		registerVideoTaskRoutes(admin, h)
+
+		// 媒体任务管理（图片 / 视频 / 音频）
+		registerMediaTaskRoutes(admin, h)
 	}
 }
 
@@ -150,6 +153,15 @@ func registerVideoTaskRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		vt.GET("", h.Admin.VideoTask.List)
 		vt.GET("/:id", h.Admin.VideoTask.Get)
 		vt.POST("/:id/cancel", h.Admin.VideoTask.Cancel)
+	}
+}
+
+func registerMediaTaskRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	mt := admin.Group("/media-tasks")
+	{
+		mt.GET("", h.Admin.MediaTask.List)
+		mt.GET("/:id", h.Admin.MediaTask.Get)
+		mt.POST("/:id/cancel", h.Admin.MediaTask.Cancel)
 	}
 }
 

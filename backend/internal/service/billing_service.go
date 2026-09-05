@@ -1812,6 +1812,7 @@ const (
 	defaultAudioRealtimePricePerMin     = 0.05
 	defaultAudioTTSPricePerMillionChars = 15.0
 	defaultAudioSTTPricePerHour         = 0.10
+	defaultAudioMediaPerSec             = 0.01
 )
 
 // CalculateWebSearchCost 计算 Codex alpha/search 网页搜索按次费用。
@@ -1871,10 +1872,12 @@ type audioPriceConfig struct {
 	RealtimePerMin *float64
 	TTSPerMChars   *float64
 	STTPerHour     *float64
+	PerSec         *float64
 }
 
-// CalculateAudioCost supports realtime (per min), tts (per M chars), stt (per hr).
-// Missing group prices use defaults; explicit 0 means free for that mode.
+// CalculateAudioCost supports realtime (per min), tts (per M chars), stt (per hr),
+// and media_audio (per sec). Missing group prices use defaults; explicit 0 means free
+// for that mode.
 func (s *BillingService) CalculateAudioCost(mode string, durationOrUnits float64, groupConfig *audioPriceConfig, rateMultiplier float64) *CostBreakdown {
 	if durationOrUnits <= 0 {
 		return &CostBreakdown{}
@@ -1895,6 +1898,11 @@ func (s *BillingService) CalculateAudioCost(mode string, durationOrUnits float64
 		unitPrice = defaultAudioSTTPricePerHour
 		if groupConfig != nil && groupConfig.STTPerHour != nil {
 			unitPrice = *groupConfig.STTPerHour
+		}
+	case "media_audio", "per_sec", "audio_sec":
+		unitPrice = defaultAudioMediaPerSec
+		if groupConfig != nil && groupConfig.PerSec != nil {
+			unitPrice = *groupConfig.PerSec
 		}
 	default:
 		return &CostBreakdown{}

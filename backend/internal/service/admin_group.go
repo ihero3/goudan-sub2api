@@ -353,6 +353,7 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 	audioRealtimePricePerMin := normalizePrice(input.AudioRealtimePricePerMin)
 	audioTTSPricePerMillionChars := normalizePrice(input.AudioTTSPricePerMillionChars)
 	audioSTTPricePerHour := normalizePrice(input.AudioSTTPricePerHour)
+	audioPricePerSec := normalizePrice(input.AudioPricePerSec)
 	imageRateMultiplier := 1.0
 	if input.ImageRateMultiplier != nil {
 		if *input.ImageRateMultiplier < 0 {
@@ -509,6 +510,7 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		AudioRealtimePricePerMin:        audioRealtimePricePerMin,
 		AudioTTSPricePerMillionChars:    audioTTSPricePerMillionChars,
 		AudioSTTPricePerHour:            audioSTTPricePerHour,
+		AudioPricePerSec:                audioPricePerSec,
 		ClaudeCodeOnly:                  input.ClaudeCodeOnly,
 		FallbackGroupID:                 input.FallbackGroupID,
 		FallbackGroupIDOnInvalidRequest: fallbackOnInvalidRequest,
@@ -827,6 +829,9 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 	}
 	if input.AudioSTTPricePerHour != nil {
 		group.AudioSTTPricePerHour = normalizePrice(input.AudioSTTPricePerHour)
+	}
+	if input.AudioPricePerSec != nil {
+		group.AudioPricePerSec = normalizePrice(input.AudioPricePerSec)
 	}
 
 	// Claude Code 客户端限制

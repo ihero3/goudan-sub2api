@@ -52,6 +52,7 @@ func ProvideAdminHandlers(
 	ticketHandler *admin.TicketHandler,
 	auditLogHandler *admin.AuditLogHandler,
 	videoTaskAdminHandler *admin.VideoTaskAdminHandler,
+	mediaTaskAdminHandler *admin.MediaTaskAdminHandler,
 	upstreamBillingProbe *service.UpstreamBillingProbeService,
 	ollamaCloudUsage *service.OllamaCloudUsageService,
 ) *AdminHandlers {
@@ -214,6 +215,7 @@ func ProvideHandlers(
 	asyncImageHandler *AsyncImageHandler,
 	batchImageHandler *BatchImageHandler,
 	videoGatewayHandler *VideoGatewayHandler,
+	mediaGatewayHandler *MediaGatewayHandler,
 	_ *service.IdempotencyCoordinator,
 	_ *service.IdempotencyCleanupService,
 	_ *service.OpenAIQuotaAutoResetService,
@@ -248,6 +250,7 @@ func ProvideHandlers(
 		AsyncImage:       asyncImageHandler,
 		BatchImage:       batchImageHandler,
 		VideoGateway:     videoGatewayHandler,
+		MediaGateway:     mediaGatewayHandler,
 	}
 }
 
@@ -282,6 +285,7 @@ var ProviderSet = wire.NewSet(
 	NewAsyncImageHandler,
 	ProvideBatchImageHandler,
 	NewVideoGatewayHandler,
+	NewMediaGatewayHandler,
 
 	// Admin handlers
 	admin.NewDashboardHandler,
@@ -324,6 +328,7 @@ var ProviderSet = wire.NewSet(
 	admin.NewTicketHandler,
 	admin.NewAuditLogHandler,
 	admin.NewVideoTaskAdminHandler,
+	admin.NewMediaTaskAdminHandler,
 
 	// AdminHandlers and Handlers constructors
 	ProvideAdminHandlers,

@@ -95,15 +95,15 @@ func (m *mockVideoTaskRepo) UpdateStatus(ctx context.Context, id int64, status, 
 	return nil
 }
 
-func (m *mockVideoTaskRepo) UpdateResult(ctx context.Context, id int64, status, videoURL, thumbnailURL string, durationSec int, costUSD float64) error {
+func (m *mockVideoTaskRepo) UpdateResult(ctx context.Context, id int64, status, videoURL, thumbnailURL string, durationSec int, costUSD float64) (bool, error) {
 	if m.updateErr != nil {
-		return m.updateErr
+		return false, m.updateErr
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	v, ok := m.byID[id]
 	if !ok {
-		return errors.New("not found")
+		return false, errors.New("not found")
 	}
 	v.Status = status
 	v.VideoURL = videoURL
@@ -115,7 +115,7 @@ func (m *mockVideoTaskRepo) UpdateResult(ctx context.Context, id int64, status, 
 		now := time.Now()
 		v.FinishedAt = &now
 	}
-	return nil
+	return true, nil
 }
 
 func (m *mockVideoTaskRepo) UpdateUpstreamTaskID(ctx context.Context, id int64, upstreamTaskID string) error {

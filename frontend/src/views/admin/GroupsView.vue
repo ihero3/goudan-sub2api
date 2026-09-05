@@ -1579,6 +1579,16 @@
                 :placeholder="t('admin.groups.voicePricing.pricePlaceholder')"
                 data-testid="create-audio-stt-price"
               />
+              <label class="input-label">{{ t("admin.groups.voicePricing.audioPricePerSec") }}</label>
+              <input
+                v-model.number="createForm.audio_price_per_sec"
+                type="number"
+                step="0.000001"
+                min="0"
+                class="input"
+                :placeholder="t('admin.groups.voicePricing.pricePlaceholder')"
+                data-testid="create-audio-price-per-sec"
+              />
             </div>
           </div>
         </div>
@@ -3375,6 +3385,16 @@
                 class="input"
                 :placeholder="t('admin.groups.voicePricing.pricePlaceholder')"
                 data-testid="edit-audio-stt-price"
+              />
+              <label class="input-label">{{ t("admin.groups.voicePricing.audioPricePerSec") }}</label>
+              <input
+                v-model.number="editForm.audio_price_per_sec"
+                type="number"
+                step="0.000001"
+                min="0"
+                class="input"
+                :placeholder="t('admin.groups.voicePricing.pricePlaceholder')"
+                data-testid="edit-audio-price-per-sec"
               />
             </div>
           </div>
@@ -5220,6 +5240,7 @@ const createForm = reactive({
   audio_realtime_price_per_min: null as number | null,
   audio_tts_price_per_million_chars: null as number | null,
   audio_stt_price_per_hour: null as number | null,
+  audio_price_per_sec: null as number | null,
   // 高峰时段倍率配置
   peak_rate_enabled: false,
   peak_start: "",
@@ -5584,6 +5605,7 @@ const editForm = reactive({
   audio_realtime_price_per_min: null as number | null,
   audio_tts_price_per_million_chars: null as number | null,
   audio_stt_price_per_hour: null as number | null,
+  audio_price_per_sec: null as number | null,
   // 高峰时段倍率配置
   peak_rate_enabled: false,
   peak_start: "",
@@ -6043,6 +6065,7 @@ const closeCreateModal = () => {
   createForm.audio_realtime_price_per_min = null;
   createForm.audio_tts_price_per_million_chars = null;
   createForm.audio_stt_price_per_hour = null;
+  createForm.audio_price_per_sec = null;
   createForm.peak_rate_enabled = false;
   createForm.peak_start = "";
   createForm.peak_end = "";
@@ -6232,6 +6255,9 @@ const handleCreateGroup = async () => {
     requestData.audio_stt_price_per_hour = emptyToNull(
       requestData.audio_stt_price_per_hour,
     );
+    requestData.audio_price_per_sec = emptyToNull(
+      requestData.audio_price_per_sec,
+    );
     requestData.web_search_price_per_call = emptyToNull(
       requestData.web_search_price_per_call,
     );
@@ -6301,6 +6327,7 @@ const handleEdit = async (group: AdminGroup) => {
   editForm.audio_realtime_price_per_min = group.audio_realtime_price_per_min ?? null;
   editForm.audio_tts_price_per_million_chars = group.audio_tts_price_per_million_chars ?? null;
   editForm.audio_stt_price_per_hour = group.audio_stt_price_per_hour ?? null;
+  editForm.audio_price_per_sec = group.audio_price_per_sec ?? null;
   editForm.peak_rate_enabled = group.peak_rate_enabled ?? false;
   editForm.peak_start = group.peak_start ?? "";
   editForm.peak_end = group.peak_end ?? "";
@@ -6394,6 +6421,7 @@ const closeEditModal = () => {
   editForm.audio_realtime_price_per_min = null;
   editForm.audio_tts_price_per_million_chars = null;
   editForm.audio_stt_price_per_hour = null;
+  editForm.audio_price_per_sec = null;
   resetMessagesDispatchFormState(editForm);
   editForm.allow_live = false;
   resetModelsListState(editModelsListState);
@@ -6522,6 +6550,9 @@ const handleUpdateGroup = async () => {
     );
     payload.audio_stt_price_per_hour = emptyPriceToClear(
       payload.audio_stt_price_per_hour,
+    );
+    payload.audio_price_per_sec = emptyPriceToClear(
+      payload.audio_price_per_sec,
     );
     payload.web_search_price_per_call = emptyPriceToClear(
       payload.web_search_price_per_call,

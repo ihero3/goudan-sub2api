@@ -8,7 +8,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
@@ -23,7 +25,7 @@ type VideoTaskRepo interface {
 	GetByLocalID(ctx context.Context, localID string) (*VideoTaskRecord, error)
 	GetByID(ctx context.Context, id int64) (*VideoTaskRecord, error)
 	UpdateStatus(ctx context.Context, id int64, status, errorMsg string) error
-	UpdateResult(ctx context.Context, id int64, status, videoURL, thumbnailURL string, durationSec int, costUSD float64) error
+	UpdateResult(ctx context.Context, id int64, status, videoURL, thumbnailURL string, durationSec int, costUSD float64) (bool, error)
 	UpdateUpstreamTaskID(ctx context.Context, id int64, upstreamTaskID string) error
 	ListByUserID(ctx context.Context, userID int64, limit, offset int) ([]*VideoTaskRecord, int, error)
 	ListProcessingTasks(ctx context.Context, before time.Time, limit int) ([]*VideoTaskRecord, error)
@@ -54,12 +56,15 @@ type VideoTaskRecord struct {
 
 // VideoTaskService 视频任务业务服务。
 type VideoTaskService struct {
-	videoTaskRepo   VideoTaskRepo
-	accountService  *AccountService
-	gatewayService  *GatewayService
-	rateLimitService *RateLimitService
-	adapter         VideoAdapter
-	logger          *zap.Logger
+	videoTaskRepo        VideoTaskRepo
+	accountService       *AccountService
+	gatewayService       *GatewayService
+	rateLimitService     *RateLimitService
+	billingService       *BillingService
+	apiKeyService        *APIKeyService
+	openAIGatewayService *OpenAIGatewayService
+	adapter              *VideoAdapterRegistry
+	logger               *zap.Logger
 }
 
 // NewVideoTaskService 创建视频任务服务实例。
@@ -68,90 +73,129 @@ func NewVideoTaskService(
 	accountService *AccountService,
 	gatewayService *GatewayService,
 	rateLimitService *RateLimitService,
-	adapter VideoAdapter,
+	billingService *BillingService,
+	apiKeyService *APIKeyService,
+	openAIGatewayService *OpenAIGatewayService,
+	adapter *VideoAdapterRegistry,
 ) *VideoTaskService {
 	return &VideoTaskService{
-		videoTaskRepo:    videoTaskRepo,
-		accountService:   accountService,
-		gatewayService:   gatewayService,
-		rateLimitService: rateLimitService,
-		adapter:          adapter,
-		logger:           logger.L(),
+		videoTaskRepo:        videoTaskRepo,
+		accountService:       accountService,
+		gatewayService:       gatewayService,
+		rateLimitService:     rateLimitService,
+		billingService:       billingService,
+		apiKeyService:        apiKeyService,
+		openAIGatewayService: openAIGatewayService,
+		adapter:              adapter,
+		logger:               logger.L(),
 	}
 }
 
 // CreateTask 处理用户视频生成请求。
-// 流程：调度选 channel → model_mapping 翻译 → 调 adapter → 写 video_tasks → 返回。
+// 流程：解析统一请求 → 选上游账号 → model_mapping 翻译 → 调 adapter → 写表。
+// 当上游创建返回可重试错误（401/403/429/5xx 等）时，会排除该账号继续选下一个，
+// 最多切换 3 次；耗尽后返回最后一个可识别的错误。
 func (s *VideoTaskService) CreateTask(c *gin.Context, groupID *int64, userID int64, apiKeyID int64, publicModel string, requestBody map[string]any) (*VideoTaskRecord, error) {
-	// 1. 解析用户请求参数
 	req, err := parseVideoCreateRequest(publicModel, requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("video_task_service: parse request: %w", err)
 	}
 
-	// 2. 调度选择支持该模型的 channel
-	account, err := s.gatewayService.SelectAccountForModel(c.Request.Context(), groupID, "", publicModel)
-	if err != nil {
-		return nil, fmt.Errorf("video_task_service: select account: %w", err)
-	}
-	if account == nil {
-		return nil, fmt.Errorf("video_task_service: no available account for model %s", publicModel)
+	ctx := c.Request.Context()
+	excluded := make(map[int64]struct{})
+	var lastUpstreamErr error
+	const maxAttempts = 100
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		account, selectErr := s.gatewayService.SelectAccountForModelWithExclusions(ctx, groupID, "", publicModel, excluded)
+		if selectErr != nil || account == nil {
+			if lastUpstreamErr != nil {
+				return nil, lastUpstreamErr
+			}
+			if selectErr == nil {
+				selectErr = fmt.Errorf("video_task_service: no available account for model %s", publicModel)
+			}
+			if errors.Is(selectErr, ErrNoAvailableAccounts) {
+				return nil, fmt.Errorf("video_task_service: no available account for model %s", publicModel)
+			}
+			return nil, fmt.Errorf("video_task_service: select account: %w", selectErr)
+		}
+
+		mapping := account.GetModelMapping()
+		upstreamModel := publicModel
+		if mapped, ok := mapping[publicModel]; ok && mapped != "" {
+			upstreamModel = mapped
+		}
+		req.PublicModel = publicModel
+		req.UpstreamModel = upstreamModel
+
+		adapter, resolveErr := s.adapter.Resolve(account.Platform, upstreamModel)
+		if resolveErr != nil {
+			return nil, fmt.Errorf("video_task_service: resolve adapter: %w", resolveErr)
+		}
+
+		createResult, createErr := adapter.Create(ctx, account, *req)
+		if createErr != nil {
+			s.logger.Warn("video_task_service: upstream create failed",
+				zap.Int64("account_id", account.ID),
+				zap.String("model", upstreamModel),
+				zap.Error(createErr),
+			)
+			excluded[account.ID] = struct{}{}
+			lastUpstreamErr = fmt.Errorf("video_task_service: upstream create: %w", createErr)
+			continue
+		}
+
+		if createResult.Status == "failed" && createResult.Mode == VideoCompletionFailed {
+			s.logger.Warn("video_task_service: upstream returned failure",
+				zap.Int64("account_id", account.ID),
+				zap.String("model", upstreamModel),
+				zap.Int("upstream_status", createResult.UpstreamStatusCode),
+				zap.String("error", createResult.ErrorMessage),
+			)
+			if videoCreateStatusShouldFailover(createResult.UpstreamStatusCode) {
+				excluded[account.ID] = struct{}{}
+				lastUpstreamErr = fmt.Errorf("video_task_service: upstream failed with status %d: %s",
+					createResult.UpstreamStatusCode, createResult.ErrorMessage)
+				continue
+			}
+		}
+
+		localID := generateVideoLocalID()
+		record := &VideoTaskRecord{
+			LocalID:        localID,
+			UserID:         userID,
+			APIKeyID:       apiKeyID,
+			PublicModel:    publicModel,
+			UpstreamModel:  upstreamModel,
+			AccountID:      account.ID,
+			UpstreamTaskID: createResult.TaskID,
+			Status:         createResult.Status,
+			Resolution:     req.Resolution,
+			DurationSec:    req.DurationSec,
+			RequestBody:    requestBody,
+			ErrorMessage:   createResult.ErrorMessage,
+		}
+		if createResult.InlineVideoURL != "" {
+			record.VideoURL = createResult.InlineVideoURL
+		}
+		if createResult.Status == "succeeded" {
+			if cost, costErr := s.calculateVideoCost(ctx, apiKeyID, publicModel, req.Resolution, req.DurationSec); costErr == nil {
+				record.CostUSD = cost
+			}
+		}
+
+		saved, saveErr := s.videoTaskRepo.Create(ctx, record)
+		if saveErr != nil {
+			return nil, fmt.Errorf("video_task_service: save task: %w", saveErr)
+		}
+		return saved, nil
 	}
 
-	// 3. model_mapping 翻译
-	mapping := account.GetModelMapping()
-	upstreamModel := publicModel
-	if mapped, ok := mapping[publicModel]; ok && mapped != "" {
-		upstreamModel = mapped
+	if lastUpstreamErr == nil {
+		lastUpstreamErr = fmt.Errorf("video_task_service: upstream account switches exhausted")
 	}
-	req.PublicModel = publicModel
-	req.UpstreamModel = upstreamModel
-
-	// 4. 调用上游 adapter
-	createResult, err := s.adapter.Create(c.Request.Context(), account, *req)
-	if err != nil {
-		s.logger.Error("video_task_service: upstream create failed",
-			zap.Int64("account_id", account.ID),
-			zap.String("model", upstreamModel),
-			zap.Error(err))
-		return nil, fmt.Errorf("video_task_service: upstream create: %w", err)
-	}
-
-	// 上游返回失败
-	if createResult.Status == "failed" {
-		// 检查是否需要故障转移（429/401/403/5xx）
-		// 这里简单记录错误，后续可加自动重试逻辑
-		s.logger.Warn("video_task_service: upstream returned failure",
-			zap.Int64("account_id", account.ID),
-			zap.String("error", createResult.ErrorMessage))
-	}
-
-	// 5. 生成 local_id 并写入 video_tasks 表
-	localID := generateVideoLocalID()
-	record := &VideoTaskRecord{
-		LocalID:        localID,
-		UserID:         userID,
-		APIKeyID:       apiKeyID,
-		PublicModel:    publicModel,
-		UpstreamModel:  upstreamModel,
-		AccountID:      account.ID,
-		UpstreamTaskID: createResult.TaskID,
-		Status:         createResult.Status,
-		Resolution:     req.Resolution,
-		DurationSec:    req.DurationSec,
-		RequestBody:    requestBody,
-		ErrorMessage:   createResult.ErrorMessage,
-	}
-	if createResult.InlineVideoURL != "" {
-		record.VideoURL = createResult.InlineVideoURL
-	}
-
-	saved, err := s.videoTaskRepo.Create(c.Request.Context(), record)
-	if err != nil {
-		return nil, fmt.Errorf("video_task_service: save task: %w", err)
-	}
-
-	return saved, nil
+	return nil, lastUpstreamErr
 }
 
 // GetTask 查询任务状态。如果任务仍在 processing，尝试向上游刷新状态。
@@ -188,16 +232,31 @@ func (s *VideoTaskService) refreshTaskStatus(ctx context.Context, record *VideoT
 		return fmt.Errorf("video_task_service: get account %d: %w", record.AccountID, err)
 	}
 
-	result, err := s.adapter.GetResult(ctx, account, record.UpstreamTaskID)
+	adapter, err := s.adapter.Resolve(account.Platform, record.UpstreamModel)
+	if err != nil {
+		return fmt.Errorf("video_task_service: resolve adapter: %w", err)
+	}
+	result, err := adapter.GetResult(ctx, account, record.UpstreamTaskID)
 	if err != nil {
 		return fmt.Errorf("video_task_service: get upstream result: %w", err)
 	}
 
 	switch result.Status {
 	case "succeeded":
-		cost := calculateVideoCost(record.PublicModel, record.Resolution, result.DurationSec)
-		if err := s.videoTaskRepo.UpdateResult(ctx, record.ID, "succeeded", result.VideoURL, result.ThumbnailURL, result.DurationSec, cost); err != nil {
+		cost, costErr := s.calculateVideoCost(ctx, record.APIKeyID, record.PublicModel, record.Resolution, result.DurationSec)
+		if costErr != nil {
+			s.logger.Warn("video_task_service: calculate cost failed",
+				zap.Int64("task_id", record.ID),
+				zap.Error(costErr),
+			)
+			cost = 0
+		}
+		claimed, err := s.videoTaskRepo.UpdateResult(ctx, record.ID, "succeeded", result.VideoURL, result.ThumbnailURL, result.DurationSec, cost)
+		if err != nil {
 			return fmt.Errorf("video_task_service: update result: %w", err)
+		}
+		if claimed && cost > 0 && s.apiKeyService != nil {
+			_ = s.apiKeyService.UpdateQuotaUsed(ctx, record.APIKeyID, cost)
 		}
 	case "failed", "cancelled":
 		if err := s.videoTaskRepo.UpdateStatus(ctx, record.ID, result.Status, result.ErrorMessage); err != nil {
@@ -257,6 +316,9 @@ func parseVideoCreateRequest(model string, body map[string]any) (*VideoCreateReq
 	if v, ok := body["resolution"].(string); ok {
 		req.Resolution = v
 	}
+	if v, ok := body["ratio"].(string); ok {
+		req.Ratio = v
+	}
 	if v, ok := body["duration"]; ok {
 		switch d := v.(type) {
 		case float64:
@@ -288,6 +350,40 @@ func parseVideoCreateRequest(model string, body map[string]any) (*VideoCreateReq
 	if v, ok := body["video_url"].(string); ok && v != "" {
 		req.VideoRefURLs = []string{v}
 	}
+	if urls, ok := body["video_urls"].([]any); ok {
+		for _, u := range urls {
+			if s, ok := u.(string); ok && s != "" {
+				req.VideoRefURLs = append(req.VideoRefURLs, s)
+			}
+		}
+	}
+	// 音频参考
+	if v, ok := body["audio_url"].(string); ok && v != "" {
+		req.AudioRefURLs = []string{v}
+	}
+	if urls, ok := body["audio_urls"].([]any); ok {
+		for _, u := range urls {
+			if s, ok := u.(string); ok && s != "" {
+				req.AudioRefURLs = append(req.AudioRefURLs, s)
+			}
+		}
+	}
+	if media, ok := body["media"].([]any); ok {
+		for _, raw := range media {
+			obj, ok := raw.(map[string]any)
+			if !ok {
+				continue
+			}
+			mediaType, _ := obj["type"].(string)
+			mediaURL, _ := obj["url"].(string)
+			mediaType = strings.TrimSpace(mediaType)
+			mediaURL = strings.TrimSpace(mediaURL)
+			if mediaType == "" || mediaURL == "" {
+				continue
+			}
+			req.Media = append(req.Media, VideoMediaInput{Type: mediaType, URL: mediaURL})
+		}
+	}
 	// 种子
 	if v, ok := body["seed"]; ok {
 		switch seed := v.(type) {
@@ -296,6 +392,15 @@ func parseVideoCreateRequest(model string, body map[string]any) (*VideoCreateReq
 			req.Seed = &s
 		case int64:
 			req.Seed = &seed
+		}
+	}
+
+	// 保留未被上述统一字段消费的请求参数，交给具体 adapter 透传。
+	// adapter 的 mergeVideoExtra 会再次过滤统一字段，避免原始值覆盖规范化结果。
+	if len(body) > 0 {
+		req.Extra = make(map[string]any, len(body))
+		for k, v := range body {
+			req.Extra[k] = v
 		}
 	}
 
@@ -309,13 +414,28 @@ func generateVideoLocalID() string {
 	return "vid_" + hex.EncodeToString(b)
 }
 
-// calculateVideoCost 简单的计费计算：按模型+分辨率+时长。
-// 实际单价从分组配置读取，这里先返回 0，后续接入分组计费。
-func calculateVideoCost(model, resolution string, durationSec int) float64 {
-	// TODO: 从分组 video_model_prices 读取单价
-	// 暂时返回 0，不影响功能运行
-	_ = model
-	_ = resolution
-	_ = durationSec
-	return 0
+// calculateVideoCost resolves the group-level video price and applies the
+// user/group video rate multiplier for a completed video task.
+func (s *VideoTaskService) calculateVideoCost(ctx context.Context, apiKeyID int64, model, resolution string, durationSec int) (float64, error) {
+	if s == nil || s.billingService == nil || s.apiKeyService == nil {
+		return 0, fmt.Errorf("video_task_service: billing dependencies are not wired")
+	}
+	apiKey, err := s.apiKeyService.GetByID(ctx, apiKeyID)
+	if err != nil || apiKey == nil {
+		return 0, fmt.Errorf("video_task_service: load api key %d: %w", apiKeyID, err)
+	}
+	if apiKey.GroupID == nil || apiKey.Group == nil {
+		return 0, fmt.Errorf("video_task_service: api key %d has no group", apiKeyID)
+	}
+
+	baseMultiplier := apiKey.Group.RateMultiplier
+	if s.openAIGatewayService != nil {
+		baseMultiplier = s.openAIGatewayService.ResolveUserGroupRateMultiplier(
+			ctx, apiKey.UserID, *apiKey.GroupID, apiKey.Group.RateMultiplier,
+		)
+	}
+	videoMultiplier := resolveVideoRateMultiplier(apiKey, baseMultiplier)
+	groupConfig := videoPriceConfigFromAPIKey(apiKey)
+	cost := s.billingService.CalculateVideoCost(model, resolution, 1, durationSec, groupConfig, videoMultiplier)
+	return cost.ActualCost, nil
 }

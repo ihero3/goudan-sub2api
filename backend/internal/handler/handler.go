@@ -48,6 +48,7 @@ type AdminHandlers struct {
 	Ticket                 *admin.TicketHandler
 	AuditLog               *admin.AuditLogHandler
 	VideoTask              *admin.VideoTaskAdminHandler
+	MediaTask              *admin.MediaTaskAdminHandler
 }
 
 // Handlers contains all HTTP handlers
@@ -81,6 +82,7 @@ type Handlers struct {
 	AsyncImage       *AsyncImageHandler
 	BatchImage       *BatchImageHandler
 	VideoGateway     *VideoGatewayHandler
+	MediaGateway     *MediaGatewayHandler
 }
 
 // BuildInfo contains build-time information

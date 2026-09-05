@@ -724,6 +724,33 @@ func (_u *GroupUpdate) ClearAudioSttPricePerHour() *GroupUpdate {
 	return _u
 }
 
+// SetAudioPricePerSec sets the "audio_price_per_sec" field.
+func (_u *GroupUpdate) SetAudioPricePerSec(v float64) *GroupUpdate {
+	_u.mutation.ResetAudioPricePerSec()
+	_u.mutation.SetAudioPricePerSec(v)
+	return _u
+}
+
+// SetNillableAudioPricePerSec sets the "audio_price_per_sec" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableAudioPricePerSec(v *float64) *GroupUpdate {
+	if v != nil {
+		_u.SetAudioPricePerSec(*v)
+	}
+	return _u
+}
+
+// AddAudioPricePerSec adds value to the "audio_price_per_sec" field.
+func (_u *GroupUpdate) AddAudioPricePerSec(v float64) *GroupUpdate {
+	_u.mutation.AddAudioPricePerSec(v)
+	return _u
+}
+
+// ClearAudioPricePerSec clears the value of the "audio_price_per_sec" field.
+func (_u *GroupUpdate) ClearAudioPricePerSec() *GroupUpdate {
+	_u.mutation.ClearAudioPricePerSec()
+	return _u
+}
+
 // SetClaudeCodeOnly sets the "claude_code_only" field.
 func (_u *GroupUpdate) SetClaudeCodeOnly(v bool) *GroupUpdate {
 	_u.mutation.SetClaudeCodeOnly(v)
@@ -1756,6 +1783,15 @@ func (_u *GroupUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if _u.mutation.AudioSttPricePerHourCleared() {
 		_spec.ClearField(group.FieldAudioSttPricePerHour, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.AudioPricePerSec(); ok {
+		_spec.SetField(group.FieldAudioPricePerSec, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAudioPricePerSec(); ok {
+		_spec.AddField(group.FieldAudioPricePerSec, field.TypeFloat64, value)
+	}
+	if _u.mutation.AudioPricePerSecCleared() {
+		_spec.ClearField(group.FieldAudioPricePerSec, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.ClaudeCodeOnly(); ok {
 		_spec.SetField(group.FieldClaudeCodeOnly, field.TypeBool, value)
@@ -2898,6 +2934,33 @@ func (_u *GroupUpdateOne) ClearAudioSttPricePerHour() *GroupUpdateOne {
 	return _u
 }
 
+// SetAudioPricePerSec sets the "audio_price_per_sec" field.
+func (_u *GroupUpdateOne) SetAudioPricePerSec(v float64) *GroupUpdateOne {
+	_u.mutation.ResetAudioPricePerSec()
+	_u.mutation.SetAudioPricePerSec(v)
+	return _u
+}
+
+// SetNillableAudioPricePerSec sets the "audio_price_per_sec" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableAudioPricePerSec(v *float64) *GroupUpdateOne {
+	if v != nil {
+		_u.SetAudioPricePerSec(*v)
+	}
+	return _u
+}
+
+// AddAudioPricePerSec adds value to the "audio_price_per_sec" field.
+func (_u *GroupUpdateOne) AddAudioPricePerSec(v float64) *GroupUpdateOne {
+	_u.mutation.AddAudioPricePerSec(v)
+	return _u
+}
+
+// ClearAudioPricePerSec clears the value of the "audio_price_per_sec" field.
+func (_u *GroupUpdateOne) ClearAudioPricePerSec() *GroupUpdateOne {
+	_u.mutation.ClearAudioPricePerSec()
+	return _u
+}
+
 // SetClaudeCodeOnly sets the "claude_code_only" field.
 func (_u *GroupUpdateOne) SetClaudeCodeOnly(v bool) *GroupUpdateOne {
 	_u.mutation.SetClaudeCodeOnly(v)
@@ -3960,6 +4023,15 @@ func (_u *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error)
 	}
 	if _u.mutation.AudioSttPricePerHourCleared() {
 		_spec.ClearField(group.FieldAudioSttPricePerHour, field.TypeFloat64)
+	}
+	if value, ok := _u.mutation.AudioPricePerSec(); ok {
+		_spec.SetField(group.FieldAudioPricePerSec, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedAudioPricePerSec(); ok {
+		_spec.AddField(group.FieldAudioPricePerSec, field.TypeFloat64, value)
+	}
+	if _u.mutation.AudioPricePerSecCleared() {
+		_spec.ClearField(group.FieldAudioPricePerSec, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.ClaudeCodeOnly(); ok {
 		_spec.SetField(group.FieldClaudeCodeOnly, field.TypeBool, value)

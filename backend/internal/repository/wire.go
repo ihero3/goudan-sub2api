@@ -23,6 +23,11 @@ func ProvideVideoTaskRepo(repo VideoTaskRepository) service.VideoTaskRepo {
 	return repo
 }
 
+// ProvideMediaTaskRepo 将 MediaTaskRepository 适配为 service.MediaTaskRepo 接口。
+func ProvideMediaTaskRepo(repo MediaTaskRepository) service.MediaTaskRepo {
+	return repo
+}
+
 // ProvideTeamMemberRepository 创建 TeamMemberRepository 实例
 func ProvideTeamMemberRepository(client *ent.Client, sqlDB *sql.DB) service.TeamMemberRepository {
 	return NewTeamMemberRepository(client, sqlDB)
@@ -156,6 +161,10 @@ var ProviderSet = wire.NewSet(
 	// 视频任务仓储
 	NewVideoTaskRepository,
 	ProvideVideoTaskRepo,
+
+	// 媒体任务仓储（图片 / 视频 / 音频统一）
+	NewMediaTaskRepository,
+	ProvideMediaTaskRepo,
 
 	// Cache implementations
 	NewGatewayCache,

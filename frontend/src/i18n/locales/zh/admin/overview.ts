@@ -1038,6 +1038,7 @@ export default {
         audioRealtimePerMin: 'Realtime 每分钟价格（USD）',
         audioTtsPerMillionChars: 'TTS 每百万字符价格（USD）',
         audioSttPerHour: 'STT 每小时价格（USD）',
+        audioPricePerSec: '音频生成每秒价格（USD）',
         pricePlaceholder: '可选'
       },
       webSearchPricing: {

@@ -69,6 +69,7 @@ type Group struct {
 	AudioRealtimePricePerMin     *float64
 	AudioTTSPricePerMillionChars *float64
 	AudioSTTPricePerHour         *float64
+	AudioPricePerSec             *float64
 
 	// ModelPricing overrides channel and built-in prices for matching models.
 	// Token intervals are selected only when LongContextPricingEnabled is true.

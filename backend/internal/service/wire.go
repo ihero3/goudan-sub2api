@@ -979,11 +979,44 @@ var ProviderSet = wire.NewSet(
 	ProvideVideoAdapter,
 	NewVideoTaskService,
 	NewVideoWorker,
+
+	// 媒体生成统一模块（图片 / 视频 / 音频）
+	ProvideMediaAdapter,
+	NewMediaTaskService,
 )
 
-// ProvideVideoAdapter 创建视频上游适配器实例。
-func ProvideVideoAdapter() VideoAdapter {
-	return NewOpenAIVideoAdapter()
+// ProvideVideoAdapter 创建视频上游适配器 registry。
+// 最后一个参数作为 OpenAI-compatible fallback，前面的显式适配器按顺序匹配。
+func ProvideVideoAdapter() *VideoAdapterRegistry {
+	return NewVideoAdapterRegistry(
+		NewSeedanceVideoAdapter(),
+		NewMiniMaxVideoAdapter(),
+		NewWanVideoAdapter(),
+		NewOpenAIVideoAdapter(),
+	)
+}
+
+// ProvideMediaAdapter 创建媒体生成 adapter registry。
+// 视频厂商 adapter 先桥接进 MediaAdapter；图片 / 音频 adapter 后续补充。
+// 最后一个参数作为 fallback（可为 nil）。
+func ProvideMediaAdapter() *MediaAdapterRegistry {
+	return NewMediaAdapterRegistry(
+		// 视频厂商（桥接）
+		NewVideoAsMediaAdapter(NewSeedanceVideoAdapter()),
+		NewVideoAsMediaAdapter(NewMiniMaxVideoAdapter()),
+		NewVideoAsMediaAdapter(NewWanVideoAdapter()),
+		NewVideoAsMediaAdapter(NewOpenAIVideoAdapter()),
+		// 图片厂商（独立）
+		NewSeedanceImageAdapter(),
+		NewWanImageAdapter(),
+		NewMiniMaxImageAdapter(),
+		NewImageMediaAdapter(),
+		// 音频厂商（独立）
+		NewMiniMaxTTSAdapter(),
+		NewVolcanoTTSAdapter(),
+		NewAliyunTTSAdapter(),
+		NewAudioMediaAdapter(),
+	)
 }
 
 // ProvideComplianceService 创建 AI 治理与合规服务。
