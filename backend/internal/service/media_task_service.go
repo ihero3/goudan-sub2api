@@ -7,9 +7,12 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha1"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"time"
 
@@ -28,6 +31,7 @@ type MediaTaskRepo interface {
 	UpdateUpstreamTaskID(ctx context.Context, id int64, upstreamTaskID string) error
 	ListByUserID(ctx context.Context, userID int64, limit, offset int) ([]*MediaTaskRecord, int, error)
 	ListProcessingTasks(ctx context.Context, before time.Time, limit int) ([]*MediaTaskRecord, error)
+	ListAdmin(ctx context.Context, userID int64, status, mediaKind string, limit, offset int) ([]*MediaTaskRecord, int, error)
 }
 
 // MediaTaskRecord 是 media_tasks 表的 Go 映射。
@@ -49,12 +53,17 @@ type MediaTaskRecord struct {
 	RequestBody    map[string]any
 	ErrorMessage   string
 	CostUSD        float64
+	ReservedCost   *float64
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	FinishedAt     *time.Time
 }
 
 // MediaTaskService 媒体任务统一业务服务。
+// maxMediaTaskDurationBeforeFail 是媒体任务轮询超时阈值：任务创建后超过该时长
+// 仍处于 processing（上游一直不回结果），直接标记 failed，避免 Worker 无限轮询。
+const maxMediaTaskDurationBeforeFail = 30 * time.Minute
+
 type MediaTaskService struct {
 	mediaTaskRepo        MediaTaskRepo
 	accountService       *AccountService
@@ -63,6 +72,7 @@ type MediaTaskService struct {
 	apiKeyService        *APIKeyService
 	openAIGatewayService *OpenAIGatewayService
 	adapter              *MediaAdapterRegistry
+	imageStorageSetting  *ImageStorageSettingService
 	logger               *zap.Logger
 }
 
@@ -75,6 +85,7 @@ func NewMediaTaskService(
 	apiKeyService *APIKeyService,
 	openAIGatewayService *OpenAIGatewayService,
 	adapter *MediaAdapterRegistry,
+	imageStorageSetting *ImageStorageSettingService,
 ) *MediaTaskService {
 	return &MediaTaskService{
 		mediaTaskRepo:        mediaTaskRepo,
@@ -84,6 +95,7 @@ func NewMediaTaskService(
 		apiKeyService:        apiKeyService,
 		openAIGatewayService: openAIGatewayService,
 		adapter:              adapter,
+		imageStorageSetting:  imageStorageSetting,
 		logger:               logger.L(),
 	}
 }
@@ -176,10 +188,16 @@ func (s *MediaTaskService) CreateTask(c *gin.Context, kind MediaKind, groupID *i
 		}
 		if createResult.InlineURL != "" {
 			record.MediaURL = createResult.InlineURL
+			if stored, ok := s.maybeStoreMedia(ctx, record, createResult.InlineURL); ok {
+				record.MediaURL = stored
+			}
 		}
-		if createResult.Status == "succeeded" {
-			if cost, costErr := s.calculateMediaCost(ctx, kind, apiKeyID, publicModel, req.Resolution, req.DurationSec); costErr == nil {
-				record.CostUSD = cost
+		if createResult.Status != "failed" {
+			if cost, costErr := s.calculateMediaCost(ctx, kind, apiKeyID, publicModel, req.Resolution, req.DurationSec); costErr == nil && cost > 0 {
+				record.ReservedCost = &cost
+				if s.apiKeyService != nil {
+					_ = s.apiKeyService.UpdateQuotaUsed(ctx, apiKeyID, cost)
+				}
 			}
 		}
 
@@ -216,6 +234,17 @@ func (s *MediaTaskService) PollTask(ctx context.Context, record *MediaTaskRecord
 	if record.Status != "processing" || record.UpstreamTaskID == "" {
 		return nil
 	}
+	if !record.CreatedAt.IsZero() && time.Since(record.CreatedAt) > maxMediaTaskDurationBeforeFail {
+		s.logger.Warn("media_task_service: task timed out, marking failed",
+			zap.Int64("task_id", record.ID),
+			zap.String("local_id", record.LocalID),
+			zap.Time("created_at", record.CreatedAt),
+		)
+		if err := s.mediaTaskRepo.UpdateStatus(ctx, record.ID, "failed", "upstream task timed out"); err != nil {
+			return fmt.Errorf("media_task_service: timeout update status: %w", err)
+		}
+		return nil
+	}
 	return s.refreshTaskStatus(ctx, record)
 }
 
@@ -244,21 +273,145 @@ func (s *MediaTaskService) refreshTaskStatus(ctx context.Context, record *MediaT
 			)
 			cost = 0
 		}
-		claimed, err := s.mediaTaskRepo.UpdateResult(ctx, record.ID, "succeeded", result.URL, result.ThumbnailURL, result.DurationSec, cost)
+		mediaURL := result.URL
+		if storedURL, ok := s.maybeStoreMedia(ctx, record, mediaURL); ok {
+			mediaURL = storedURL
+		}
+		claimed, err := s.mediaTaskRepo.UpdateResult(ctx, record.ID, "succeeded", mediaURL, result.ThumbnailURL, result.DurationSec, cost)
 		if err != nil {
 			return fmt.Errorf("media_task_service: update result: %w", err)
 		}
-		if claimed && cost > 0 && s.apiKeyService != nil {
-			_ = s.apiKeyService.UpdateQuotaUsed(ctx, record.APIKeyID, cost)
+		if claimed {
+			var reserved float64
+			if record.ReservedCost != nil {
+				reserved = *record.ReservedCost
+			}
+			settleMediaReservedQuota(s.apiKeyService, ctx, record.APIKeyID, reserved, cost)
 		}
 	case "failed", "cancelled":
 		if err := s.mediaTaskRepo.UpdateStatus(ctx, record.ID, result.Status, result.ErrorMessage); err != nil {
 			return fmt.Errorf("media_task_service: update status: %w", err)
 		}
+		var reserved float64
+		if record.ReservedCost != nil {
+			reserved = *record.ReservedCost
+		}
+		releaseMediaReservedQuota(s.apiKeyService, ctx, record.APIKeyID, reserved)
 	default:
 		// still processing
 	}
 	return nil
+}
+
+// ListAdmin 管理后台全量列表（条件在 SQL 层过滤）。
+func (s *MediaTaskService) ListAdmin(ctx context.Context, userID int64, status, mediaKind string, limit, offset int) ([]*MediaTaskRecord, int, error) {
+	return s.mediaTaskRepo.ListAdmin(ctx, userID, status, mediaKind, limit, offset)
+}
+
+// maybeStoreMedia 在对象存储可用时把上游媒体 URL 下载并转存为稳定 URL。
+// 返回 (稳定URL, true) 表示转存成功；否则返回 (原URL, false)。
+func (s *MediaTaskService) maybeStoreMedia(ctx context.Context, record *MediaTaskRecord, rawURL string) (string, bool) {
+	if s == nil || s.imageStorageSetting == nil {
+		return rawURL, false
+	}
+	rawURL = strings.TrimSpace(rawURL)
+	if rawURL == "" || !strings.HasPrefix(rawURL, "http") {
+		return rawURL, false
+	}
+	storage, ok := s.imageStorageSetting.Storage()
+	if !ok || storage == nil {
+		return rawURL, false
+	}
+	data, contentType, err := downloadMediaBytes(ctx, rawURL)
+	if err != nil {
+		s.logger.Warn("media_task_service: download for storage failed, keep original URL",
+			zap.Int64("task_id", record.ID),
+			zap.String("kind", string(record.MediaKind)),
+			zap.Error(err),
+		)
+		return rawURL, false
+	}
+	key := mediaStorageKey(record, contentType)
+	storedURL, err := storage.Save(ctx, key, contentType, data)
+	if err != nil {
+		s.logger.Warn("media_task_service: storage save failed, keep original URL",
+			zap.Int64("task_id", record.ID),
+			zap.String("kind", string(record.MediaKind)),
+			zap.Error(err),
+		)
+		return rawURL, false
+	}
+	return storedURL, true
+}
+
+// mediaStorageKey 生成对象存储 key，保证同一任务多次轮询不重复覆盖。
+func mediaStorageKey(record *MediaTaskRecord, contentType string) string {
+	raw := record.LocalID
+	if record.UpstreamTaskID != "" {
+		raw = record.LocalID + "-" + record.UpstreamTaskID
+	}
+	h := sha1.Sum([]byte(raw))
+	sum := hex.EncodeToString(h[:6])
+	ext := mediaExtensionForContentType(contentType)
+	return "media/" + string(record.MediaKind) + "/" + sum + ext
+}
+
+func mediaExtensionForContentType(contentType string) string {
+	ct := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	switch {
+	case strings.Contains(ct, "mp4"):
+		return ".mp4"
+	case strings.Contains(ct, "webm"):
+		return ".webm"
+	case strings.Contains(ct, "quicktime"), strings.Contains(ct, "mov"):
+		return ".mov"
+	case strings.Contains(ct, "mpeg"), strings.Contains(ct, "mp3"):
+		return ".mp3"
+	case strings.Contains(ct, "wav"):
+		return ".wav"
+	case strings.Contains(ct, "ogg"):
+		return ".ogg"
+	case strings.Contains(ct, "png"):
+		return ".png"
+	case strings.Contains(ct, "jpeg"):
+		return ".jpg"
+	case strings.Contains(ct, "webp"):
+		return ".webp"
+	case strings.Contains(ct, "gif"):
+		return ".gif"
+	default:
+		// 根据 media kind 兜底
+		return ".bin"
+	}
+}
+
+func downloadMediaBytes(ctx context.Context, rawURL string) ([]byte, string, error) {
+	if !strings.HasPrefix(rawURL, "http://") && !strings.HasPrefix(rawURL, "https://") {
+		return nil, "", fmt.Errorf("unsupported url scheme")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, "", err
+	}
+	req.Header.Set("User-Agent", "sub2api-media-store")
+	// 部分签名 URL 需保留 Range；此处仅 GET 全量。
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, "", fmt.Errorf("download media: unexpected status %d", resp.StatusCode)
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 200<<20)) // 200MB 上限
+	if err != nil {
+		return nil, "", err
+	}
+	contentType := strings.TrimSpace(strings.Split(resp.Header.Get("Content-Type"), ";")[0])
+	if contentType == "" {
+		contentType = http.DetectContentType(data)
+	}
+	return data, contentType, nil
 }
 
 // ListTasksByUserID 查询指定用户媒体任务列表（分页）。
@@ -286,9 +439,37 @@ func (s *MediaTaskService) GetTaskByID(ctx context.Context, id int64) (*MediaTas
 
 // CancelTask 管理员手动取消任务：仅更新本地状态。
 func (s *MediaTaskService) CancelTask(ctx context.Context, id int64) error {
+	record, err := s.mediaTaskRepo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("media_task_service: get task before cancel: %w", err)
+	}
+	// 尽力同步上游取消：若 adapter 支持 Cancel 则调用，忽略不支持/失败的厂商。
+	if record.UpstreamTaskID != "" {
+		account, accErr := s.accountService.GetByID(ctx, record.AccountID)
+		if accErr == nil && account != nil {
+			if adapter, rErr := s.adapter.Resolve(record.MediaKind, account.Platform, record.UpstreamModel); rErr == nil {
+				if canceller, ok := adapter.(interface {
+					Cancel(ctx context.Context, account *Account, upstreamTaskID string) error
+				}); ok {
+					if cErr := canceller.Cancel(ctx, account, record.UpstreamTaskID); cErr != nil {
+						s.logger.Warn("media_task_service: upstream cancel failed (ignored)",
+							zap.Int64("task_id", record.ID),
+							zap.Int64("account_id", record.AccountID),
+							zap.Error(cErr),
+						)
+					}
+				}
+			}
+		}
+	}
 	if err := s.mediaTaskRepo.UpdateStatus(ctx, id, "cancelled", "cancelled by admin"); err != nil {
 		return fmt.Errorf("media_task_service: cancel task: %w", err)
 	}
+	var reserved float64
+	if record.ReservedCost != nil {
+		reserved = *record.ReservedCost
+	}
+	releaseMediaReservedQuota(s.apiKeyService, ctx, record.APIKeyID, reserved)
 	return nil
 }
 
@@ -471,4 +652,58 @@ func mediaCreateStatusShouldFailover(statusCode int) bool {
 	default:
 		return statusCode >= 500
 	}
+}
+
+// ResolveAudioSpeechBytes 同步处理 OpenAI 兼容 /v1/audio/speech。
+// 它选号 + 调 adapter，若上游返回原始音频字节则直接返回字节；
+// 若返回 URL 则返回 URL 让 handler 302。不写 media_tasks（同步端点）。
+func (s *MediaTaskService) ResolveAudioSpeechBytes(ctx context.Context, groupID *int64, publicModel string, requestBody map[string]any) ([]byte, string, error) {
+	req, err := parseMediaCreateRequest(MediaKindAudio, publicModel, requestBody)
+	if err != nil {
+		return nil, "", fmt.Errorf("media_task_service: parse request: %w", err)
+	}
+	excluded := make(map[int64]struct{})
+	const maxAttempts = 100
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		account, selectErr := s.gatewayService.SelectAccountForModelWithExclusions(ctx, groupID, "", publicModel, excluded)
+		if selectErr != nil || account == nil {
+			if selectErr == nil {
+				selectErr = fmt.Errorf("media_task_service: no available account for model %s", publicModel)
+			}
+			return nil, "", fmt.Errorf("media_task_service: select account: %w", selectErr)
+		}
+		upstreamModel := publicModel
+		if mapped := account.GetMappedModel(publicModel); mapped != "" {
+			upstreamModel = mapped
+		}
+		req.PublicModel = publicModel
+		req.UpstreamModel = upstreamModel
+		adapter, resolveErr := s.adapter.Resolve(MediaKindAudio, account.Platform, upstreamModel)
+		if resolveErr != nil {
+			return nil, "", fmt.Errorf("media_task_service: resolve adapter: %w", resolveErr)
+		}
+		createResult, createErr := adapter.Create(ctx, account, *req)
+		if createErr != nil {
+			excluded[account.ID] = struct{}{}
+			continue
+		}
+		if createResult.Status == "failed" && createResult.Mode == MediaCompletionFailed {
+			if mediaCreateStatusShouldFailover(createResult.UpstreamStatusCode) {
+				excluded[account.ID] = struct{}{}
+				continue
+			}
+			return nil, "", fmt.Errorf("media_task_service: upstream failed with status %d: %s", createResult.UpstreamStatusCode, createResult.ErrorMessage)
+		}
+		// 同步字节直接返回；有 URL 返回 URL。
+		if len(createResult.InlineBytes) > 0 {
+			return createResult.InlineBytes, "audio/mpeg", nil
+		}
+		if createResult.InlineURL != "" {
+			return nil, createResult.InlineURL, nil
+		}
+		// 既无字节也无 URL：视为异步任务，返回空让 handler 走任务 JSON。
+		return nil, "", nil
+	}
+	return nil, "", fmt.Errorf("media_task_service: upstream audio speech exhausted")
 }

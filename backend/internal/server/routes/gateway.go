@@ -321,6 +321,12 @@ func RegisterGatewayRoutes(
 		gateway.GET("/media/:id", h.MediaGateway.Get)
 		gateway.GET("/media/:id/content", h.MediaGateway.GetContent)
 
+		// OpenAI 兼容标准音频端点：/v1/audio/speech（同步返回音频字节）
+		gateway.POST("/audio/speech", h.MediaGateway.AudioSpeech)
+		// OpenAI 兼容标准音频识别端点：/v1/audio/transcriptions、/v1/audio/translations
+		gateway.POST("/audio/transcriptions", h.MediaGateway.AudioTranscription)
+		gateway.POST("/audio/translations", h.MediaGateway.AudioTranslation)
+
 		// xAI Voice APIs (Grok platform only): HTTP TTS/STT + Realtime WS.
 		// Not part of the creation-center product surface — gateway relay only.
 		voiceHandler := func(endpoint string) gin.HandlerFunc {
@@ -771,6 +777,12 @@ func compositeRouteEndpointForPath(path string) string {
 		return service.CompositeRouteEndpointChatCompletions
 	case strings.Contains(path, "/embeddings"):
 		return service.CompositeRouteEndpointEmbeddings
+	case strings.Contains(path, "/media"):
+		return service.CompositeRouteEndpointMedia
+	case strings.Contains(path, "/audio"):
+		return service.CompositeRouteEndpointAudio
+	case strings.Contains(path, "/video"):
+		return service.CompositeRouteEndpointVideo
 	case strings.Contains(path, "/images/"):
 		return service.CompositeRouteEndpointImages
 	case strings.Contains(path, "/v1beta/"):

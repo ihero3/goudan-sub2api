@@ -293,33 +293,33 @@ type RateLimitCacheInvalidator interface {
 }
 
 type APIKeyService struct {
-	apiKeyRepo            APIKeyRepository
-	userRepo              UserRepository
-	groupRepo             GroupRepository
-	userSubRepo           UserSubscriptionRepository
-	userGroupRateRepo     UserGroupRateRepository
-	cache                 APIKeyCache
-	rateLimitCacheInvalid RateLimitCacheInvalidator // optional: invalidate Redis rate limit cache
-	consumerRepo          ConsumerRepository        // optional: for auto-filling team_id from consumer
-	concurrencyService    *ConcurrencyService
-	cfg                   *config.Config
-	authCacheL1           *ristretto.Cache
-	authNegativeCacheL1   *ristretto.Cache
-	authCfg               apiKeyAuthCacheConfig
-	authGroup             singleflight.Group
-	authLookupSlots       chan struct{}
-	authLookupTotal       atomic.Uint64
-	authLookupRejected    atomic.Uint64
-	authLookupInFlight    atomic.Int64
-	invalidAuthAbuse      *invalidAuthAbuseLimiter
-	authInvalidationStart sync.Once
-	authInvalidationStop  sync.Once
-	authInvalidationCancel context.CancelFunc
-	authInvalidationWG     sync.WaitGroup
+	apiKeyRepo                APIKeyRepository
+	userRepo                  UserRepository
+	groupRepo                 GroupRepository
+	userSubRepo               UserSubscriptionRepository
+	userGroupRateRepo         UserGroupRateRepository
+	cache                     APIKeyCache
+	rateLimitCacheInvalid     RateLimitCacheInvalidator // optional: invalidate Redis rate limit cache
+	consumerRepo              ConsumerRepository        // optional: for auto-filling team_id from consumer
+	concurrencyService        *ConcurrencyService
+	cfg                       *config.Config
+	authCacheL1               *ristretto.Cache
+	authNegativeCacheL1       *ristretto.Cache
+	authCfg                   apiKeyAuthCacheConfig
+	authGroup                 singleflight.Group
+	authLookupSlots           chan struct{}
+	authLookupTotal           atomic.Uint64
+	authLookupRejected        atomic.Uint64
+	authLookupInFlight        atomic.Int64
+	invalidAuthAbuse          *invalidAuthAbuseLimiter
+	authInvalidationStart     sync.Once
+	authInvalidationStop      sync.Once
+	authInvalidationCancel    context.CancelFunc
+	authInvalidationWG        sync.WaitGroup
 	authInvalidationConnected atomic.Bool
 	authInvalidationFailures  atomic.Uint64
-	lastUsedTouchL1        sync.Map // keyID -> nextAllowedAt(time.Time)
-	lastUsedTouchSF        singleflight.Group
+	lastUsedTouchL1           sync.Map // keyID -> nextAllowedAt(time.Time)
+	lastUsedTouchSF           singleflight.Group
 }
 
 type APIKeyAuthLookupMetrics struct {
@@ -1153,6 +1153,19 @@ func (s *APIKeyService) CheckAPIKeyQuotaAndExpiry(apiKey *APIKey) error {
 		return ErrAPIKeyQuotaExhausted
 	}
 
+	return nil
+}
+
+// ReleaseQuotaUsed 释放之前预扣的额度（cost 为正则是退回，内部对 quota_used 做负向增量）。
+// 用于完成时多退少补：估算预扣 > 实际费用时退回差额。
+func (s *APIKeyService) ReleaseQuotaUsed(ctx context.Context, apiKeyID int64, cost float64) error {
+	if cost <= 0 {
+		return nil
+	}
+	_, err := s.apiKeyRepo.IncrementQuotaUsed(ctx, apiKeyID, -cost)
+	if err != nil {
+		return fmt.Errorf("release quota used: %w", err)
+	}
 	return nil
 }
 

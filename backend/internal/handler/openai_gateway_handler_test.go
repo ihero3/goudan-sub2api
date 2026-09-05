@@ -2197,6 +2197,7 @@ func TestOpenAIResponses_APIKeyPassthroughPool5xxRetriesThenExhaustsMaxSwitches(
 		nil,
 		nil,
 		cfg,
+	nil,
 	)
 
 	rec := httptest.NewRecorder()
@@ -2298,6 +2299,7 @@ func TestOpenAIResponses_APIKeyPassthroughPoolAuthFailureRetriesThenSwitchesToHe
 				nil,
 				nil,
 				cfg,
+			nil,
 			)
 
 			rec := httptest.NewRecorder()
@@ -2380,6 +2382,7 @@ func TestOpenAIResponses_APIKeyPassthroughSSERateLimitUsesConfiguredPoolRetry(t 
 		nil,
 		nil,
 		cfg,
+	nil,
 	)
 
 	rec := httptest.NewRecorder()

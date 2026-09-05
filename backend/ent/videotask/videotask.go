@@ -47,6 +47,8 @@ const (
 	FieldErrorMessage = "error_message"
 	// FieldCostUsd holds the string denoting the cost_usd field in the database.
 	FieldCostUsd = "cost_usd"
+	// FieldReservedCost holds the string denoting the reserved_cost field in the database.
+	FieldReservedCost = "reserved_cost"
 	// FieldFinishedAt holds the string denoting the finished_at field in the database.
 	FieldFinishedAt = "finished_at"
 	// Table holds the table name of the videotask in the database.
@@ -73,6 +75,7 @@ var Columns = []string{
 	FieldRequestBody,
 	FieldErrorMessage,
 	FieldCostUsd,
+	FieldReservedCost,
 	FieldFinishedAt,
 }
 
@@ -205,6 +208,11 @@ func ByErrorMessage(opts ...sql.OrderTermOption) OrderOption {
 // ByCostUsd orders the results by the cost_usd field.
 func ByCostUsd(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCostUsd, opts...).ToFunc()
+}
+
+// ByReservedCost orders the results by the reserved_cost field.
+func ByReservedCost(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReservedCost, opts...).ToFunc()
 }
 
 // ByFinishedAt orders the results by the finished_at field.

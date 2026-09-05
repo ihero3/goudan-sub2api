@@ -139,6 +139,11 @@ func CostUsd(v float64) predicate.MediaTask {
 	return predicate.MediaTask(sql.FieldEQ(FieldCostUsd, v))
 }
 
+// ReservedCost applies equality check predicate on the "reserved_cost" field. It's identical to ReservedCostEQ.
+func ReservedCost(v float64) predicate.MediaTask {
+	return predicate.MediaTask(sql.FieldEQ(FieldReservedCost, v))
+}
+
 // FinishedAt applies equality check predicate on the "finished_at" field. It's identical to FinishedAtEQ.
 func FinishedAt(v time.Time) predicate.MediaTask {
 	return predicate.MediaTask(sql.FieldEQ(FieldFinishedAt, v))
@@ -1152,6 +1157,56 @@ func CostUsdLT(v float64) predicate.MediaTask {
 // CostUsdLTE applies the LTE predicate on the "cost_usd" field.
 func CostUsdLTE(v float64) predicate.MediaTask {
 	return predicate.MediaTask(sql.FieldLTE(FieldCostUsd, v))
+}
+
+// ReservedCostEQ applies the EQ predicate on the "reserved_cost" field.
+func ReservedCostEQ(v float64) predicate.MediaTask {
+	return predicate.MediaTask(sql.FieldEQ(FieldReservedCost, v))
+}
+
+// ReservedCostNEQ applies the NEQ predicate on the "reserved_cost" field.
+func ReservedCostNEQ(v float64) predicate.MediaTask {
+	return predicate.MediaTask(sql.FieldNEQ(FieldReservedCost, v))
+}
+
+// ReservedCostIn applies the In predicate on the "reserved_cost" field.
+func ReservedCostIn(vs ...float64) predicate.MediaTask {
+	return predicate.MediaTask(sql.FieldIn(FieldReservedCost, vs...))
+}
+
+// ReservedCostNotIn applies the NotIn predicate on the "reserved_cost" field.
+func ReservedCostNotIn(vs ...float64) predicate.MediaTask {
+	return predicate.MediaTask(sql.FieldNotIn(FieldReservedCost, vs...))
+}
+
+// ReservedCostGT applies the GT predicate on the "reserved_cost" field.
+func ReservedCostGT(v float64) predicate.MediaTask {
+	return predicate.MediaTask(sql.FieldGT(FieldReservedCost, v))
+}
+
+// ReservedCostGTE applies the GTE predicate on the "reserved_cost" field.
+func ReservedCostGTE(v float64) predicate.MediaTask {
+	return predicate.MediaTask(sql.FieldGTE(FieldReservedCost, v))
+}
+
+// ReservedCostLT applies the LT predicate on the "reserved_cost" field.
+func ReservedCostLT(v float64) predicate.MediaTask {
+	return predicate.MediaTask(sql.FieldLT(FieldReservedCost, v))
+}
+
+// ReservedCostLTE applies the LTE predicate on the "reserved_cost" field.
+func ReservedCostLTE(v float64) predicate.MediaTask {
+	return predicate.MediaTask(sql.FieldLTE(FieldReservedCost, v))
+}
+
+// ReservedCostIsNil applies the IsNil predicate on the "reserved_cost" field.
+func ReservedCostIsNil() predicate.MediaTask {
+	return predicate.MediaTask(sql.FieldIsNull(FieldReservedCost))
+}
+
+// ReservedCostNotNil applies the NotNil predicate on the "reserved_cost" field.
+func ReservedCostNotNil() predicate.MediaTask {
+	return predicate.MediaTask(sql.FieldNotNull(FieldReservedCost))
 }
 
 // FinishedAtEQ applies the EQ predicate on the "finished_at" field.

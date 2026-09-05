@@ -29,6 +29,7 @@ type VideoTaskRepo interface {
 	UpdateUpstreamTaskID(ctx context.Context, id int64, upstreamTaskID string) error
 	ListByUserID(ctx context.Context, userID int64, limit, offset int) ([]*VideoTaskRecord, int, error)
 	ListProcessingTasks(ctx context.Context, before time.Time, limit int) ([]*VideoTaskRecord, error)
+	ListAdmin(ctx context.Context, userID int64, status string, limit, offset int) ([]*VideoTaskRecord, int, error)
 }
 
 // VideoTaskRecord 是 video_tasks 表的 Go 映射。
@@ -49,12 +50,17 @@ type VideoTaskRecord struct {
 	RequestBody    map[string]any
 	ErrorMessage   string
 	CostUSD        float64
+	ReservedCost   *float64
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	FinishedAt     *time.Time
 }
 
 // VideoTaskService 视频任务业务服务。
+// maxVideoTaskDurationBeforeFail 是视频任务轮询超时阈值：任务创建后超过该时长
+// 仍处于 processing（上游一直不回结果），直接标记 failed，避免 Worker 无限轮询。
+const maxVideoTaskDurationBeforeFail = 30 * time.Minute
+
 type VideoTaskService struct {
 	videoTaskRepo        VideoTaskRepo
 	accountService       *AccountService
@@ -179,9 +185,12 @@ func (s *VideoTaskService) CreateTask(c *gin.Context, groupID *int64, userID int
 		if createResult.InlineVideoURL != "" {
 			record.VideoURL = createResult.InlineVideoURL
 		}
-		if createResult.Status == "succeeded" {
-			if cost, costErr := s.calculateVideoCost(ctx, apiKeyID, publicModel, req.Resolution, req.DurationSec); costErr == nil {
-				record.CostUSD = cost
+		if createResult.Status != "failed" {
+			if cost, costErr := s.calculateVideoCost(ctx, apiKeyID, publicModel, req.Resolution, req.DurationSec); costErr == nil && cost > 0 {
+				record.ReservedCost = &cost
+				if s.apiKeyService != nil {
+					_ = s.apiKeyService.UpdateQuotaUsed(ctx, apiKeyID, cost)
+				}
 			}
 		}
 
@@ -221,6 +230,17 @@ func (s *VideoTaskService) PollTask(ctx context.Context, record *VideoTaskRecord
 	if record.Status != "processing" || record.UpstreamTaskID == "" {
 		return nil
 	}
+	if !record.CreatedAt.IsZero() && time.Since(record.CreatedAt) > maxVideoTaskDurationBeforeFail {
+		s.logger.Warn("video_task_service: task timed out, marking failed",
+			zap.Int64("task_id", record.ID),
+			zap.String("local_id", record.LocalID),
+			zap.Time("created_at", record.CreatedAt),
+		)
+		if err := s.videoTaskRepo.UpdateStatus(ctx, record.ID, "failed", "upstream task timed out"); err != nil {
+			return fmt.Errorf("video_task_service: timeout update status: %w", err)
+		}
+		return nil
+	}
 	return s.refreshTaskStatus(ctx, record)
 }
 
@@ -255,18 +275,32 @@ func (s *VideoTaskService) refreshTaskStatus(ctx context.Context, record *VideoT
 		if err != nil {
 			return fmt.Errorf("video_task_service: update result: %w", err)
 		}
-		if claimed && cost > 0 && s.apiKeyService != nil {
-			_ = s.apiKeyService.UpdateQuotaUsed(ctx, record.APIKeyID, cost)
+		if claimed {
+			var reserved float64
+			if record.ReservedCost != nil {
+				reserved = *record.ReservedCost
+			}
+			settleMediaReservedQuota(s.apiKeyService, ctx, record.APIKeyID, reserved, cost)
 		}
 	case "failed", "cancelled":
 		if err := s.videoTaskRepo.UpdateStatus(ctx, record.ID, result.Status, result.ErrorMessage); err != nil {
 			return fmt.Errorf("video_task_service: update status: %w", err)
 		}
+		var reserved float64
+		if record.ReservedCost != nil {
+			reserved = *record.ReservedCost
+		}
+		releaseMediaReservedQuota(s.apiKeyService, ctx, record.APIKeyID, reserved)
 	default:
 		// still processing, no update needed
 	}
 
 	return nil
+}
+
+// ListAdmin 管理后台全量列表（status 在 SQL 层过滤）。
+func (s *VideoTaskService) ListAdmin(ctx context.Context, userID int64, status string, limit, offset int) ([]*VideoTaskRecord, int, error) {
+	return s.videoTaskRepo.ListAdmin(ctx, userID, status, limit, offset)
 }
 
 // ListTasksByUserID 查询指定用户的视频任务列表（分页）。
@@ -295,9 +329,37 @@ func (s *VideoTaskService) GetTaskByID(ctx context.Context, id int64) (*VideoTas
 // CancelTask 管理员手动取消任务：仅更新本地状态为 cancelled。
 // 不调上游 cancel API（上游 cancel 支持不一致），上游任务自然超时或被忽略。
 func (s *VideoTaskService) CancelTask(ctx context.Context, id int64) error {
+	record, err := s.videoTaskRepo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("video_task_service: get task before cancel: %w", err)
+	}
+	// 尽力同步上游取消（视频厂商若支持 Cancel 接口则调用，失败忽略）。
+	if record.UpstreamTaskID != "" {
+		account, accErr := s.accountService.GetByID(ctx, record.AccountID)
+		if accErr == nil && account != nil {
+			if adapter, rErr := s.adapter.Resolve(account.Platform, record.UpstreamModel); rErr == nil {
+				if canceller, ok := adapter.(interface {
+					Cancel(ctx context.Context, account *Account, upstreamTaskID string) error
+				}); ok {
+					if cErr := canceller.Cancel(ctx, account, record.UpstreamTaskID); cErr != nil {
+						s.logger.Warn("video_task_service: upstream cancel failed (ignored)",
+							zap.Int64("task_id", record.ID),
+							zap.Int64("account_id", record.AccountID),
+							zap.Error(cErr),
+						)
+					}
+				}
+			}
+		}
+	}
 	if err := s.videoTaskRepo.UpdateStatus(ctx, id, "cancelled", "cancelled by admin"); err != nil {
 		return fmt.Errorf("video_task_service: cancel task: %w", err)
 	}
+	var reserved float64
+	if record.ReservedCost != nil {
+		reserved = *record.ReservedCost
+	}
+	releaseMediaReservedQuota(s.apiKeyService, ctx, record.APIKeyID, reserved)
 	return nil
 }
 

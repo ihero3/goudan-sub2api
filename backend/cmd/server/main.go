@@ -170,6 +170,9 @@ func runMainServer() {
 	if app.VideoWorker != nil {
 		app.VideoWorker.Start(context.Background())
 	}
+	if app.MediaWorker != nil {
+		app.MediaWorker.Start(context.Background())
+	}
 
 	// 启动服务器
 	go func() {

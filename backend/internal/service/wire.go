@@ -983,6 +983,7 @@ var ProviderSet = wire.NewSet(
 	// 媒体生成统一模块（图片 / 视频 / 音频）
 	ProvideMediaAdapter,
 	NewMediaTaskService,
+	NewMediaWorker,
 )
 
 // ProvideVideoAdapter 创建视频上游适配器 registry。

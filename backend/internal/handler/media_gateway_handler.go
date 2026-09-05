@@ -9,6 +9,7 @@ package handler
 // 低耦合：仅依赖 service.MediaTaskService，不直接访问 repository 或 adapter。
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -37,6 +38,199 @@ func NewMediaGatewayHandler(mediaTaskService *service.MediaTaskService, billingC
 		billingCacheService: billingCacheService,
 		logger:              logger.L(),
 	}
+}
+
+// AudioSpeech POST /v1/audio/speech
+// OpenAI 兼容同步端点。返回原始音频字节（audio/mpeg），或 302 到上游音频 URL。
+func (h *MediaGatewayHandler) AudioSpeech(c *gin.Context) {
+	apiKey, ok := middleware2.GetAPIKeyFromContext(c)
+	if !ok {
+		mediaErrorResponse(c, http.StatusUnauthorized, "authentication_error", "Invalid API key")
+		return
+	}
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		mediaErrorResponse(c, http.StatusUnauthorized, "authentication_error", "User context not found")
+		return
+	}
+	subscription, _ := middleware2.GetSubscriptionFromContext(c)
+
+	bodyBytes, err := readMediaRequestBody(c)
+	if err != nil {
+		mediaErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to read request body")
+		return
+	}
+	if len(bodyBytes) == 0 {
+		mediaErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Request body is empty")
+		return
+	}
+	var body map[string]any
+	if err := json.Unmarshal(bodyBytes, &body); err != nil {
+		mediaErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Invalid JSON body")
+		return
+	}
+	publicModel, _ := body["model"].(string)
+	if strings.TrimSpace(publicModel) == "" {
+		mediaErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "model is required")
+		return
+	}
+	// 调用前额度检查
+	if h.billingCacheService != nil {
+		if err := h.billingCacheService.CheckBillingEligibility(
+			c.Request.Context(), apiKey.User, apiKey, apiKey.Group, subscription,
+			service.QuotaPlatform(c.Request.Context(), apiKey),
+		); err != nil {
+			status, code, message, retryAfter := billingErrorDetails(err)
+			if retryAfter > 0 {
+				c.Header("Retry-After", strconv.Itoa(retryAfter))
+			}
+			mediaErrorResponse(c, status, code, message)
+			return
+		}
+	}
+
+	bytesOut, urlOut, err := h.mediaTaskService.ResolveAudioSpeechBytes(
+		c.Request.Context(), apiKey.GroupID, publicModel, body,
+	)
+	if err != nil {
+		h.logger.Warn("media_gateway.audio_speech_failed",
+			zap.Int64("user_id", subject.UserID),
+			zap.String("model", publicModel),
+			zap.Error(err),
+		)
+		mediaErrorResponse(c, http.StatusBadGateway, "api_error", "Audio speech request failed")
+		return
+	}
+	if len(bytesOut) > 0 {
+		c.Data(http.StatusOK, "audio/mpeg", bytesOut)
+		return
+	}
+	if urlOut != "" {
+		c.Redirect(http.StatusFound, urlOut)
+		return
+	}
+	// 既无字节也无 URL（异步任务），回退到统一任务流程
+	h.Create(c)
+}
+
+// audioFileEndpoint 处理 OpenAI 兼容 /audio/transcriptions 与 /audio/translations。
+// 读取 multipart file，转发到上游同名端点，返回上游 JSON。
+func (h *MediaGatewayHandler) audioFileEndpoint(c *gin.Context, endpoint string) {
+	apiKey, ok := middleware2.GetAPIKeyFromContext(c)
+	if !ok {
+		mediaErrorResponse(c, http.StatusUnauthorized, "authentication_error", "Invalid API key")
+		return
+	}
+	// 读 multipart
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		mediaErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "file field is required")
+		return
+	}
+	defer func() { _ = file.Close() }()
+	fileBytes, err := io.ReadAll(io.LimitReader(file, 200<<20))
+	if err != nil {
+		mediaErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "read file failed")
+		return
+	}
+	model := strings.TrimSpace(c.PostForm("model"))
+	if model == "" {
+		mediaErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "model is required")
+		return
+	}
+
+	extraForm := map[string]string{}
+	for k := range c.Request.MultipartForm.Value {
+		switch k {
+		case "model", "file":
+			continue
+		default:
+			extraForm[k] = c.PostForm(k)
+		}
+	}
+
+	respBody, err := h.mediaTaskService.ResolveAudioTranscription(
+		c.Request.Context(), apiKey.GroupID, model, endpoint, fileBytes, header.Filename, header.Header.Get("Content-Type"), extraForm,
+	)
+	if err != nil {
+		mediaErrorResponse(c, http.StatusBadGateway, "api_error", "Audio file request failed")
+		return
+	}
+	// 直接原样返回上游 JSON（OpenAI 格式 {"text":"..."}）。
+	c.Data(http.StatusOK, "application/json", respBody)
+}
+
+// AudioTranscription POST /v1/audio/transcriptions
+func (h *MediaGatewayHandler) AudioTranscription(c *gin.Context) {
+	h.audioFileEndpoint(c, "/v1/audio/transcriptions")
+}
+
+// AudioTranslation POST /v1/audio/translations
+func (h *MediaGatewayHandler) AudioTranslation(c *gin.Context) {
+	h.audioFileEndpoint(c, "/v1/audio/translations")
+}
+
+// mediaCreateIdempotent 创建媒体任务；当请求带 Idempotency-Key 头时用幂等协调器包住，
+// 防止客户端重试重复创建付费任务。坐标器不可用时退化为直接执行。
+func (h *MediaGatewayHandler) mediaCreateIdempotent(
+	c *gin.Context,
+	kind service.MediaKind,
+	apiKey *service.APIKey,
+	subject middleware2.AuthSubject,
+	publicModel string,
+	body map[string]any,
+) (*service.MediaTaskRecord, bool, error) {
+	coordinator := service.DefaultIdempotencyCoordinator()
+	if coordinator == nil {
+		record, err := h.mediaTaskService.CreateTask(c, kind, apiKey.GroupID, subject.UserID, apiKey.ID, publicModel, body)
+		return record, false, err
+	}
+
+	actorScope := "user:" + strconv.FormatInt(subject.UserID, 10)
+	var record *service.MediaTaskRecord
+	result, err := coordinator.Execute(c.Request.Context(), service.IdempotencyExecuteOptions{
+		Scope:          "media_create",
+		ActorScope:     actorScope,
+		Method:         c.Request.Method,
+		Route:          c.FullPath(),
+		IdempotencyKey: c.GetHeader("Idempotency-Key"),
+		Payload:        body,
+		RequireKey:     false,
+	}, func(ctx context.Context) (any, error) {
+		rec, err := h.mediaTaskService.CreateTask(c, kind, apiKey.GroupID, subject.UserID, apiKey.ID, publicModel, body)
+		if err != nil {
+			return nil, err
+		}
+		record = rec
+		return rec, nil
+	})
+	if err != nil {
+		return nil, false, err
+	}
+	if result != nil {
+		if rec, ok := result.Data.(*service.MediaTaskRecord); ok {
+			record = rec
+		} else if rec := decodeMediaTaskRecord(result.Data); rec != nil {
+			record = rec
+		}
+	}
+	return record, result != nil && result.Replayed, nil
+}
+
+// decodeMediaTaskRecord 在幂等重放时把存储的 JSON 数据（map)还原为 MediaTaskRecord。
+func decodeMediaTaskRecord(data any) *service.MediaTaskRecord {
+	if data == nil {
+		return nil
+	}
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return nil
+	}
+	var rec service.MediaTaskRecord
+	if err := json.Unmarshal(raw, &rec); err != nil {
+		return nil
+	}
+	return &rec
 }
 
 // Create POST /v1/media/generations
@@ -109,7 +303,7 @@ func (h *MediaGatewayHandler) Create(c *gin.Context) {
 		zap.String("kind", string(kind)),
 	)
 
-	record, err := h.mediaTaskService.CreateTask(c, kind, apiKey.GroupID, subject.UserID, apiKey.ID, publicModel, body)
+	record, replayed, err := h.mediaCreateIdempotent(c, kind, apiKey, subject, publicModel, body)
 	if err != nil {
 		reqLog.Error("media_gateway.create_task_failed", zap.Error(err))
 		if strings.Contains(err.Error(), "no available account") {
@@ -118,6 +312,9 @@ func (h *MediaGatewayHandler) Create(c *gin.Context) {
 		}
 		mediaErrorResponse(c, http.StatusBadGateway, "api_error", "Media generation request failed")
 		return
+	}
+	if replayed {
+		c.Header("X-Idempotency-Replayed", "true")
 	}
 
 	reqLog.Info("media_gateway.create_task_succeeded",

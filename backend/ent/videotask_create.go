@@ -212,6 +212,20 @@ func (_c *VideoTaskCreate) SetNillableCostUsd(v *float64) *VideoTaskCreate {
 	return _c
 }
 
+// SetReservedCost sets the "reserved_cost" field.
+func (_c *VideoTaskCreate) SetReservedCost(v float64) *VideoTaskCreate {
+	_c.mutation.SetReservedCost(v)
+	return _c
+}
+
+// SetNillableReservedCost sets the "reserved_cost" field if the given value is not nil.
+func (_c *VideoTaskCreate) SetNillableReservedCost(v *float64) *VideoTaskCreate {
+	if v != nil {
+		_c.SetReservedCost(*v)
+	}
+	return _c
+}
+
 // SetFinishedAt sets the "finished_at" field.
 func (_c *VideoTaskCreate) SetFinishedAt(v time.Time) *VideoTaskCreate {
 	_c.mutation.SetFinishedAt(v)
@@ -452,6 +466,10 @@ func (_c *VideoTaskCreate) createSpec() (*VideoTask, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CostUsd(); ok {
 		_spec.SetField(videotask.FieldCostUsd, field.TypeFloat64, value)
 		_node.CostUsd = value
+	}
+	if value, ok := _c.mutation.ReservedCost(); ok {
+		_spec.SetField(videotask.FieldReservedCost, field.TypeFloat64, value)
+		_node.ReservedCost = &value
 	}
 	if value, ok := _c.mutation.FinishedAt(); ok {
 		_spec.SetField(videotask.FieldFinishedAt, field.TypeTime, value)
@@ -776,6 +794,30 @@ func (u *VideoTaskUpsert) UpdateCostUsd() *VideoTaskUpsert {
 // AddCostUsd adds v to the "cost_usd" field.
 func (u *VideoTaskUpsert) AddCostUsd(v float64) *VideoTaskUpsert {
 	u.Add(videotask.FieldCostUsd, v)
+	return u
+}
+
+// SetReservedCost sets the "reserved_cost" field.
+func (u *VideoTaskUpsert) SetReservedCost(v float64) *VideoTaskUpsert {
+	u.Set(videotask.FieldReservedCost, v)
+	return u
+}
+
+// UpdateReservedCost sets the "reserved_cost" field to the value that was provided on create.
+func (u *VideoTaskUpsert) UpdateReservedCost() *VideoTaskUpsert {
+	u.SetExcluded(videotask.FieldReservedCost)
+	return u
+}
+
+// AddReservedCost adds v to the "reserved_cost" field.
+func (u *VideoTaskUpsert) AddReservedCost(v float64) *VideoTaskUpsert {
+	u.Add(videotask.FieldReservedCost, v)
+	return u
+}
+
+// ClearReservedCost clears the value of the "reserved_cost" field.
+func (u *VideoTaskUpsert) ClearReservedCost() *VideoTaskUpsert {
+	u.SetNull(videotask.FieldReservedCost)
 	return u
 }
 
@@ -1154,6 +1196,34 @@ func (u *VideoTaskUpsertOne) AddCostUsd(v float64) *VideoTaskUpsertOne {
 func (u *VideoTaskUpsertOne) UpdateCostUsd() *VideoTaskUpsertOne {
 	return u.Update(func(s *VideoTaskUpsert) {
 		s.UpdateCostUsd()
+	})
+}
+
+// SetReservedCost sets the "reserved_cost" field.
+func (u *VideoTaskUpsertOne) SetReservedCost(v float64) *VideoTaskUpsertOne {
+	return u.Update(func(s *VideoTaskUpsert) {
+		s.SetReservedCost(v)
+	})
+}
+
+// AddReservedCost adds v to the "reserved_cost" field.
+func (u *VideoTaskUpsertOne) AddReservedCost(v float64) *VideoTaskUpsertOne {
+	return u.Update(func(s *VideoTaskUpsert) {
+		s.AddReservedCost(v)
+	})
+}
+
+// UpdateReservedCost sets the "reserved_cost" field to the value that was provided on create.
+func (u *VideoTaskUpsertOne) UpdateReservedCost() *VideoTaskUpsertOne {
+	return u.Update(func(s *VideoTaskUpsert) {
+		s.UpdateReservedCost()
+	})
+}
+
+// ClearReservedCost clears the value of the "reserved_cost" field.
+func (u *VideoTaskUpsertOne) ClearReservedCost() *VideoTaskUpsertOne {
+	return u.Update(func(s *VideoTaskUpsert) {
+		s.ClearReservedCost()
 	})
 }
 
@@ -1701,6 +1771,34 @@ func (u *VideoTaskUpsertBulk) AddCostUsd(v float64) *VideoTaskUpsertBulk {
 func (u *VideoTaskUpsertBulk) UpdateCostUsd() *VideoTaskUpsertBulk {
 	return u.Update(func(s *VideoTaskUpsert) {
 		s.UpdateCostUsd()
+	})
+}
+
+// SetReservedCost sets the "reserved_cost" field.
+func (u *VideoTaskUpsertBulk) SetReservedCost(v float64) *VideoTaskUpsertBulk {
+	return u.Update(func(s *VideoTaskUpsert) {
+		s.SetReservedCost(v)
+	})
+}
+
+// AddReservedCost adds v to the "reserved_cost" field.
+func (u *VideoTaskUpsertBulk) AddReservedCost(v float64) *VideoTaskUpsertBulk {
+	return u.Update(func(s *VideoTaskUpsert) {
+		s.AddReservedCost(v)
+	})
+}
+
+// UpdateReservedCost sets the "reserved_cost" field to the value that was provided on create.
+func (u *VideoTaskUpsertBulk) UpdateReservedCost() *VideoTaskUpsertBulk {
+	return u.Update(func(s *VideoTaskUpsert) {
+		s.UpdateReservedCost()
+	})
+}
+
+// ClearReservedCost clears the value of the "reserved_cost" field.
+func (u *VideoTaskUpsertBulk) ClearReservedCost() *VideoTaskUpsertBulk {
+	return u.Update(func(s *VideoTaskUpsert) {
+		s.ClearReservedCost()
 	})
 }
 

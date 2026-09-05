@@ -34342,6 +34342,8 @@ type MediaTaskMutation struct {
 	error_message    *string
 	cost_usd         *float64
 	addcost_usd      *float64
+	reserved_cost    *float64
+	addreserved_cost *float64
 	finished_at      *time.Time
 	clearedFields    map[string]struct{}
 	done             bool
@@ -35301,6 +35303,76 @@ func (m *MediaTaskMutation) ResetCostUsd() {
 	m.addcost_usd = nil
 }
 
+// SetReservedCost sets the "reserved_cost" field.
+func (m *MediaTaskMutation) SetReservedCost(f float64) {
+	m.reserved_cost = &f
+	m.addreserved_cost = nil
+}
+
+// ReservedCost returns the value of the "reserved_cost" field in the mutation.
+func (m *MediaTaskMutation) ReservedCost() (r float64, exists bool) {
+	v := m.reserved_cost
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReservedCost returns the old "reserved_cost" field's value of the MediaTask entity.
+// If the MediaTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaTaskMutation) OldReservedCost(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReservedCost is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReservedCost requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReservedCost: %w", err)
+	}
+	return oldValue.ReservedCost, nil
+}
+
+// AddReservedCost adds f to the "reserved_cost" field.
+func (m *MediaTaskMutation) AddReservedCost(f float64) {
+	if m.addreserved_cost != nil {
+		*m.addreserved_cost += f
+	} else {
+		m.addreserved_cost = &f
+	}
+}
+
+// AddedReservedCost returns the value that was added to the "reserved_cost" field in this mutation.
+func (m *MediaTaskMutation) AddedReservedCost() (r float64, exists bool) {
+	v := m.addreserved_cost
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearReservedCost clears the value of the "reserved_cost" field.
+func (m *MediaTaskMutation) ClearReservedCost() {
+	m.reserved_cost = nil
+	m.addreserved_cost = nil
+	m.clearedFields[mediatask.FieldReservedCost] = struct{}{}
+}
+
+// ReservedCostCleared returns if the "reserved_cost" field was cleared in this mutation.
+func (m *MediaTaskMutation) ReservedCostCleared() bool {
+	_, ok := m.clearedFields[mediatask.FieldReservedCost]
+	return ok
+}
+
+// ResetReservedCost resets all changes to the "reserved_cost" field.
+func (m *MediaTaskMutation) ResetReservedCost() {
+	m.reserved_cost = nil
+	m.addreserved_cost = nil
+	delete(m.clearedFields, mediatask.FieldReservedCost)
+}
+
 // SetFinishedAt sets the "finished_at" field.
 func (m *MediaTaskMutation) SetFinishedAt(t time.Time) {
 	m.finished_at = &t
@@ -35384,7 +35456,7 @@ func (m *MediaTaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaTaskMutation) Fields() []string {
-	fields := make([]string, 0, 19)
+	fields := make([]string, 0, 20)
 	if m.created_at != nil {
 		fields = append(fields, mediatask.FieldCreatedAt)
 	}
@@ -35439,6 +35511,9 @@ func (m *MediaTaskMutation) Fields() []string {
 	if m.cost_usd != nil {
 		fields = append(fields, mediatask.FieldCostUsd)
 	}
+	if m.reserved_cost != nil {
+		fields = append(fields, mediatask.FieldReservedCost)
+	}
 	if m.finished_at != nil {
 		fields = append(fields, mediatask.FieldFinishedAt)
 	}
@@ -35486,6 +35561,8 @@ func (m *MediaTaskMutation) Field(name string) (ent.Value, bool) {
 		return m.ErrorMessage()
 	case mediatask.FieldCostUsd:
 		return m.CostUsd()
+	case mediatask.FieldReservedCost:
+		return m.ReservedCost()
 	case mediatask.FieldFinishedAt:
 		return m.FinishedAt()
 	}
@@ -35533,6 +35610,8 @@ func (m *MediaTaskMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldErrorMessage(ctx)
 	case mediatask.FieldCostUsd:
 		return m.OldCostUsd(ctx)
+	case mediatask.FieldReservedCost:
+		return m.OldReservedCost(ctx)
 	case mediatask.FieldFinishedAt:
 		return m.OldFinishedAt(ctx)
 	}
@@ -35670,6 +35749,13 @@ func (m *MediaTaskMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCostUsd(v)
 		return nil
+	case mediatask.FieldReservedCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReservedCost(v)
+		return nil
 	case mediatask.FieldFinishedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -35700,6 +35786,9 @@ func (m *MediaTaskMutation) AddedFields() []string {
 	if m.addcost_usd != nil {
 		fields = append(fields, mediatask.FieldCostUsd)
 	}
+	if m.addreserved_cost != nil {
+		fields = append(fields, mediatask.FieldReservedCost)
+	}
 	return fields
 }
 
@@ -35718,6 +35807,8 @@ func (m *MediaTaskMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedDurationSec()
 	case mediatask.FieldCostUsd:
 		return m.AddedCostUsd()
+	case mediatask.FieldReservedCost:
+		return m.AddedReservedCost()
 	}
 	return nil, false
 }
@@ -35762,6 +35853,13 @@ func (m *MediaTaskMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddCostUsd(v)
 		return nil
+	case mediatask.FieldReservedCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddReservedCost(v)
+		return nil
 	}
 	return fmt.Errorf("unknown MediaTask numeric field %s", name)
 }
@@ -35793,6 +35891,9 @@ func (m *MediaTaskMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(mediatask.FieldErrorMessage) {
 		fields = append(fields, mediatask.FieldErrorMessage)
+	}
+	if m.FieldCleared(mediatask.FieldReservedCost) {
+		fields = append(fields, mediatask.FieldReservedCost)
 	}
 	if m.FieldCleared(mediatask.FieldFinishedAt) {
 		fields = append(fields, mediatask.FieldFinishedAt)
@@ -35834,6 +35935,9 @@ func (m *MediaTaskMutation) ClearField(name string) error {
 		return nil
 	case mediatask.FieldErrorMessage:
 		m.ClearErrorMessage()
+		return nil
+	case mediatask.FieldReservedCost:
+		m.ClearReservedCost()
 		return nil
 	case mediatask.FieldFinishedAt:
 		m.ClearFinishedAt()
@@ -35899,6 +36003,9 @@ func (m *MediaTaskMutation) ResetField(name string) error {
 		return nil
 	case mediatask.FieldCostUsd:
 		m.ResetCostUsd()
+		return nil
+	case mediatask.FieldReservedCost:
+		m.ResetReservedCost()
 		return nil
 	case mediatask.FieldFinishedAt:
 		m.ResetFinishedAt()
@@ -74334,6 +74441,8 @@ type VideoTaskMutation struct {
 	error_message    *string
 	cost_usd         *float64
 	addcost_usd      *float64
+	reserved_cost    *float64
+	addreserved_cost *float64
 	finished_at      *time.Time
 	clearedFields    map[string]struct{}
 	done             bool
@@ -75257,6 +75366,76 @@ func (m *VideoTaskMutation) ResetCostUsd() {
 	m.addcost_usd = nil
 }
 
+// SetReservedCost sets the "reserved_cost" field.
+func (m *VideoTaskMutation) SetReservedCost(f float64) {
+	m.reserved_cost = &f
+	m.addreserved_cost = nil
+}
+
+// ReservedCost returns the value of the "reserved_cost" field in the mutation.
+func (m *VideoTaskMutation) ReservedCost() (r float64, exists bool) {
+	v := m.reserved_cost
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReservedCost returns the old "reserved_cost" field's value of the VideoTask entity.
+// If the VideoTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *VideoTaskMutation) OldReservedCost(ctx context.Context) (v *float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReservedCost is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReservedCost requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReservedCost: %w", err)
+	}
+	return oldValue.ReservedCost, nil
+}
+
+// AddReservedCost adds f to the "reserved_cost" field.
+func (m *VideoTaskMutation) AddReservedCost(f float64) {
+	if m.addreserved_cost != nil {
+		*m.addreserved_cost += f
+	} else {
+		m.addreserved_cost = &f
+	}
+}
+
+// AddedReservedCost returns the value that was added to the "reserved_cost" field in this mutation.
+func (m *VideoTaskMutation) AddedReservedCost() (r float64, exists bool) {
+	v := m.addreserved_cost
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearReservedCost clears the value of the "reserved_cost" field.
+func (m *VideoTaskMutation) ClearReservedCost() {
+	m.reserved_cost = nil
+	m.addreserved_cost = nil
+	m.clearedFields[videotask.FieldReservedCost] = struct{}{}
+}
+
+// ReservedCostCleared returns if the "reserved_cost" field was cleared in this mutation.
+func (m *VideoTaskMutation) ReservedCostCleared() bool {
+	_, ok := m.clearedFields[videotask.FieldReservedCost]
+	return ok
+}
+
+// ResetReservedCost resets all changes to the "reserved_cost" field.
+func (m *VideoTaskMutation) ResetReservedCost() {
+	m.reserved_cost = nil
+	m.addreserved_cost = nil
+	delete(m.clearedFields, videotask.FieldReservedCost)
+}
+
 // SetFinishedAt sets the "finished_at" field.
 func (m *VideoTaskMutation) SetFinishedAt(t time.Time) {
 	m.finished_at = &t
@@ -75340,7 +75519,7 @@ func (m *VideoTaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *VideoTaskMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 19)
 	if m.created_at != nil {
 		fields = append(fields, videotask.FieldCreatedAt)
 	}
@@ -75392,6 +75571,9 @@ func (m *VideoTaskMutation) Fields() []string {
 	if m.cost_usd != nil {
 		fields = append(fields, videotask.FieldCostUsd)
 	}
+	if m.reserved_cost != nil {
+		fields = append(fields, videotask.FieldReservedCost)
+	}
 	if m.finished_at != nil {
 		fields = append(fields, videotask.FieldFinishedAt)
 	}
@@ -75437,6 +75619,8 @@ func (m *VideoTaskMutation) Field(name string) (ent.Value, bool) {
 		return m.ErrorMessage()
 	case videotask.FieldCostUsd:
 		return m.CostUsd()
+	case videotask.FieldReservedCost:
+		return m.ReservedCost()
 	case videotask.FieldFinishedAt:
 		return m.FinishedAt()
 	}
@@ -75482,6 +75666,8 @@ func (m *VideoTaskMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldErrorMessage(ctx)
 	case videotask.FieldCostUsd:
 		return m.OldCostUsd(ctx)
+	case videotask.FieldReservedCost:
+		return m.OldReservedCost(ctx)
 	case videotask.FieldFinishedAt:
 		return m.OldFinishedAt(ctx)
 	}
@@ -75612,6 +75798,13 @@ func (m *VideoTaskMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetCostUsd(v)
 		return nil
+	case videotask.FieldReservedCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReservedCost(v)
+		return nil
 	case videotask.FieldFinishedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -75642,6 +75835,9 @@ func (m *VideoTaskMutation) AddedFields() []string {
 	if m.addcost_usd != nil {
 		fields = append(fields, videotask.FieldCostUsd)
 	}
+	if m.addreserved_cost != nil {
+		fields = append(fields, videotask.FieldReservedCost)
+	}
 	return fields
 }
 
@@ -75660,6 +75856,8 @@ func (m *VideoTaskMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedDurationSec()
 	case videotask.FieldCostUsd:
 		return m.AddedCostUsd()
+	case videotask.FieldReservedCost:
+		return m.AddedReservedCost()
 	}
 	return nil, false
 }
@@ -75704,6 +75902,13 @@ func (m *VideoTaskMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddCostUsd(v)
 		return nil
+	case videotask.FieldReservedCost:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddReservedCost(v)
+		return nil
 	}
 	return fmt.Errorf("unknown VideoTask numeric field %s", name)
 }
@@ -75735,6 +75940,9 @@ func (m *VideoTaskMutation) ClearedFields() []string {
 	}
 	if m.FieldCleared(videotask.FieldErrorMessage) {
 		fields = append(fields, videotask.FieldErrorMessage)
+	}
+	if m.FieldCleared(videotask.FieldReservedCost) {
+		fields = append(fields, videotask.FieldReservedCost)
 	}
 	if m.FieldCleared(videotask.FieldFinishedAt) {
 		fields = append(fields, videotask.FieldFinishedAt)
@@ -75776,6 +75984,9 @@ func (m *VideoTaskMutation) ClearField(name string) error {
 		return nil
 	case videotask.FieldErrorMessage:
 		m.ClearErrorMessage()
+		return nil
+	case videotask.FieldReservedCost:
+		m.ClearReservedCost()
 		return nil
 	case videotask.FieldFinishedAt:
 		m.ClearFinishedAt()
@@ -75838,6 +76049,9 @@ func (m *VideoTaskMutation) ResetField(name string) error {
 		return nil
 	case videotask.FieldCostUsd:
 		m.ResetCostUsd()
+		return nil
+	case videotask.FieldReservedCost:
+		m.ResetReservedCost()
 		return nil
 	case videotask.FieldFinishedAt:
 		m.ResetFinishedAt()

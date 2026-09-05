@@ -6,7 +6,7 @@ import (
 )
 
 func TestMapJurisdiction_EUHighRisk(t *testing.T) {
-	svc := NewComplianceMappingService()
+	svc := NewComplianceMappingService(nil, nil, nil)
 	result, err := svc.MapJurisdiction(context.Background(), JurisdictionMappingRequest{
 		CompanyRegion: "eu",
 		Industry:      "healthcare",
@@ -27,7 +27,7 @@ func TestMapJurisdiction_EUHighRisk(t *testing.T) {
 }
 
 func TestMapJurisdiction_ChinaDefaultRisk(t *testing.T) {
-	svc := NewComplianceMappingService()
+	svc := NewComplianceMappingService(nil, nil, nil)
 	result, err := svc.MapJurisdiction(context.Background(), JurisdictionMappingRequest{
 		CompanyRegion: "China",
 		Industry:      "ecommerce",
@@ -39,13 +39,13 @@ func TestMapJurisdiction_ChinaDefaultRisk(t *testing.T) {
 	if result.RiskLevel != JurisdictionRiskMedium {
 		t.Fatalf("expected medium risk, got %s", result.RiskLevel)
 	}
-	if !containsString(result.ApplicableRegulations, "个人信息保护法") {
+	if !containsString(result.ApplicableRegulations, "Personal Information Protection Law") {
 		t.Fatalf("expected China regulations, got %v", result.ApplicableRegulations)
 	}
 }
 
 func TestMapJurisdiction_Unsupported(t *testing.T) {
-	svc := NewComplianceMappingService()
+	svc := NewComplianceMappingService(nil, nil, nil)
 	if _, err := svc.MapJurisdiction(context.Background(), JurisdictionMappingRequest{CompanyRegion: "Mars"}); err == nil {
 		t.Fatal("expected error for unsupported region")
 	}

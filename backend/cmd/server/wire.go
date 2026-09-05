@@ -29,6 +29,7 @@ type Application struct {
 	PromptAudit   *securityaudit.PromptService
 	PluginManager *service.PluginManager
 	VideoWorker   *service.VideoWorker
+	MediaWorker   *service.MediaWorker
 	Cleanup       func()
 }
 
@@ -59,7 +60,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 		provideCleanup,
 
 		// Application struct
-		wire.Struct(new(Application), "Server", "PromptAudit", "PluginManager", "VideoWorker", "Cleanup"),
+		wire.Struct(new(Application), "Server", "PromptAudit", "PluginManager", "VideoWorker", "MediaWorker", "Cleanup"),
 	)
 	return nil, nil
 }
@@ -130,6 +131,7 @@ func provideCleanup(
 	promptAudit *securityaudit.PromptService,
 	pluginManager *service.PluginManager,
 	videoWorker *service.VideoWorker,
+	mediaWorker *service.MediaWorker,
 ) func() {
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -151,6 +153,12 @@ func provideCleanup(
 			{"VideoWorker", func() error {
 				if videoWorker != nil {
 					videoWorker.Stop()
+				}
+				return nil
+			}},
+			{"MediaWorker", func() error {
+				if mediaWorker != nil {
+					mediaWorker.Stop()
 				}
 				return nil
 			}},

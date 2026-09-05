@@ -169,3 +169,35 @@ func (m *mockVideoTaskRepo) ListProcessingTasks(ctx context.Context, before time
 	}
 	return out, nil
 }
+
+func (m *mockVideoTaskRepo) ListAdmin(ctx context.Context, userID int64, status string, limit, offset int) ([]*VideoTaskRecord, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var all []*VideoTaskRecord
+	for _, t := range m.byID {
+		if userID > 0 && t.UserID != userID {
+			continue
+		}
+		if status != "" && t.Status != status {
+			continue
+		}
+		cp := *t
+		all = append(all, &cp)
+	}
+	total := len(all)
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	start := offset
+	if start > total {
+		start = total
+	}
+	end := start + limit
+	if end > total {
+		end = total
+	}
+	return all[start:end], total, nil
+}

@@ -63,7 +63,7 @@ func TestVideoTaskRecord_CRUD(t *testing.T) {
 	}
 
 	// UpdateResult
-	if err := repo.UpdateResult(ctx, created.ID, "succeeded", "https://cdn.example.com/v.mp4", "https://cdn.example.com/v.jpg", 5, 0.05); err != nil {
+	if _, err := repo.UpdateResult(ctx, created.ID, "succeeded", "https://cdn.example.com/v.mp4", "https://cdn.example.com/v.jpg", 5, 0.05); err != nil {
 		t.Fatalf("update result failed: %v", err)
 	}
 	got4, _ := repo.GetByID(ctx, created.ID)

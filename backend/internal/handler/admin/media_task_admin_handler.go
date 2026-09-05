@@ -95,14 +95,12 @@ func (h *MediaTaskAdminHandler) List(c *gin.Context) {
 	}
 
 	statusFilter := strings.TrimSpace(c.Query("status"))
+	mediaKindFilter := strings.TrimSpace(c.Query("media_kind"))
 	userIDFilter, _ := strconv.ParseInt(c.Query("user_id"), 10, 64)
 
-	if userIDFilter <= 0 {
-		response.ErrorFrom(c, infraerrors.BadRequest("VALIDATION_ERROR", "user_id filter is required for now"))
-		return
-	}
-
-	items, total, err := h.mediaTaskService.ListTasksByUserID(c.Request.Context(), userIDFilter, pageSize, (page-1)*pageSize)
+	items, total, err := h.mediaTaskService.ListAdmin(
+		c.Request.Context(), userIDFilter, statusFilter, mediaKindFilter, pageSize, (page-1)*pageSize,
+	)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -110,9 +108,6 @@ func (h *MediaTaskAdminHandler) List(c *gin.Context) {
 
 	out := make([]*mediaTaskAdminResponse, 0, len(items))
 	for _, t := range items {
-		if statusFilter != "" && t.Status != statusFilter {
-			continue
-		}
 		out = append(out, toMediaTaskAdminResponse(t))
 	}
 

@@ -63,6 +63,7 @@ type MediaCreateResult struct {
 	Mode               MediaCompletionMode // 规范化完成模式
 	UpstreamStatusCode int                 // 上游 HTTP 状态码，用于 failover 判定
 	UpstreamRaw        []byte              // 上游原始响应
+	InlineBytes        []byte              // 同步返回的原始字节（如音频二进制），与 InlineURL 二选一
 	ErrorMessage       string
 }
 

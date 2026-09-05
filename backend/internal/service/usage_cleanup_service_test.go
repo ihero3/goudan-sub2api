@@ -231,6 +231,22 @@ func (s *cleanupRepoStub) DeleteUsageLogsBatch(ctx context.Context, filters Usag
 	return resp.deleted, resp.err
 }
 
+func (s *cleanupRepoStub) DeleteExpiredRetentionLogs(ctx context.Context, limit int) (int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// 简单桩：复用 deleteQueue 的删除结果；无配置时返回 0。
+	if len(s.deleteQueue) == 0 {
+		return 0, nil
+	}
+	if s.deleteCalls == nil {
+		s.deleteCalls = []cleanupDeleteCall{}
+	}
+	s.deleteCalls = append(s.deleteCalls, cleanupDeleteCall{filters: UsageCleanupFilters{}, limit: limit})
+	resp := s.deleteQueue[0]
+	s.deleteQueue = s.deleteQueue[1:]
+	return resp.deleted, resp.err
+}
+
 func TestUsageCleanupServiceCreateTaskSanitizeFilters(t *testing.T) {
 	repo := &cleanupRepoStub{}
 	cfg := &config.Config{UsageCleanup: config.UsageCleanupConfig{Enabled: true, MaxRangeDays: 31}}

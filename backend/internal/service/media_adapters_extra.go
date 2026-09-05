@@ -19,8 +19,8 @@ import (
 // 根据 Kind 决定 POST/GET 路径与响应字段，兼容图片生成（/images/generations）
 // 与语音合成（/audio/speech），异步任务形（任务 id + 轮询）与同步 URL 均支持。
 type openAICompatMediaAdapter struct {
-	kind    MediaKind
-	supports func(platform, model string) bool
+	kind       MediaKind
+	supports   func(platform, model string) bool
 	httpClient *http.Client
 	// createPath 与 queryPath 可被 Kind 默认值覆盖
 	createPath string
@@ -100,6 +100,15 @@ func (a *openAICompatMediaAdapter) Create(ctx context.Context, account *Account,
 			UpstreamStatusCode: resp.StatusCode,
 			UpstreamRaw:        respBody,
 			ErrorMessage:       fmt.Sprintf("upstream returned %d: %s", resp.StatusCode, string(respBody)),
+		}, nil
+	}
+
+	// 音频 kind：OpenAI 兼容 /audio/speech 返回原始音频字节（audio/mpeg），非 JSON。
+	// 此时直接把字节给调用方，标 succeeded（同步）。
+	if a.kind == MediaKindAudio && !json.Valid(respBody) {
+		return &MediaCreateResult{
+			Status: "succeeded", Mode: MediaCompletionSync, InlineBytes: respBody,
+			UpstreamStatusCode: resp.StatusCode, UpstreamRaw: respBody,
 		}, nil
 	}
 

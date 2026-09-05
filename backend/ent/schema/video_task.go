@@ -79,6 +79,11 @@ func (VideoTask) Fields() []ent.Field {
 		field.Float("cost_usd").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
 			Default(0),
+		field.Float("reserved_cost").
+			Optional().
+			Nillable().
+			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
+			Comment("创建时预扣的估算费用，完成时用于多退少补"),
 		field.Time("finished_at").
 			Optional().
 			Nillable().

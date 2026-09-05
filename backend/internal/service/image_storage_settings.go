@@ -125,6 +125,19 @@ func (s *ImageStorageSettingService) resolve() (*ImageResultUploader, bool) {
 	return s.uploader, true
 }
 
+// Storage 返回当前解析出的 ImageStorage（对象存储），若未启用/未配置则返回 nil,false。
+// 适用于把媒体（图片/视频/音频）字节转存到对象存储的场景。
+func (s *ImageStorageSettingService) Storage() (ImageStorage, bool) {
+	uploader, ok := s.resolve()
+	if !ok || uploader == nil {
+		return nil, false
+	}
+	if uploader.storage == nil {
+		return nil, false
+	}
+	return uploader.storage, true
+}
+
 // Invalidate 丢弃缓存，使下一次请求按最新设置重新解析。
 func (s *ImageStorageSettingService) Invalidate() {
 	if s == nil {

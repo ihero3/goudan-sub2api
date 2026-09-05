@@ -37,6 +37,7 @@ import adminComplianceAPI from './compliance'
 import auditAPI from './audit'
 import pluginsAPI from './plugins'
 import videoTasksAPI from './videoTasks'
+import mediaTasksAPI from './mediaTasks'
 
 /**
  * Unified admin API object for convenient access
@@ -75,7 +76,8 @@ export const adminAPI = {
   compliance: adminComplianceAPI,
   audit: auditAPI,
   plugins: pluginsAPI,
-  videoTasks: videoTasksAPI
+  videoTasks: videoTasksAPI,
+  mediaTasks: mediaTasksAPI
 }
 
 export {

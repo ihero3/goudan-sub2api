@@ -333,6 +333,33 @@ func (_u *MediaTaskUpdate) AddCostUsd(v float64) *MediaTaskUpdate {
 	return _u
 }
 
+// SetReservedCost sets the "reserved_cost" field.
+func (_u *MediaTaskUpdate) SetReservedCost(v float64) *MediaTaskUpdate {
+	_u.mutation.ResetReservedCost()
+	_u.mutation.SetReservedCost(v)
+	return _u
+}
+
+// SetNillableReservedCost sets the "reserved_cost" field if the given value is not nil.
+func (_u *MediaTaskUpdate) SetNillableReservedCost(v *float64) *MediaTaskUpdate {
+	if v != nil {
+		_u.SetReservedCost(*v)
+	}
+	return _u
+}
+
+// AddReservedCost adds value to the "reserved_cost" field.
+func (_u *MediaTaskUpdate) AddReservedCost(v float64) *MediaTaskUpdate {
+	_u.mutation.AddReservedCost(v)
+	return _u
+}
+
+// ClearReservedCost clears the value of the "reserved_cost" field.
+func (_u *MediaTaskUpdate) ClearReservedCost() *MediaTaskUpdate {
+	_u.mutation.ClearReservedCost()
+	return _u
+}
+
 // SetFinishedAt sets the "finished_at" field.
 func (_u *MediaTaskUpdate) SetFinishedAt(v time.Time) *MediaTaskUpdate {
 	_u.mutation.SetFinishedAt(v)
@@ -555,6 +582,15 @@ func (_u *MediaTaskUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedCostUsd(); ok {
 		_spec.AddField(mediatask.FieldCostUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.ReservedCost(); ok {
+		_spec.SetField(mediatask.FieldReservedCost, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedReservedCost(); ok {
+		_spec.AddField(mediatask.FieldReservedCost, field.TypeFloat64, value)
+	}
+	if _u.mutation.ReservedCostCleared() {
+		_spec.ClearField(mediatask.FieldReservedCost, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.FinishedAt(); ok {
 		_spec.SetField(mediatask.FieldFinishedAt, field.TypeTime, value)
@@ -887,6 +923,33 @@ func (_u *MediaTaskUpdateOne) AddCostUsd(v float64) *MediaTaskUpdateOne {
 	return _u
 }
 
+// SetReservedCost sets the "reserved_cost" field.
+func (_u *MediaTaskUpdateOne) SetReservedCost(v float64) *MediaTaskUpdateOne {
+	_u.mutation.ResetReservedCost()
+	_u.mutation.SetReservedCost(v)
+	return _u
+}
+
+// SetNillableReservedCost sets the "reserved_cost" field if the given value is not nil.
+func (_u *MediaTaskUpdateOne) SetNillableReservedCost(v *float64) *MediaTaskUpdateOne {
+	if v != nil {
+		_u.SetReservedCost(*v)
+	}
+	return _u
+}
+
+// AddReservedCost adds value to the "reserved_cost" field.
+func (_u *MediaTaskUpdateOne) AddReservedCost(v float64) *MediaTaskUpdateOne {
+	_u.mutation.AddReservedCost(v)
+	return _u
+}
+
+// ClearReservedCost clears the value of the "reserved_cost" field.
+func (_u *MediaTaskUpdateOne) ClearReservedCost() *MediaTaskUpdateOne {
+	_u.mutation.ClearReservedCost()
+	return _u
+}
+
 // SetFinishedAt sets the "finished_at" field.
 func (_u *MediaTaskUpdateOne) SetFinishedAt(v time.Time) *MediaTaskUpdateOne {
 	_u.mutation.SetFinishedAt(v)
@@ -1139,6 +1202,15 @@ func (_u *MediaTaskUpdateOne) sqlSave(ctx context.Context) (_node *MediaTask, er
 	}
 	if value, ok := _u.mutation.AddedCostUsd(); ok {
 		_spec.AddField(mediatask.FieldCostUsd, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.ReservedCost(); ok {
+		_spec.SetField(mediatask.FieldReservedCost, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.AddedReservedCost(); ok {
+		_spec.AddField(mediatask.FieldReservedCost, field.TypeFloat64, value)
+	}
+	if _u.mutation.ReservedCostCleared() {
+		_spec.ClearField(mediatask.FieldReservedCost, field.TypeFloat64)
 	}
 	if value, ok := _u.mutation.FinishedAt(); ok {
 		_spec.SetField(mediatask.FieldFinishedAt, field.TypeTime, value)

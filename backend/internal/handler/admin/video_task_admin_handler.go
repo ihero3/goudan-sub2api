@@ -32,24 +32,24 @@ func NewVideoTaskAdminHandler(videoTaskService *service.VideoTaskService) *Video
 // --- 响应 DTO ---
 
 type videoTaskAdminResponse struct {
-	ID             int64  `json:"id"`
-	LocalID        string `json:"local_id"`
-	UserID         int64  `json:"user_id"`
-	APIKeyID       int64  `json:"api_key_id"`
-	PublicModel    string `json:"public_model"`
-	UpstreamModel  string `json:"upstream_model"`
-	AccountID      int64  `json:"account_id"`
-	UpstreamTaskID string `json:"upstream_task_id"`
-	Status         string `json:"status"`
-	Resolution     string `json:"resolution"`
-	DurationSec    int    `json:"duration_sec"`
-	VideoURL       string `json:"video_url"`
-	ThumbnailURL   string `json:"thumbnail_url"`
-	ErrorMessage   string `json:"error_message"`
+	ID             int64   `json:"id"`
+	LocalID        string  `json:"local_id"`
+	UserID         int64   `json:"user_id"`
+	APIKeyID       int64   `json:"api_key_id"`
+	PublicModel    string  `json:"public_model"`
+	UpstreamModel  string  `json:"upstream_model"`
+	AccountID      int64   `json:"account_id"`
+	UpstreamTaskID string  `json:"upstream_task_id"`
+	Status         string  `json:"status"`
+	Resolution     string  `json:"resolution"`
+	DurationSec    int     `json:"duration_sec"`
+	VideoURL       string  `json:"video_url"`
+	ThumbnailURL   string  `json:"thumbnail_url"`
+	ErrorMessage   string  `json:"error_message"`
 	CostUSD        float64 `json:"cost_usd"`
-	CreatedAt      string `json:"created_at"`
-	UpdatedAt      string `json:"updated_at"`
-	FinishedAt     string `json:"finished_at"`
+	CreatedAt      string  `json:"created_at"`
+	UpdatedAt      string  `json:"updated_at"`
+	FinishedAt     string  `json:"finished_at"`
 }
 
 func toVideoTaskAdminResponse(t *service.VideoTaskRecord) *videoTaskAdminResponse {
@@ -98,16 +98,9 @@ func (h *VideoTaskAdminHandler) List(c *gin.Context) {
 	statusFilter := strings.TrimSpace(c.Query("status"))
 	userIDFilter, _ := strconv.ParseInt(c.Query("user_id"), 10, 64)
 
-	// 当前 VideoTaskRepo.ListByUserID 仅按 user_id 查询。
-	// 管理后台需要全量列表 + 多条件筛选，这里先通过 user_id 路由：
-	// - user_id > 0：按用户查
-	// - user_id == 0：暂不支持全量列表（需后续扩展 repo 方法）
-	if userIDFilter <= 0 {
-		response.ErrorFrom(c, infraerrors.BadRequest("VALIDATION_ERROR", "user_id filter is required for now"))
-		return
-	}
-
-	items, total, err := h.videoTaskService.ListTasksByUserID(c.Request.Context(), userIDFilter, pageSize, (page-1)*pageSize)
+	items, total, err := h.videoTaskService.ListAdmin(
+		c.Request.Context(), userIDFilter, statusFilter, pageSize, (page-1)*pageSize,
+	)
 	if err != nil {
 		response.ErrorFrom(c, err)
 		return
@@ -115,10 +108,6 @@ func (h *VideoTaskAdminHandler) List(c *gin.Context) {
 
 	out := make([]*videoTaskAdminResponse, 0, len(items))
 	for _, t := range items {
-		// 可选 status 过滤（内存过滤，数据量大时应下推到 repo）
-		if statusFilter != "" && t.Status != statusFilter {
-			continue
-		}
 		out = append(out, toVideoTaskAdminResponse(t))
 	}
 

@@ -23,6 +23,7 @@ type VideoTaskRepository interface {
 	UpdateUpstreamTaskID(ctx context.Context, id int64, upstreamTaskID string) error
 	ListByUserID(ctx context.Context, userID int64, limit, offset int) ([]*service.VideoTaskRecord, int, error)
 	ListProcessingTasks(ctx context.Context, before time.Time, limit int) ([]*service.VideoTaskRecord, error)
+	ListAdmin(ctx context.Context, userID int64, status string, limit, offset int) ([]*service.VideoTaskRecord, int, error)
 }
 
 // videoTaskRepository 实现 VideoTaskRepository 接口。
@@ -69,6 +70,9 @@ func (r *videoTaskRepository) Create(ctx context.Context, task *service.VideoTas
 	}
 	if task.CostUSD > 0 {
 		b.SetCostUsd(task.CostUSD)
+	}
+	if task.ReservedCost != nil {
+		b.SetNillableReservedCost(task.ReservedCost)
 	}
 
 	vt, err := b.Save(ctx)
@@ -165,6 +169,39 @@ func (r *videoTaskRepository) ListByUserID(ctx context.Context, userID int64, li
 	return records, total, nil
 }
 
+func (r *videoTaskRepository) ListAdmin(ctx context.Context, userID int64, status string, limit, offset int) ([]*service.VideoTaskRecord, int, error) {
+	query := r.client.VideoTask.Query()
+	if userID > 0 {
+		query = query.Where(dbvideotask.UserIDEQ(userID))
+	}
+	if status != "" {
+		query = query.Where(dbvideotask.StatusEQ(status))
+	}
+	total, err := query.Count(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("video_task_repo: count admin: %w", err)
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	tasks, err := query.
+		Order(dbvideotask.ByCreatedAt(entsql.OrderDesc())).
+		Limit(limit).
+		Offset(offset).
+		All(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("video_task_repo: list admin: %w", err)
+	}
+	records := make([]*service.VideoTaskRecord, len(tasks))
+	for i, vt := range tasks {
+		records[i] = entToRecord(vt)
+	}
+	return records, total, nil
+}
+
 func (r *videoTaskRepository) ListProcessingTasks(ctx context.Context, before time.Time, limit int) ([]*service.VideoTaskRecord, error) {
 	if limit <= 0 {
 		limit = 50
@@ -205,6 +242,7 @@ func entToRecord(vt *dbent.VideoTask) *service.VideoTaskRecord {
 		RequestBody:    vt.RequestBody,
 		ErrorMessage:   vt.ErrorMessage,
 		CostUSD:        vt.CostUsd,
+		ReservedCost:   vt.ReservedCost,
 		CreatedAt:      vt.CreatedAt,
 		UpdatedAt:      vt.UpdatedAt,
 		FinishedAt:     vt.FinishedAt,

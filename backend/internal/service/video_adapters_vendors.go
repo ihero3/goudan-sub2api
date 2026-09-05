@@ -126,6 +126,26 @@ func (a vendorVideoAdapter) Create(ctx context.Context, account *Account, req Vi
 	return a.parseCreate(respBody, statusCode)
 }
 
+// Cancel 通过 DELETE 到任务查询端点尝试取消上游任务（很多厂商支持删除/取消）。
+// 由于部分厂商不支持，失败仅记录日志，不向上抛。由 MediaTaskService 尽力调用。
+func (a vendorVideoAdapter) Cancel(ctx context.Context, account *Account, upstreamTaskID string) error {
+	if a.buildQuery == nil {
+		return fmt.Errorf("%s video adapter has no query builder for cancel", a.name)
+	}
+	url, err := a.buildQuery(account, upstreamTaskID)
+	if err != nil {
+		return fmt.Errorf("%s video adapter build cancel url: %w", a.name, err)
+	}
+	respBody, statusCode, err := a.do(ctx, account, http.MethodDelete, url, nil)
+	if err != nil {
+		return fmt.Errorf("%s video adapter cancel do: %w", a.name, err)
+	}
+	if statusCode >= 400 {
+		return fmt.Errorf("%s video adapter cancel returned %d: %s", a.name, statusCode, string(respBody))
+	}
+	return nil
+}
+
 func (a vendorVideoAdapter) GetResult(ctx context.Context, account *Account, upstreamTaskID string) (*VideoTaskResult, error) {
 	if a.buildQuery == nil || a.parseQuery == nil {
 		return nil, fmt.Errorf("%s video adapter is missing query handlers", a.name)

@@ -226,6 +226,20 @@ func (_c *MediaTaskCreate) SetNillableCostUsd(v *float64) *MediaTaskCreate {
 	return _c
 }
 
+// SetReservedCost sets the "reserved_cost" field.
+func (_c *MediaTaskCreate) SetReservedCost(v float64) *MediaTaskCreate {
+	_c.mutation.SetReservedCost(v)
+	return _c
+}
+
+// SetNillableReservedCost sets the "reserved_cost" field if the given value is not nil.
+func (_c *MediaTaskCreate) SetNillableReservedCost(v *float64) *MediaTaskCreate {
+	if v != nil {
+		_c.SetReservedCost(*v)
+	}
+	return _c
+}
+
 // SetFinishedAt sets the "finished_at" field.
 func (_c *MediaTaskCreate) SetFinishedAt(v time.Time) *MediaTaskCreate {
 	_c.mutation.SetFinishedAt(v)
@@ -482,6 +496,10 @@ func (_c *MediaTaskCreate) createSpec() (*MediaTask, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CostUsd(); ok {
 		_spec.SetField(mediatask.FieldCostUsd, field.TypeFloat64, value)
 		_node.CostUsd = value
+	}
+	if value, ok := _c.mutation.ReservedCost(); ok {
+		_spec.SetField(mediatask.FieldReservedCost, field.TypeFloat64, value)
+		_node.ReservedCost = &value
 	}
 	if value, ok := _c.mutation.FinishedAt(); ok {
 		_spec.SetField(mediatask.FieldFinishedAt, field.TypeTime, value)
@@ -818,6 +836,30 @@ func (u *MediaTaskUpsert) UpdateCostUsd() *MediaTaskUpsert {
 // AddCostUsd adds v to the "cost_usd" field.
 func (u *MediaTaskUpsert) AddCostUsd(v float64) *MediaTaskUpsert {
 	u.Add(mediatask.FieldCostUsd, v)
+	return u
+}
+
+// SetReservedCost sets the "reserved_cost" field.
+func (u *MediaTaskUpsert) SetReservedCost(v float64) *MediaTaskUpsert {
+	u.Set(mediatask.FieldReservedCost, v)
+	return u
+}
+
+// UpdateReservedCost sets the "reserved_cost" field to the value that was provided on create.
+func (u *MediaTaskUpsert) UpdateReservedCost() *MediaTaskUpsert {
+	u.SetExcluded(mediatask.FieldReservedCost)
+	return u
+}
+
+// AddReservedCost adds v to the "reserved_cost" field.
+func (u *MediaTaskUpsert) AddReservedCost(v float64) *MediaTaskUpsert {
+	u.Add(mediatask.FieldReservedCost, v)
+	return u
+}
+
+// ClearReservedCost clears the value of the "reserved_cost" field.
+func (u *MediaTaskUpsert) ClearReservedCost() *MediaTaskUpsert {
+	u.SetNull(mediatask.FieldReservedCost)
 	return u
 }
 
@@ -1210,6 +1252,34 @@ func (u *MediaTaskUpsertOne) AddCostUsd(v float64) *MediaTaskUpsertOne {
 func (u *MediaTaskUpsertOne) UpdateCostUsd() *MediaTaskUpsertOne {
 	return u.Update(func(s *MediaTaskUpsert) {
 		s.UpdateCostUsd()
+	})
+}
+
+// SetReservedCost sets the "reserved_cost" field.
+func (u *MediaTaskUpsertOne) SetReservedCost(v float64) *MediaTaskUpsertOne {
+	return u.Update(func(s *MediaTaskUpsert) {
+		s.SetReservedCost(v)
+	})
+}
+
+// AddReservedCost adds v to the "reserved_cost" field.
+func (u *MediaTaskUpsertOne) AddReservedCost(v float64) *MediaTaskUpsertOne {
+	return u.Update(func(s *MediaTaskUpsert) {
+		s.AddReservedCost(v)
+	})
+}
+
+// UpdateReservedCost sets the "reserved_cost" field to the value that was provided on create.
+func (u *MediaTaskUpsertOne) UpdateReservedCost() *MediaTaskUpsertOne {
+	return u.Update(func(s *MediaTaskUpsert) {
+		s.UpdateReservedCost()
+	})
+}
+
+// ClearReservedCost clears the value of the "reserved_cost" field.
+func (u *MediaTaskUpsertOne) ClearReservedCost() *MediaTaskUpsertOne {
+	return u.Update(func(s *MediaTaskUpsert) {
+		s.ClearReservedCost()
 	})
 }
 
@@ -1771,6 +1841,34 @@ func (u *MediaTaskUpsertBulk) AddCostUsd(v float64) *MediaTaskUpsertBulk {
 func (u *MediaTaskUpsertBulk) UpdateCostUsd() *MediaTaskUpsertBulk {
 	return u.Update(func(s *MediaTaskUpsert) {
 		s.UpdateCostUsd()
+	})
+}
+
+// SetReservedCost sets the "reserved_cost" field.
+func (u *MediaTaskUpsertBulk) SetReservedCost(v float64) *MediaTaskUpsertBulk {
+	return u.Update(func(s *MediaTaskUpsert) {
+		s.SetReservedCost(v)
+	})
+}
+
+// AddReservedCost adds v to the "reserved_cost" field.
+func (u *MediaTaskUpsertBulk) AddReservedCost(v float64) *MediaTaskUpsertBulk {
+	return u.Update(func(s *MediaTaskUpsert) {
+		s.AddReservedCost(v)
+	})
+}
+
+// UpdateReservedCost sets the "reserved_cost" field to the value that was provided on create.
+func (u *MediaTaskUpsertBulk) UpdateReservedCost() *MediaTaskUpsertBulk {
+	return u.Update(func(s *MediaTaskUpsert) {
+		s.UpdateReservedCost()
+	})
+}
+
+// ClearReservedCost clears the value of the "reserved_cost" field.
+func (u *MediaTaskUpsertBulk) ClearReservedCost() *MediaTaskUpsertBulk {
+	return u.Update(func(s *MediaTaskUpsert) {
+		s.ClearReservedCost()
 	})
 }
 

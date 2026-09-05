@@ -70,6 +70,19 @@ func (a *VideoAsMediaAdapter) GetResult(ctx context.Context, account *Account, u
 	}, nil
 }
 
+// Cancel 透传到视频厂商 adapter（若其支持 Cancel）。供 MediaTaskService 尽力取消上游任务。
+func (a *VideoAsMediaAdapter) Cancel(ctx context.Context, account *Account, upstreamTaskID string) error {
+	if a.video == nil {
+		return nil
+	}
+	if canceller, ok := a.video.(interface {
+		Cancel(ctx context.Context, account *Account, upstreamTaskID string) error
+	}); ok {
+		return canceller.Cancel(ctx, account, upstreamTaskID)
+	}
+	return nil
+}
+
 // Supports 实现 MediaAdapterMatcher，转发到底层视频 adapter 的 Supports（若有）。
 func (a *VideoAsMediaAdapter) Supports(platform, model string) bool {
 	if matcher, ok := a.video.(VideoAdapterMatcher); ok {

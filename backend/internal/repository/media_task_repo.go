@@ -24,6 +24,7 @@ type MediaTaskRepository interface {
 	UpdateUpstreamTaskID(ctx context.Context, id int64, upstreamTaskID string) error
 	ListByUserID(ctx context.Context, userID int64, limit, offset int) ([]*service.MediaTaskRecord, int, error)
 	ListProcessingTasks(ctx context.Context, before time.Time, limit int) ([]*service.MediaTaskRecord, error)
+	ListAdmin(ctx context.Context, userID int64, status, mediaKind string, limit, offset int) ([]*service.MediaTaskRecord, int, error)
 }
 
 // mediaTaskRepository 实现 MediaTaskRepository 接口。
@@ -73,6 +74,9 @@ func (r *mediaTaskRepository) Create(ctx context.Context, task *service.MediaTas
 	}
 	if task.CostUSD > 0 {
 		b.SetCostUsd(task.CostUSD)
+	}
+	if task.ReservedCost != nil {
+		b.SetNillableReservedCost(task.ReservedCost)
 	}
 
 	mt, err := b.Save(ctx)
@@ -169,6 +173,42 @@ func (r *mediaTaskRepository) ListByUserID(ctx context.Context, userID int64, li
 	return records, total, nil
 }
 
+func (r *mediaTaskRepository) ListAdmin(ctx context.Context, userID int64, status, mediaKind string, limit, offset int) ([]*service.MediaTaskRecord, int, error) {
+	query := r.client.MediaTask.Query()
+	if userID > 0 {
+		query = query.Where(dbmediatask.UserIDEQ(userID))
+	}
+	if status != "" {
+		query = query.Where(dbmediatask.StatusEQ(status))
+	}
+	if mediaKind != "" {
+		query = query.Where(dbmediatask.MediaKindEQ(mediaKind))
+	}
+	total, err := query.Count(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("media_task_repo: count admin: %w", err)
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	tasks, err := query.
+		Order(dbmediatask.ByCreatedAt(entsql.OrderDesc())).
+		Limit(limit).
+		Offset(offset).
+		All(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("media_task_repo: list admin: %w", err)
+	}
+	records := make([]*service.MediaTaskRecord, len(tasks))
+	for i, mt := range tasks {
+		records[i] = entToMediaTaskRecord(mt)
+	}
+	return records, total, nil
+}
+
 func (r *mediaTaskRepository) ListProcessingTasks(ctx context.Context, before time.Time, limit int) ([]*service.MediaTaskRecord, error) {
 	if limit <= 0 {
 		limit = 50
@@ -210,6 +250,7 @@ func entToMediaTaskRecord(mt *dbent.MediaTask) *service.MediaTaskRecord {
 		RequestBody:    mt.RequestBody,
 		ErrorMessage:   mt.ErrorMessage,
 		CostUSD:        mt.CostUsd,
+		ReservedCost:   mt.ReservedCost,
 		CreatedAt:      mt.CreatedAt,
 		UpdatedAt:      mt.UpdatedAt,
 		FinishedAt:     mt.FinishedAt,

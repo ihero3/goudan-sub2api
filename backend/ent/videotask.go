@@ -52,6 +52,8 @@ type VideoTask struct {
 	ErrorMessage string `json:"error_message,omitempty"`
 	// CostUsd holds the value of the "cost_usd" field.
 	CostUsd float64 `json:"cost_usd,omitempty"`
+	// 创建时预扣的估算费用，完成时用于多退少补
+	ReservedCost *float64 `json:"reserved_cost,omitempty"`
 	// FinishedAt holds the value of the "finished_at" field.
 	FinishedAt   *time.Time `json:"finished_at,omitempty"`
 	selectValues sql.SelectValues
@@ -64,7 +66,7 @@ func (*VideoTask) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case videotask.FieldRequestBody:
 			values[i] = new([]byte)
-		case videotask.FieldCostUsd:
+		case videotask.FieldCostUsd, videotask.FieldReservedCost:
 			values[i] = new(sql.NullFloat64)
 		case videotask.FieldID, videotask.FieldUserID, videotask.FieldAPIKeyID, videotask.FieldAccountID, videotask.FieldDurationSec:
 			values[i] = new(sql.NullInt64)
@@ -197,6 +199,13 @@ func (_m *VideoTask) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CostUsd = value.Float64
 			}
+		case videotask.FieldReservedCost:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field reserved_cost", values[i])
+			} else if value.Valid {
+				_m.ReservedCost = new(float64)
+				*_m.ReservedCost = value.Float64
+			}
 		case videotask.FieldFinishedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field finished_at", values[i])
@@ -290,6 +299,11 @@ func (_m *VideoTask) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("cost_usd=")
 	builder.WriteString(fmt.Sprintf("%v", _m.CostUsd))
+	builder.WriteString(", ")
+	if v := _m.ReservedCost; v != nil {
+		builder.WriteString("reserved_cost=")
+		builder.WriteString(fmt.Sprintf("%v", *v))
+	}
 	builder.WriteString(", ")
 	if v := _m.FinishedAt; v != nil {
 		builder.WriteString("finished_at=")

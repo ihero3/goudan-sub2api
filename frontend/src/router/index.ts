@@ -946,6 +946,20 @@ const routes: RouteRecordRaw[] = [
     }
   },
 
+  // ==================== Admin: Media Tasks ====================
+  {
+    path: '/admin/media-tasks',
+    name: 'AdminMediaTasks',
+    component: () => import('@/views/admin/MediaTasksView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Media Tasks',
+      titleKey: 'admin.videoTasks.title',
+      descriptionKey: 'admin.videoTasks.description'
+    }
+  },
+
   // ==================== 404 Not Found ====================
   {
     path: '/:pathMatch(.*)*',
