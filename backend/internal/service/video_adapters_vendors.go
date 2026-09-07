@@ -272,6 +272,69 @@ func (*WanVideoAdapter) Supports(platform, model string) bool {
 	return a.supports(platform, model)
 }
 
+
+// KimiVideoAdapter supports Moonshot Kimi H3 video model.
+// Kimi (月之暗面 / Moonshot) video API is OpenAI-compatible with a
+// multi-modal content array similar to MiniMax / Seedance.
+//
+// API contract (2026-09):
+//
+//	POST /v1/video/generations
+//	GET  /v1/video/generations/{task_id}
+//
+// The create payload uses a `content` array with text/image/video items.
+// Kimi supports both video generation and video extension (续写).
+type KimiVideoAdapter struct{ vendorVideoAdapter }
+
+func NewKimiVideoAdapter() *KimiVideoAdapter {
+	a := &KimiVideoAdapter{}
+	a.vendorVideoAdapter = newVendorVideoAdapter("kimi-video")
+	a.supports = func(platform, model string) bool {
+		m := strings.ToLower(strings.TrimSpace(model))
+		return strings.HasPrefix(m, "kimi-h3") ||
+			strings.HasPrefix(m, "kimi-video") ||
+			strings.Contains(m, "moonshot-video") ||
+			strings.HasPrefix(m, "moonshot-h3") ||
+			(strings.HasPrefix(m, "video-") && strings.Contains(m, "kimi"))
+	}
+	a.buildCreate = buildKimiVideoCreateBody
+	a.parseCreate = parseKimiVideoCreateResult
+	a.buildCreateURL = buildKimiVideoCreateURL
+	a.buildQuery = buildKimiVideoQueryURL
+	a.parseQuery = parseKimiVideoQueryResult
+	return a
+}
+
+func (*KimiVideoAdapter) Supports(platform, model string) bool {
+	a := NewKimiVideoAdapter()
+	return a.supports(platform, model)
+}
+
+func buildKimiVideoCreateURL(account *Account) (string, error) {
+	baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")
+	if baseURL == "" {
+		return "", fmt.Errorf("video adapter: account %d has no base_url", account.ID)
+	}
+	path := "/v1/video/generations"
+	if extra := account.GetCredential("video_create_path"); strings.TrimSpace(extra) != "" {
+		path = normalizeVideoURLPath(extra)
+	}
+	return baseURL + path, nil
+}
+
+func buildKimiVideoQueryURL(account *Account, upstreamTaskID string) (string, error) {
+	baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")
+	if baseURL == "" {
+		return "", fmt.Errorf("video adapter: account %d has no base_url", account.ID)
+	}
+	path := "/v1/video/generations/" + upstreamTaskID
+	if extra := account.GetCredential("video_query_path"); strings.TrimSpace(extra) != "" {
+		path = normalizeVideoURLPath(extra) + "/" + upstreamTaskID
+	}
+	return baseURL + path, nil
+}
+
+
 // --- Shared request builders ---
 
 // seedanceVideoContent converts the unified request to Volcano Ark content items.
@@ -452,6 +515,66 @@ func buildWanVideoCreateBody(req VideoCreateRequest) []byte {
 	data, _ := json.Marshal(body)
 	return data
 }
+
+
+func buildKimiVideoCreateBody(req VideoCreateRequest) []byte {
+	content := kimiVideoContent(req)
+	body := map[string]any{
+		"model":   req.UpstreamModel,
+		"content": content,
+	}
+	if req.Resolution != "" {
+		body["resolution"] = req.Resolution
+	}
+	if req.Ratio != "" {
+		body["ratio"] = req.Ratio
+	}
+	if req.DurationSec > 0 {
+		body["duration"] = req.DurationSec
+	}
+	if req.Seed != nil {
+		body["seed"] = *req.Seed
+	}
+	mergeVideoExtra(body, req.Extra)
+	data, _ := json.Marshal(body)
+	return data
+}
+
+// kimiVideoContent converts the unified request to Kimi content items.
+// Kimi uses a flat content array with text, image_url, and video_url types.
+func kimiVideoContent(req VideoCreateRequest) []map[string]any {
+	content := make([]map[string]any, 0, len(req.Media)+len(req.ImageRefURLs)+len(req.VideoRefURLs)+len(req.AudioRefURLs)+1)
+	if strings.TrimSpace(req.Prompt) != "" {
+		content = append(content, map[string]any{"type": "text", "text": req.Prompt})
+	}
+	if len(req.Media) > 0 {
+		for _, item := range req.Media {
+			switch strings.ToLower(strings.TrimSpace(item.Type)) {
+			case "first_frame", "last_frame", "reference_image":
+				content = append(content, map[string]any{
+					"type": "image_url", "image_url": map[string]any{"url": item.URL},
+				})
+			case "reference_video":
+				content = append(content, map[string]any{
+					"type": "video_url", "video_url": map[string]any{"url": item.URL},
+				})
+			}
+		}
+		return content
+	}
+	for _, imageURL := range req.ImageRefURLs {
+		content = append(content, map[string]any{
+			"type": "image_url", "image_url": map[string]any{"url": imageURL},
+		})
+	}
+	for _, videoURL := range req.VideoRefURLs {
+		content = append(content, map[string]any{
+			"type": "video_url", "video_url": map[string]any{"url": videoURL},
+		})
+	}
+	return content
+}
+
 
 // wanVideoMedia converts the unified request into DashScope Wan media objects.
 // Explicit `media` (from all-in-one callers) is preserved as-is; the flattened
@@ -757,6 +880,29 @@ func parseWanVideoQueryResult(respBody []byte, statusCode int) (*VideoTaskResult
 	result.ThumbnailURL = stringAtPath(data, "output.thumbnail_url", "thumbnail_url")
 	result.DurationSec = intAtPath(data, "usage.duration", "output.duration", "duration")
 	result.ErrorMessage = stringAtPath(data, "message", "output.message", "error.message")
+	return result, nil
+}
+
+
+func parseKimiVideoCreateResult(respBody []byte, statusCode int) (*VideoCreateResult, error) {
+	return parseGenericVideoCreateResultWithPaths(respBody, statusCode, "data.id", "task_id", "id")
+}
+
+func parseKimiVideoQueryResult(respBody []byte, statusCode int) (*VideoTaskResult, error) {
+	result := &VideoTaskResult{StatusCode: statusCode, UpstreamRaw: respBody}
+	if statusCode >= 400 {
+		result.Status = "failed"
+		result.ErrorMessage = fmt.Sprintf("upstream returned %d: %s", statusCode, string(respBody))
+		return result, nil
+	}
+	var data map[string]any
+	_ = json.Unmarshal(respBody, &data)
+	result.Status = normalizeVideoTaskStatus(firstNonEmptyString(
+		stringAtPath(data, "data.status", "status"), "processing"))
+	result.VideoURL = stringAtPath(data, "data.video_url", "video_url")
+	result.ThumbnailURL = stringAtPath(data, "data.thumbnail_url", "thumbnail_url")
+	result.DurationSec = intAtPath(data, "data.duration", "duration")
+	result.ErrorMessage = stringAtPath(data, "data.error.message", "data.error", "error.message", "message")
 	return result, nil
 }
 

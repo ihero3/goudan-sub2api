@@ -77,6 +77,10 @@ func IsKnownVideoVendorModel(model string) bool {
 		m == "minimax-h3-max",
 		(strings.HasPrefix(m, "video-") && strings.Contains(m, "hailuo")):
 		return true
+	case strings.HasPrefix(m, "kimi-h3"),
+		strings.HasPrefix(m, "kimi-video"),
+		strings.Contains(m, "moonshot-video"):
+		return true
 	case strings.HasPrefix(m, "wan") &&
 		(strings.Contains(m, "video") || strings.Contains(m, "wanx") ||
 			strings.Contains(m, "t2v") || strings.HasPrefix(m, "wan2") || strings.HasPrefix(m, "wan3")):

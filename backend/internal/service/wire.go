@@ -993,6 +993,7 @@ func ProvideVideoAdapter() *VideoAdapterRegistry {
 		NewSeedanceVideoAdapter(),
 		NewMiniMaxVideoAdapter(),
 		NewWanVideoAdapter(),
+		NewKimiVideoAdapter(),
 		NewOpenAIVideoAdapter(),
 	)
 }
@@ -1006,6 +1007,7 @@ func ProvideMediaAdapter() *MediaAdapterRegistry {
 		NewVideoAsMediaAdapter(NewSeedanceVideoAdapter()),
 		NewVideoAsMediaAdapter(NewMiniMaxVideoAdapter()),
 		NewVideoAsMediaAdapter(NewWanVideoAdapter()),
+		NewVideoAsMediaAdapter(NewKimiVideoAdapter()),
 		NewVideoAsMediaAdapter(NewOpenAIVideoAdapter()),
 		// 图片厂商（独立）
 		NewSeedanceImageAdapter(),
