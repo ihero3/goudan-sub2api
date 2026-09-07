@@ -201,19 +201,21 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
 	}
+	// 验证当前启用的验证码（邮箱验证码注册场景避免重复校验一次性票据）
+	proof := captchaProof(req.TurnstileToken, req.TencentCaptchaTicket, req.TencentCaptchaRandstr)
+	if err := h.authService.VerifyCaptchaForRegister(c.Request.Context(), proof, ip.GetClientIP(c), req.VerifyCode); err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+
+	// 邮箱验证码校验通过后再消费一次性点击验证 token，
+	// 避免"验证码错误重试"时提前把 token 消耗掉。
 	if h.enforceClickCaptchaForRegistration(c) {
 		ipHash := service.HashFingerprint(ip.GetClientIP(c), c.Request.UserAgent())
 		if err := h.clickCaptcha.ConsumeToken(c.Request.Context(), req.ClickCaptchaToken, ipHash, ipHash); err != nil {
 			response.ErrorFrom(c, err)
 			return
 		}
-	}
-
-	// 验证当前启用的验证码（邮箱验证码注册场景避免重复校验一次性票据）
-	proof := captchaProof(req.TurnstileToken, req.TencentCaptchaTicket, req.TencentCaptchaRandstr)
-	if err := h.authService.VerifyCaptchaForRegister(c.Request.Context(), proof, ip.GetClientIP(c), req.VerifyCode); err != nil {
-		response.ErrorFrom(c, err)
-		return
 	}
 
 	_, user, err := h.authService.RegisterWithVerification(
@@ -240,13 +242,6 @@ func (h *AuthHandler) SendVerifyCode(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
-	}
-	if h.enforceClickCaptchaForRegistration(c) {
-		ipHash := service.HashFingerprint(ip.GetClientIP(c), c.Request.UserAgent())
-		if err := h.clickCaptcha.ConsumeToken(c.Request.Context(), req.ClickCaptchaToken, ipHash, ipHash); err != nil {
-			response.ErrorFrom(c, err)
-			return
-		}
 	}
 
 	proof := captchaProof(req.TurnstileToken, req.TencentCaptchaTicket, req.TencentCaptchaRandstr)
