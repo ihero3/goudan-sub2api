@@ -68,6 +68,7 @@ type MediaTaskService struct {
 	mediaTaskRepo        MediaTaskRepo
 	accountService       *AccountService
 	gatewayService       *GatewayService
+	rateLimitService     *RateLimitService
 	billingService       *BillingService
 	apiKeyService        *APIKeyService
 	openAIGatewayService *OpenAIGatewayService
@@ -81,6 +82,7 @@ func NewMediaTaskService(
 	mediaTaskRepo MediaTaskRepo,
 	accountService *AccountService,
 	gatewayService *GatewayService,
+	rateLimitService *RateLimitService,
 	billingService *BillingService,
 	apiKeyService *APIKeyService,
 	openAIGatewayService *OpenAIGatewayService,
@@ -91,6 +93,7 @@ func NewMediaTaskService(
 		mediaTaskRepo:        mediaTaskRepo,
 		accountService:       accountService,
 		gatewayService:       gatewayService,
+		rateLimitService:     rateLimitService,
 		billingService:       billingService,
 		apiKeyService:        apiKeyService,
 		openAIGatewayService: openAIGatewayService,
@@ -143,6 +146,7 @@ func (s *MediaTaskService) CreateTask(c *gin.Context, kind MediaKind, groupID *i
 
 		createResult, createErr := adapter.Create(ctx, account, *req)
 		if createErr != nil {
+			s.recordMediaTransportFailure(c, ctx, account, createErr)
 			s.logger.Warn("media_task_service: upstream create failed",
 				zap.Int64("account_id", account.ID),
 				zap.String("kind", string(kind)),
@@ -162,7 +166,10 @@ func (s *MediaTaskService) CreateTask(c *gin.Context, kind MediaKind, groupID *i
 				zap.Int("upstream_status", createResult.UpstreamStatusCode),
 				zap.String("error", createResult.ErrorMessage),
 			)
-			if mediaCreateStatusShouldFailover(createResult.UpstreamStatusCode) {
+			failureBody := []byte(createResult.ErrorMessage)
+			decision := classifyMediaUpstreamFailure(createResult.UpstreamStatusCode, failureBody)
+			s.recordMediaUpstreamFailure(c, ctx, account, createResult.UpstreamStatusCode, failureBody, publicModel)
+			if decision.ShouldFailover {
 				excluded[account.ID] = struct{}{}
 				lastUpstreamErr = fmt.Errorf("media_task_service: upstream failed with status %d: %s",
 					createResult.UpstreamStatusCode, createResult.ErrorMessage)
@@ -644,20 +651,10 @@ func generateMediaLocalID(kind MediaKind) string {
 	return prefix + "_" + hex.EncodeToString(b)
 }
 
-// mediaCreateStatusShouldFailover 报告创建响应状态码是否应切换下一个上游账号。
-func mediaCreateStatusShouldFailover(statusCode int) bool {
-	switch statusCode {
-	case 401, 403, 404, 429, 529:
-		return true
-	default:
-		return statusCode >= 500
-	}
-}
-
 // ResolveAudioSpeechBytes 同步处理 OpenAI 兼容 /v1/audio/speech。
 // 它选号 + 调 adapter，若上游返回原始音频字节则直接返回字节；
 // 若返回 URL 则返回 URL 让 handler 302。不写 media_tasks（同步端点）。
-func (s *MediaTaskService) ResolveAudioSpeechBytes(ctx context.Context, groupID *int64, publicModel string, requestBody map[string]any) ([]byte, string, error) {
+func (s *MediaTaskService) ResolveAudioSpeechBytes(c *gin.Context, ctx context.Context, groupID *int64, publicModel string, requestBody map[string]any) ([]byte, string, error) {
 	req, err := parseMediaCreateRequest(MediaKindAudio, publicModel, requestBody)
 	if err != nil {
 		return nil, "", fmt.Errorf("media_task_service: parse request: %w", err)
@@ -685,11 +682,15 @@ func (s *MediaTaskService) ResolveAudioSpeechBytes(ctx context.Context, groupID 
 		}
 		createResult, createErr := adapter.Create(ctx, account, *req)
 		if createErr != nil {
+			s.recordMediaTransportFailure(c, ctx, account, createErr)
 			excluded[account.ID] = struct{}{}
 			continue
 		}
 		if createResult.Status == "failed" && createResult.Mode == MediaCompletionFailed {
-			if mediaCreateStatusShouldFailover(createResult.UpstreamStatusCode) {
+			failureBody := []byte(createResult.ErrorMessage)
+			decision := classifyMediaUpstreamFailure(createResult.UpstreamStatusCode, failureBody)
+			s.recordMediaUpstreamFailure(c, ctx, account, createResult.UpstreamStatusCode, failureBody, publicModel)
+			if decision.ShouldFailover {
 				excluded[account.ID] = struct{}{}
 				continue
 			}

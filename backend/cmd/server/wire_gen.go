@@ -317,7 +317,7 @@ func initializeApplication(buildInfo handler.BuildInfo) (*Application, error) {
 	mediaTaskRepository := repository.NewMediaTaskRepository(client)
 	mediaTaskRepo := repository.ProvideMediaTaskRepo(mediaTaskRepository)
 	mediaAdapter := service.ProvideMediaAdapter()
-	mediaTaskService := service.NewMediaTaskService(mediaTaskRepo, accountService, gatewayService, billingService, apiKeyService, openAIGatewayService, mediaAdapter, imageStorageSettingService)
+	mediaTaskService := service.NewMediaTaskService(mediaTaskRepo, accountService, gatewayService, rateLimitService, billingService, apiKeyService, openAIGatewayService, mediaAdapter, imageStorageSettingService)
 	mediaGatewayHandler := handler.NewMediaGatewayHandler(mediaTaskService, billingCacheService)
 	mediaTaskAdminHandler := admin.NewMediaTaskAdminHandler(mediaTaskService)
 	upstreamBillingProbeService := service.ProvideUpstreamBillingProbeService(accountRepository, accountTestService, settingService, leaderLockCache, db)

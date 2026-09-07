@@ -142,6 +142,7 @@ func (s *VideoTaskService) CreateTask(c *gin.Context, groupID *int64, userID int
 
 		createResult, createErr := adapter.Create(ctx, account, *req)
 		if createErr != nil {
+			s.recordMediaTransportFailure(c, ctx, account, createErr)
 			s.logger.Warn("video_task_service: upstream create failed",
 				zap.Int64("account_id", account.ID),
 				zap.String("model", upstreamModel),
@@ -159,7 +160,10 @@ func (s *VideoTaskService) CreateTask(c *gin.Context, groupID *int64, userID int
 				zap.Int("upstream_status", createResult.UpstreamStatusCode),
 				zap.String("error", createResult.ErrorMessage),
 			)
-			if videoCreateStatusShouldFailover(createResult.UpstreamStatusCode) {
+			failureBody := []byte(createResult.ErrorMessage)
+			decision := classifyMediaUpstreamFailure(createResult.UpstreamStatusCode, failureBody)
+			s.recordMediaUpstreamFailure(c, ctx, account, createResult.UpstreamStatusCode, failureBody, publicModel)
+			if decision.ShouldFailover {
 				excluded[account.ID] = struct{}{}
 				lastUpstreamErr = fmt.Errorf("video_task_service: upstream failed with status %d: %s",
 					createResult.UpstreamStatusCode, createResult.ErrorMessage)
@@ -205,6 +209,74 @@ func (s *VideoTaskService) CreateTask(c *gin.Context, groupID *int64, userID int
 		lastUpstreamErr = fmt.Errorf("video_task_service: upstream account switches exhausted")
 	}
 	return nil, lastUpstreamErr
+}
+
+// recordMediaUpstreamFailure 复用媒体错误分类，让视频旧链路同样冷却坏账号。
+func (s *VideoTaskService) recordMediaUpstreamFailure(c *gin.Context, ctx context.Context, account *Account, statusCode int, responseBody []byte, requestedModel string) {
+	decision := classifyMediaUpstreamFailure(statusCode, responseBody)
+	if account != nil {
+		message := strings.TrimSpace(sanitizeUpstreamErrorMessage(string(responseBody)))
+		if message == "" && statusCode != 0 {
+			message = strings.TrimSpace(sanitizeUpstreamErrorMessage(string(decision.Class)))
+		}
+		safeBody := string(truncateForLog([]byte(message), 1024))
+		appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+			Platform:             account.Platform,
+			AccountID:            account.ID,
+			AccountName:          account.Name,
+			UpstreamStatusCode:   statusCode,
+			UpstreamResponseBody: safeBody,
+			Kind:                 "http_error",
+			Stage:                "media_upstream",
+			Reason:               string(decision.Class),
+			Message:              message,
+		})
+	}
+	if !decision.ShouldCooldown || account == nil {
+		return
+	}
+	if s.rateLimitService != nil && (decision.Class == MediaFailureAuth || decision.Class == MediaFailureBillingQuota) {
+		_ = s.rateLimitService.HandleUpstreamError(ctx, account, statusCode, nil, responseBody, requestedModel)
+		return
+	}
+	if s.rateLimitService != nil {
+		until := time.Now().Add(decision.Cooldown)
+		if s.rateLimitService.SetMediaTempUnschedulable(ctx, account.ID, until, "media upstream failure: "+string(decision.Class)) {
+			return
+		}
+	}
+	if s.accountService == nil {
+		return
+	}
+	until := time.Now().Add(decision.Cooldown)
+	_ = s.accountService.SetTempUnschedulable(ctx, account.ID, until, "media upstream failure: "+string(decision.Class))
+}
+
+// recordMediaTransportFailure 持久网络故障停调账号；瞬时网络故障只切换账号。
+func (s *VideoTaskService) recordMediaTransportFailure(c *gin.Context, ctx context.Context, account *Account, createErr error) {
+	if account == nil || createErr == nil {
+		return
+	}
+	safeErr := strings.TrimSpace(sanitizeUpstreamErrorMessage(createErr.Error()))
+	appendOpsUpstreamError(c, OpsUpstreamErrorEvent{
+		Platform:           account.Platform,
+		AccountID:          account.ID,
+		AccountName:        account.Name,
+		UpstreamStatusCode: 0,
+		Kind:               "request_error",
+		Stage:              "media_upstream",
+		Reason:             "transport_error",
+		Message:            safeErr,
+	})
+	if !classifyUpstreamTransportError(createErr).Persistent {
+		return
+	}
+	until := time.Now().Add(10 * time.Minute)
+	if s.rateLimitService == nil || !s.rateLimitService.SetMediaTempUnschedulable(ctx, account.ID, until, "media upstream transport error: "+createErr.Error()) {
+		if s.accountService != nil {
+			_ = s.accountService.SetTempUnschedulable(ctx, account.ID, until, "media upstream transport error: "+createErr.Error())
+		}
+	}
 }
 
 // GetTask 查询任务状态。如果任务仍在 processing，尝试向上游刷新状态。

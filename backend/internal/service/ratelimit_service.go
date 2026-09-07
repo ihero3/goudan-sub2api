@@ -2672,6 +2672,30 @@ func (s *RateLimitService) triggerTempUnschedulable(ctx context.Context, account
 	return true
 }
 
+// SetMediaTempUnschedulable 将媒体链路识别到的临时故障同步到 Redis + DB，
+// 确保同进程下一次选号和多副本下一次选号都能立即排除该账号。
+func (s *RateLimitService) SetMediaTempUnschedulable(ctx context.Context, accountID int64, until time.Time, reason string) bool {
+	if s == nil || accountID <= 0 {
+		return false
+	}
+	state := &TempUnschedState{
+		UntilUnix:       until.Unix(),
+		TriggeredAtUnix: time.Now().Unix(),
+		ErrorMessage:    reason,
+		RuleIndex:       -1,
+	}
+	if err := s.accountRepo.SetTempUnschedulable(ctx, accountID, until, reason); err != nil {
+		slog.Warn("media_temp_unsched_set_failed", "account_id", accountID, "error", err)
+		return false
+	}
+	if s.tempUnschedCache != nil {
+		if err := s.tempUnschedCache.SetTempUnsched(ctx, accountID, state); err != nil {
+			slog.Warn("media_temp_unsched_cache_set_failed", "account_id", accountID, "error", err)
+		}
+	}
+	return true
+}
+
 func truncateTempUnschedMessage(body []byte, maxBytes int) string {
 	if maxBytes <= 0 || len(body) == 0 {
 		return ""

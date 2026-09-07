@@ -90,7 +90,7 @@ func (h *MediaGatewayHandler) AudioSpeech(c *gin.Context) {
 	}
 
 	bytesOut, urlOut, err := h.mediaTaskService.ResolveAudioSpeechBytes(
-		c.Request.Context(), apiKey.GroupID, publicModel, body,
+		c, c.Request.Context(), apiKey.GroupID, publicModel, body,
 	)
 	if err != nil {
 		h.logger.Warn("media_gateway.audio_speech_failed",
@@ -150,7 +150,7 @@ func (h *MediaGatewayHandler) audioFileEndpoint(c *gin.Context, endpoint string)
 	}
 
 	respBody, err := h.mediaTaskService.ResolveAudioTranscription(
-		c.Request.Context(), apiKey.GroupID, model, endpoint, fileBytes, header.Filename, header.Header.Get("Content-Type"), extraForm,
+		c, c.Request.Context(), apiKey.GroupID, model, endpoint, fileBytes, header.Filename, header.Header.Get("Content-Type"), extraForm,
 	)
 	if err != nil {
 		mediaErrorResponse(c, http.StatusBadGateway, "api_error", "Audio file request failed")

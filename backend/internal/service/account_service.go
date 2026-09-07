@@ -476,6 +476,11 @@ func (s *AccountService) UpdateStatus(ctx context.Context, id int64, status stri
 	return nil
 }
 
+// SetTempUnschedulable 将账号临时移出调度，超时后由现有调度器自动恢复。
+func (s *AccountService) SetTempUnschedulable(ctx context.Context, id int64, until time.Time, reason string) error {
+	return s.accountRepo.SetTempUnschedulable(ctx, id, until, reason)
+}
+
 // UpdateLastUsed 更新最后使用时间
 func (s *AccountService) UpdateLastUsed(ctx context.Context, id int64) error {
 	if err := s.accountRepo.UpdateLastUsed(ctx, id); err != nil {

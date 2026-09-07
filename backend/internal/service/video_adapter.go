@@ -247,19 +247,6 @@ func videoCompletionModeForStatus(status string) VideoCompletionMode {
 	}
 }
 
-// videoCreateStatusShouldFailover reports whether a create response status code
-// should try another upstream account before returning to the client.
-func videoCreateStatusShouldFailover(statusCode int) bool {
-	switch statusCode {
-	case http.StatusUnauthorized, http.StatusForbidden, http.StatusTooManyRequests, http.StatusServiceUnavailable, http.StatusBadGateway, http.StatusGatewayTimeout:
-		return true
-	case 529:
-		return true
-	default:
-		return statusCode >= 500
-	}
-}
-
 // GetResult 查询上游任务状态和结果。
 func (a *OpenAIVideoAdapter) GetResult(ctx context.Context, account *Account, upstreamTaskID string) (*VideoTaskResult, error) {
 	baseURL := strings.TrimRight(account.GetCredential("base_url"), "/")

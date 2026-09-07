@@ -12,15 +12,18 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 // ResolveAudioTranscription 转发 multipart 音频文件到上游 /audio/transcriptions。
 // 返回上游响应体（OpenAI 兼容 JSON，通常为 {"text":"..."}）。
-func (s *MediaTaskService) ResolveAudioTranscription(ctx context.Context, groupID *int64, publicModel, endpoint string, fileBytes []byte, filename, contentType string, extraForm map[string]string) ([]byte, error) {
+func (s *MediaTaskService) ResolveAudioTranscription(c *gin.Context, ctx context.Context, groupID *int64, publicModel, endpoint string, fileBytes []byte, filename, contentType string, extraForm map[string]string) ([]byte, error) {
 	if len(fileBytes) == 0 {
 		return nil, fmt.Errorf("media_audio_file: empty audio file")
 	}
 	excluded := make(map[int64]struct{})
+	var lastUpstreamErr error
 	const maxAttempts = 100
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
@@ -77,15 +80,30 @@ func (s *MediaTaskService) ResolveAudioTranscription(ctx context.Context, groupI
 
 		resp, err := http.DefaultClient.Do(httpReq)
 		if err != nil {
+			s.recordMediaTransportFailure(c, ctx, account, err)
 			excluded[account.ID] = struct{}{}
 			continue
 		}
 		respBody, _ := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
 		if resp.StatusCode >= 400 {
-			return nil, fmt.Errorf("media_audio_file: upstream returned %d: %s", resp.StatusCode, string(respBody))
+			decision := classifyMediaUpstreamFailure(resp.StatusCode, respBody)
+			s.recordMediaUpstreamFailure(c, ctx, account, resp.StatusCode, respBody, publicModel)
+			if decision.ShouldFailover {
+				excluded[account.ID] = struct{}{}
+				lastUpstreamErr = fmt.Errorf("media_audio_file: upstream returned %d: %s", resp.StatusCode, string(respBody))
+				continue
+			}
+			if lastUpstreamErr == nil {
+				lastUpstreamErr = fmt.Errorf("media_audio_file: upstream returned %d: %s",
+					resp.StatusCode, string(respBody))
+			}
+			return nil, lastUpstreamErr
 		}
 		return respBody, nil
 	}
-	return nil, fmt.Errorf("media_audio_file: upstream account switches exhausted")
+	if lastUpstreamErr == nil {
+		lastUpstreamErr = fmt.Errorf("media_audio_file: upstream account switches exhausted")
+	}
+	return nil, lastUpstreamErr
 }
