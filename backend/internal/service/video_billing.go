@@ -15,8 +15,7 @@ const (
 	VideoPriceFamilySeedance           = "seedance"
 	VideoPriceFamilyMiniMaxVideo       = "minimax-video"
 	VideoPriceFamilyWanVideo           = "wan-video"
-	VideoPriceFamilyKimiVideo       = "kimi-video"
-)
+	)
 
 // CanonicalVideoModelPriceFamily maps a client-facing video model ID to the
 // family key stored in groups.video_model_prices. Grok families retain their
@@ -37,10 +36,6 @@ func CanonicalVideoModelPriceFamily(model string) string {
 		strings.HasPrefix(m, "minimax-h3"),
 		(strings.HasPrefix(m, "video-") && strings.Contains(m, "hailuo")):
 		return VideoPriceFamilyMiniMaxVideo
-	case strings.HasPrefix(m, "kimi-h3"),
-		strings.HasPrefix(m, "kimi-video"),
-		strings.Contains(m, "moonshot-video"):
-		return VideoPriceFamilyKimiVideo
 	case strings.HasPrefix(m, "wan") &&
 		(strings.Contains(m, "video") || strings.Contains(m, "wanx") ||
 			strings.Contains(m, "t2v") || strings.HasPrefix(m, "wan2") || strings.HasPrefix(m, "wan3")):
