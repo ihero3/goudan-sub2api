@@ -205,7 +205,7 @@
 
         <!-- Turnstile Widget -->
         <div v-if="captchaEnabled" data-testid="registration-turnstile">
-          <TurnstileWidget
+        <TurnstileWidget
             ref="turnstileRef"
             :turnstile-enabled="turnstileEnabled"
             :turnstile-site-key="turnstileSiteKey"
@@ -218,9 +218,16 @@
             :aliyun-region="aliyunCaptchaRegion"
             @verify="onTurnstileVerify"
             @expire="onTurnstileExpire"
-            @error="onTurnstileError"
-          />
+          @error="onTurnstileError"
+        />
         </div>
+
+        <!-- 自建顺序点击验证码（仅邮箱验证开启且开关启用时显示） -->
+        <ClickCaptcha
+          v-if="clickCaptchaEnabled"
+          data-testid="registration-click-captcha"
+          @verified="onClickCaptchaVerified"
+        />
 
         <LoginAgreementPrompt
           v-if="loginAgreementEnabled"
@@ -237,7 +244,7 @@
         <!-- Submit Button -->
         <button
           type="submit"
-          :disabled="registrationActionDisabled || (turnstileEnabled && !turnstileToken)"
+          :disabled="registrationActionDisabled || (turnstileEnabled && !turnstileToken) || (clickCaptchaEnabled && !clickCaptchaToken)"
           class="btn btn-primary w-full"
         >
           <svg
@@ -344,6 +351,7 @@ import EmailOAuthButtons from '@/components/auth/EmailOAuthButtons.vue'
 import LoginAgreementPrompt from '@/components/auth/LoginAgreementPrompt.vue'
 import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/CaptchaChallenge.vue'
+import ClickCaptcha from '@/components/ClickCaptcha.vue'
 import { useAuthStore, useAppStore } from '@/stores'
 import {
   buildOAuthLoginStartURL,
@@ -384,10 +392,12 @@ const isLoading = ref<boolean>(false)
 const settingsLoaded = ref<boolean>(false)
 const errorMessage = ref<string>('')
 const showPassword = ref<boolean>(false)
+const clickCaptchaToken = ref<string>('')
 
 // Public settings
 const registrationEnabled = ref<boolean>(true)
 const emailVerifyEnabled = ref<boolean>(false)
+const clickCaptchaEnabled = ref<boolean>(false)
 const promoCodeEnabled = ref<boolean>(true)
 const invitationCodeEnabled = ref<boolean>(false)
 const affiliateEnabled = ref<boolean>(false)
@@ -514,6 +524,10 @@ function syncAffiliateReferralCode(): string {
   return code
 }
 
+function onClickCaptchaVerified(token: string) {
+  clickCaptchaToken.value = token
+}
+
 // ==================== Lifecycle ====================
 
 onMounted(async () => {
@@ -523,6 +537,7 @@ onMounted(async () => {
     const settings = await getPublicSettings()
     registrationEnabled.value = settings.registration_enabled
     emailVerifyEnabled.value = settings.email_verify_enabled
+    clickCaptchaEnabled.value = settings.registration_click_captcha_enabled === true && emailVerifyEnabled.value
     promoCodeEnabled.value = settings.promo_code_enabled
     invitationCodeEnabled.value = settings.invitation_code_enabled
     affiliateEnabled.value = settings.affiliate_enabled
@@ -950,6 +965,12 @@ async function handleRegister(): Promise<void> {
     return
   }
 
+  // 自建顺序点击验证：未通过则阻断提交（防止回车绕过禁用按钮）
+  if (clickCaptchaEnabled.value && !clickCaptchaToken.value) {
+    errorMessage.value = t('auth.clickCaptchaRequired')
+    return
+  }
+
   // Check promo code validation status
   if (formData.promo_code.trim()) {
     // If promo code is being validated, wait
@@ -1008,6 +1029,7 @@ async function handleRegister(): Promise<void> {
         JSON.stringify({
           email: formData.email,
           password: formData.password,
+          click_captcha_token: clickCaptchaEnabled.value ? clickCaptchaToken.value : undefined,
           turnstile_token:
             turnstileEnabled.value || aliyunCaptchaEnabled.value ? turnstileToken.value : undefined,
           tencent_captcha_ticket: tencentCaptchaEnabled.value ? turnstileToken.value : undefined,
@@ -1027,6 +1049,7 @@ async function handleRegister(): Promise<void> {
     await authStore.register({
       email: formData.email,
       password: formData.password,
+      click_captcha_token: clickCaptchaEnabled.value ? clickCaptchaToken.value : undefined,
       turnstile_token:
         turnstileEnabled.value || aliyunCaptchaEnabled.value ? turnstileToken.value : undefined,
       tencent_captcha_ticket: tencentCaptchaEnabled.value ? turnstileToken.value : undefined,

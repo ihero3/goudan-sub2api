@@ -27,9 +27,15 @@ type AuthHandler struct {
 	redeemService        *service.RedeemService
 	totpService          *service.TotpService
 	userAttributeService *service.UserAttributeService
+	clickCaptcha         *service.RegistrationClickCaptchaService
 
 	dingTalkClientInstance *DingTalkClient
 	dingTalkClientMu       sync.Mutex
+}
+
+// SetRegistrationClickCaptchaService 注入自建点击验证码服务，不改构造函数。
+func (h *AuthHandler) SetRegistrationClickCaptchaService(svc *service.RegistrationClickCaptchaService) {
+	h.clickCaptcha = svc
 }
 
 // NewAuthHandler creates a new AuthHandler
@@ -51,6 +57,7 @@ type RegisterRequest struct {
 	Email                 string `json:"email" binding:"required,email"`
 	Password              string `json:"password" binding:"required,min=6"`
 	VerifyCode            string `json:"verify_code"`
+	ClickCaptchaToken     string `json:"click_captcha_token"`
 	TurnstileToken        string `json:"turnstile_token"`
 	TencentCaptchaTicket  string `json:"tencent_captcha_ticket"`
 	TencentCaptchaRandstr string `json:"tencent_captcha_randstr"`
@@ -62,6 +69,7 @@ type RegisterRequest struct {
 // SendVerifyCodeRequest 发送验证码请求
 type SendVerifyCodeRequest struct {
 	Email                 string `json:"email" binding:"required,email"`
+	ClickCaptchaToken     string `json:"click_captcha_token"`
 	TurnstileToken        string `json:"turnstile_token"`
 	TencentCaptchaTicket  string `json:"tencent_captcha_ticket"`
 	TencentCaptchaRandstr string `json:"tencent_captcha_randstr"`
@@ -174,6 +182,17 @@ func (h *AuthHandler) isBackendModeEnabled(ctx context.Context) bool {
 	return h.settingSvc.IsBackendModeEnabled(ctx)
 }
 
+// enforceClickCaptchaForRegistration 邮箱验证开启且功能启用时返回 true。
+func (h *AuthHandler) enforceClickCaptchaForRegistration(c *gin.Context) bool {
+	if h == nil || h.clickCaptcha == nil || h.settingSvc == nil {
+		return false
+	}
+	if !h.settingSvc.IsEmailVerifyEnabled(c.Request.Context()) {
+		return false
+	}
+	return h.settingSvc.IsRegistrationClickCaptchaEnabled(c.Request.Context())
+}
+
 // Register handles user registration
 // POST /api/v1/auth/register
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -181,6 +200,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
+	}
+	if h.enforceClickCaptchaForRegistration(c) {
+		ipHash := service.HashFingerprint(ip.GetClientIP(c), c.Request.UserAgent())
+		if err := h.clickCaptcha.ConsumeToken(c.Request.Context(), req.ClickCaptchaToken, ipHash, ipHash); err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
 	}
 
 	// 验证当前启用的验证码（邮箱验证码注册场景避免重复校验一次性票据）
@@ -214,6 +240,13 @@ func (h *AuthHandler) SendVerifyCode(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, "Invalid request: "+err.Error())
 		return
+	}
+	if h.enforceClickCaptchaForRegistration(c) {
+		ipHash := service.HashFingerprint(ip.GetClientIP(c), c.Request.UserAgent())
+		if err := h.clickCaptcha.ConsumeToken(c.Request.Context(), req.ClickCaptchaToken, ipHash, ipHash); err != nil {
+			response.ErrorFrom(c, err)
+			return
+		}
 	}
 
 	proof := captchaProof(req.TurnstileToken, req.TencentCaptchaTicket, req.TencentCaptchaRandstr)

@@ -145,6 +145,9 @@ export default {
         emailDomainQuota: 'Non-allowlist Domain Quota',
         emailDomainQuotaHint:
           'When enabled and the allowlist is not empty, every other registrable domain can register one account. When disabled, non-allowlist domains are rejected. Has no effect while the allowlist is empty',
+        clickCaptcha: 'Click Captcha Before Registration',
+        clickCaptchaHint:
+          'When enabled with email verification, users must complete the built-in ordered-click human verification before registration. No third-party captcha service needed',
         promoCode: 'Promo Code',
         promoCodeHint: 'Allow users to use promo codes during registration',
         invitationCode: 'Invitation Code Registration',

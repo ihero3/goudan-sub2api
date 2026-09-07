@@ -14,6 +14,7 @@ func firstNonEmpty(values ...string) string {
 type SystemSettings struct {
 	RegistrationEnabled                 bool
 	EmailVerifyEnabled                  bool
+	RegistrationClickCaptchaEnabled    bool
 	RegistrationEmailSuffixWhitelist    []string
 	RegistrationEmailDomainQuotaEnabled bool // 白名单非空时放行非白名单域名限量注册（默认关闭）
 	PromoCodeEnabled                    bool
@@ -321,6 +322,7 @@ type DefaultSubscriptionSetting struct {
 type PublicSettings struct {
 	RegistrationEnabled                 bool
 	EmailVerifyEnabled                  bool
+	RegistrationClickCaptchaEnabled    bool
 	ForceEmailOnThirdPartySignup        bool
 	RegistrationEmailSuffixWhitelist    []string
 	RegistrationEmailDomainQuotaEnabled bool

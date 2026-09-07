@@ -299,6 +299,7 @@ const captchaEnabled = computed(
   () =>
     (turnstileEnabled.value && Boolean(turnstileSiteKey.value)) || actionCaptchaEnabled.value
 )
+const clickCaptchaToken = ref<string>('')
 
 const errors = ref({
   code: '',
@@ -338,6 +339,7 @@ onMounted(async () => {
       initialTencentCaptchaRandstr.value = registerData.tencent_captcha_randstr || ''
       promoCode.value = registerData.promo_code || ''
       invitationCode.value = registerData.invitation_code || ''
+      clickCaptchaToken.value = registerData.click_captcha_token || ''
       affCode.value = registerData.aff_code || loadAffiliateReferralCode()
       pendingAuthToken.value = registerData.pending_auth_token || activePendingSession?.token || ''
       pendingAuthTokenField.value = registerData.pending_auth_token_field || activePendingSession?.token_field || 'pending_auth_token'
@@ -541,6 +543,7 @@ async function sendCode(): Promise<void> {
 
     const requestPayload = {
       email: email.value,
+      click_captcha_token: clickCaptchaToken.value || undefined,
       [pendingAuthTokenField.value]: pendingAuthToken.value || undefined,
       // 优先使用重发时新获取的 token（因为初始 token 可能已被使用）
       turnstile_token:
@@ -723,6 +726,7 @@ async function handleVerify(): Promise<void> {
         email: email.value,
         password: password.value,
         verify_code: verifyCode.value.trim(),
+        click_captcha_token: clickCaptchaToken.value || undefined,
         turnstile_token:
           turnstileEnabled.value || aliyunCaptchaEnabled.value
             ? initialTurnstileToken.value || undefined

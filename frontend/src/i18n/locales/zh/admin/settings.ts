@@ -145,6 +145,9 @@ export default {
         emailDomainQuota: '非白名单域名限量注册',
         emailDomainQuotaHint:
           '开启后，白名单非空时，其他可注册主域名各限注册一个账户；关闭时非白名单域名直接拒绝注册。白名单为空时本开关无效果',
+        clickCaptcha: '注册前顺序点击验证',
+        clickCaptchaHint:
+          '开启并启用邮箱验证后，用户注册前必须完成自建顺序点击人机验证，无需第三方验证码服务',
         promoCode: '优惠码',
         promoCodeHint: '允许用户在注册时使用优惠码',
         invitationCode: '邀请码注册',

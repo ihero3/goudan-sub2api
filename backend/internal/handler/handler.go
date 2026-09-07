@@ -53,36 +53,37 @@ type AdminHandlers struct {
 
 // Handlers contains all HTTP handlers
 type Handlers struct {
-	Auth             *AuthHandler
-	User             *UserHandler
-	APIKey           *APIKeyHandler
-	Usage            *UsageHandler
-	Redeem           *RedeemHandler
-	Subscription     *SubscriptionHandler
-	Announcement     *AnnouncementHandler
-	Blog             *BlogHandler
-	ChannelMonitor   *ChannelMonitorUserHandler
-	ChannelMonitorV2 *ChannelMonitorV2Handler
-	Admin            *AdminHandlers
-	Gateway          *GatewayHandler
-	OpenAIGateway    *OpenAIGatewayHandler
-	Setting          *SettingHandler
-	Totp             *TotpHandler
-	Passkey          *PasskeyHandler
-	Payment          *PaymentHandler
-	PaymentWebhook   *PaymentWebhookHandler
-	AvailableChannel *AvailableChannelHandler
-	Ticket           *TicketHandler
-	Governance       *GovernanceUserHandler
-	Team             *TeamHandler
-	Department       *DepartmentHandler
-	Consumer         *ConsumerHandler
-	TeamAnalytics    *TeamAnalyticsHandler
-	ModelPlaza       *ModelPlazaHandler
-	AsyncImage       *AsyncImageHandler
-	BatchImage       *BatchImageHandler
-	VideoGateway     *VideoGatewayHandler
-	MediaGateway     *MediaGatewayHandler
+	Auth                     *AuthHandler
+	RegistrationClickCaptcha *RegistrationClickCaptchaHandler
+	User                     *UserHandler
+	APIKey                   *APIKeyHandler
+	Usage                    *UsageHandler
+	Redeem                   *RedeemHandler
+	Subscription             *SubscriptionHandler
+	Announcement             *AnnouncementHandler
+	Blog                     *BlogHandler
+	ChannelMonitor           *ChannelMonitorUserHandler
+	ChannelMonitorV2         *ChannelMonitorV2Handler
+	Admin                    *AdminHandlers
+	Gateway                  *GatewayHandler
+	OpenAIGateway            *OpenAIGatewayHandler
+	Setting                  *SettingHandler
+	Totp                     *TotpHandler
+	Passkey                  *PasskeyHandler
+	Payment                  *PaymentHandler
+	PaymentWebhook           *PaymentWebhookHandler
+	AvailableChannel         *AvailableChannelHandler
+	Ticket                   *TicketHandler
+	Governance               *GovernanceUserHandler
+	Team                     *TeamHandler
+	Department               *DepartmentHandler
+	Consumer                 *ConsumerHandler
+	TeamAnalytics            *TeamAnalyticsHandler
+	ModelPlaza               *ModelPlazaHandler
+	AsyncImage               *AsyncImageHandler
+	BatchImage               *BatchImageHandler
+	VideoGateway             *VideoGatewayHandler
+	MediaGateway             *MediaGatewayHandler
 }
 
 // BuildInfo contains build-time information

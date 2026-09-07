@@ -180,6 +180,7 @@ export interface RegisterRequest {
   email: string
   password: string
   verify_code?: string
+  click_captcha_token?: string
   turnstile_token?: string
   tencent_captcha_ticket?: string
   tencent_captcha_randstr?: string
@@ -216,6 +217,7 @@ export interface AffiliateTransferResponse {
 
 export interface SendVerifyCodeRequest {
   email: string
+  click_captcha_token?: string
   turnstile_token?: string
   tencent_captcha_ticket?: string
   tencent_captcha_randstr?: string
@@ -253,6 +255,7 @@ export interface LoginAgreementDocument {
 export interface PublicSettings {
   registration_enabled: boolean
   email_verify_enabled: boolean
+  registration_click_captcha_enabled?: boolean
   force_email_on_third_party_signup: boolean
   registration_email_suffix_whitelist: string[]
   registration_email_domain_quota_enabled?: boolean
@@ -331,6 +334,24 @@ export interface AuthResponse {
   expires_in?: number     // New: Access Token expiry time in seconds
   token_type: string
   user: User & { run_mode?: 'standard' | 'simple' }
+}
+
+export interface ClickCaptchaCell {
+  cell_id: string
+  content: string
+  type: 'text' | 'emoji'
+}
+
+export interface ClickCaptchaChallenge {
+  challenge_id: string
+  expires_in: number
+  prompt: string[]
+  grid: ClickCaptchaCell[]
+}
+
+export interface ClickCaptchaVerifyResponse {
+  captcha_token: string
+  expires_in: number
 }
 
 export interface CurrentUserResponse extends User {

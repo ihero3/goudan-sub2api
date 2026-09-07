@@ -46,6 +46,7 @@ func (h *SettingHandler) GetPublicSettings(c *gin.Context) {
 	response.Success(c, dto.PublicSettings{
 		RegistrationEnabled:                 settings.RegistrationEnabled,
 		EmailVerifyEnabled:                  settings.EmailVerifyEnabled,
+		RegistrationClickCaptchaEnabled:     settings.RegistrationClickCaptchaEnabled,
 		ForceEmailOnThirdPartySignup:        settings.ForceEmailOnThirdPartySignup,
 		RegistrationEmailSuffixWhitelist:    settings.RegistrationEmailSuffixWhitelist,
 		RegistrationEmailDomainQuotaEnabled: settings.RegistrationEmailDomainQuotaEnabled,

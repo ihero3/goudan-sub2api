@@ -244,6 +244,17 @@ export default {
       USER_NOT_ACTIVE: 'Account has been disabled.',
     },
     registrationFailed: 'Registration failed. Please try again.',
+    clickCaptchaRequired: 'Please complete the human verification first',
+    clickCaptcha: {
+      start: 'Click to start verification',
+      restart: 'Verify again',
+      verifying: 'Verifying...',
+      promptPrefix: 'Click in order: ',
+      promptSeparator: ', ',
+      passed: '✓ Verification passed',
+      initFailed: 'Failed to initialize the verification. Please try again',
+      wrongOrder: 'Incorrect click order. Please try again',
+    },
     emailDomainRegistrationLimit:
       'This email domain cannot register another account. Please use a mainstream email, or contact support to add your enterprise domain to the allowlist.',
     emailSuffixNotAllowed: 'This email domain is not allowed for registration.',
